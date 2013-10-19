@@ -1,0 +1,36 @@
+.\"
+.TH "BLUETOOTHD" "8" "March 2004" "Bluetooth daemon" "System management commands"
+.SH "NAME"
+bluetoothd \- Bluetooth daemon
+
+.SH "SYNOPSIS"
+.B bluetoothd
+[
+.B \-n
+]
+
+.SH "DESCRIPTION"
+This manual page documents briefly the
+.B bluetoothd
+daemon, which manages all the Bluetooth devices.
+.B bluetoothd
+can also provide a number of services via the D-Bus message bus
+system.
+.SH "OPTIONS"
+.TP
+.BI \-n
+Don't run as daemon in background.
+.TP
+.BI \-d
+Enable debug information output.
+.TP
+.BI \-m\ mtu\-size
+Use specific MTU size for SDP server.
+
+.SH "FILES"
+.TP
+.I @CONFIGDIR@/main.conf
+Default location of the global configuration file.
+
+.SH "AUTHOR"
+This manual page was written by Marcel Holtmann, Philipp Matthias Hahn and Fredrik Noring.
