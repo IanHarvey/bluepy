@@ -1,0 +1,17 @@
+[Unit]
+Description=Bluetooth service
+Documentation=man:bluetoothd(8)
+
+[Service]
+Type=dbus
+BusName=org.bluez
+ExecStart=/usr/local/libexec/bluetooth/bluetoothd
+NotifyAccess=main
+#WatchdogSec=10
+#Restart=on-failure
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE CAP_NET_RAW
+LimitNPROC=1
+
+[Install]
+WantedBy=bluetooth.target
+Alias=dbus-org.bluez.service

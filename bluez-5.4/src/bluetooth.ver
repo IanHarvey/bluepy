@@ -1,0 +1,10 @@
+{
+	global:
+		btd_*;
+		g_dbus_*;
+		info;
+		error;
+		debug;
+	local:
+		*;
+};
