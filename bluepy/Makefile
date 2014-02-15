@@ -12,14 +12,10 @@ CFLAGS = -O0 -g
 
 CPPFLAGS = -DHAVE_CONFIG_H
 
-#ARCH=i386-linux-gnu
-ARCH=arm-linux-gnueabihf
-
-CPPFLAGS +=  -I/usr/include/dbus-1.0 -I/usr/lib/$(ARCH)/dbus-1.0/include
-CPPFLAGS += -I/usr/include/glib-2.0 -I/usr/lib/$(ARCH)/glib-2.0/include
 CPPFLAGS += -I$(BLUEZ_PATH)/attrib -I$(BLUEZ_PATH) -I$(BLUEZ_PATH)/lib -I$(BLUEZ_PATH)/src -I$(BLUEZ_PATH)/gdbus -I$(BLUEZ_PATH)/btio
 
-LDLIBS = -lglib-2.0
+CPPFLAGS += `pkg-config glib-2.0 dbus-1 --cflags`
+LDLIBS += `pkg-config glib-2.0 --libs`
 
 all: bluepy-helper 
 
