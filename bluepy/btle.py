@@ -3,6 +3,8 @@ import sys, os, time
 import subprocess
 import binascii
 
+Debugging = True
+
 helperExe = os.path.join(os.path.abspath(os.path.dirname(__file__)), "bluepy-helper")
 if not os.path.isfile(helperExe):
     raise ImportError("Cannot find required executable '%s'" % helperExe)
@@ -10,6 +12,24 @@ if not os.path.isfile(helperExe):
 SEC_LEVEL_LOW    = "low"
 SEC_LEVEL_MEDIUM = "medium"
 SEC_LEVEL_HIGH   = "high"
+
+def DBG(*args):
+    if Debugging:
+        msg = " ".join([str(a) for a in args])
+        print (msg)
+ 
+class BTLEException(Exception):
+    DISCONNECTED = 1
+    COMM_ERROR = 2
+    INTERNAL_ERROR = 3
+    
+    def __init__(self, code, message):
+        self.code = code
+        self.message = message
+
+    def __str__(self):
+        return self.message
+
 
 class UUID:
     def __init__(self, val):
@@ -87,16 +107,30 @@ class Descriptor:
 
 class Peripheral:
     def __init__(self, deviceAddr=None):
-        print "Running", helperExe
-        self._helper = subprocess.Popen([helperExe],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        self._cmdFd = self._helper.stdin
-        self._respFd = self._helper.stdout
-
-        if deviceAddr != None:
-            self.connect(deviceAddr)
+        self._helper = None
         self.services = {} # Indexed by UUID
         self.discoveredAllServices = False
+        if deviceAddr != None:
+            self.connect(deviceAddr)
+
+    def _startHelper(self):
+        if self._helper == None:
+            DBG("Running ", helperExe)
+            self._helper = subprocess.Popen([helperExe],
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+
+    def _stopHelper(self):
+        if self._helper != None:
+            DBG("Stopping ", helperExe)
+            self._helper.stdin.write("quit\n")
+            self._helper.wait()
+            self._helper = None
+
+    def _writeCmd(self, cmd):
+        if self._helper == None:
+            raise BTLEException(BTLEException.INTERNAL_ERROR, "Helper not started (did you call connect()?)")
+        DBG("Sent: ", cmd)
+        self._helper.stdin.write(cmd)
 
     @staticmethod
     def parseResp(line):
@@ -113,44 +147,67 @@ class Peripheral:
             elif tval[0]=='b':
                 val = binascii.a2b_hex(tval[1:])
             else:
-                raise ValueError("Cannot understand response value %s" % repr(tval))
+                raise BTLEException(BTLEException.INTERNAL_ERROR, 
+                             "Cannot understand response value %s" % repr(tval))
             if tag not in resp:
                 resp[tag] = [val]
             else:
                 resp[tag].append(val)
         return resp
-        # Umm, stuff here ...!
 
-    def _getResp(self):
+    def _getResp(self, wantType):
 	while True:
-            rv = self._respFd.readline()
-            #print "Got:", repr(rv)
+            self._helper.poll()
+            if self._helper.returncode != None:
+                raise BTLEException(BTLEException.INTERNAL_ERROR, "Helper exited")
+      
+            rv = self._helper.stdout.readline()
+            DBG("Got:", repr(rv))
             if not rv.startswith('#'):
-                return Peripheral.parseResp(rv)
+                resp = Peripheral.parseResp(rv)
+                break
+        if 'rsp' not in resp:
+            raise BTLEException(BTLEException.INTERNAL_ERROR,
+		"No response type indicator")
+        respType = resp['rsp'][0]
+        if respType == wantType:
+            return resp
+        elif respType == 'stat' and resp['state'][0] == 'disc':
+            self._stopHelper()
+            raise BTLEException(BTLEException.DISCONNECTED, "Device disconnected")
+        elif respType == 'err':
+            errcode=resp['code'][0]
+            raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode)
+        else:
+            raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response (%s)" % respType)
 
     def status(self):
-	self._cmdFd.write("stat\n")
-        return self._getResp()
+	self._writeCmd("stat\n")
+        return self._getResp('stat')
 
     def connect(self,addr):
         if len( addr.split(":") ) != 6:
             raise ValueError("Expected MAC address, got %s", repr(addr))
+        self._startHelper()
         self.deviceAddr = addr
-	self._cmdFd.write("conn %s\n" % addr)
-        rsp = self._getResp()
+	self._writeCmd("conn %s\n" % addr)
+        rsp = self._getResp('stat')
         while rsp['state'][0] == 'tryconn':
-            rsp = self._getResp()
-        print "Response", rsp
-        # TODO handle errors
+            rsp = self._getResp('stat')
+        if rsp['state'][0] != 'conn':
+            self._stopHelper()
+            raise BTLEException(BTLEException.DISCONNECTED, "Failed to connect to peripheral")
 
     def disconnect(self):
-	self._cmdFd.write("disc\n")
-        return self._getResp()
+        if self._helper==None:
+            return
+	self._writeCmd("disc\n")
+        self._getResp('stat')
+        self._stopHelper()
 
     def discoverServices(self):
-	self._cmdFd.write("svcs\n")
-        rsp = self._getResp()
-        assert( rsp['rsp'][0]=='find' )
+	self._writeCmd("svcs\n")
+        rsp = self._getResp('find')
         starts = rsp['hstart']
         ends   = rsp['hend']
         uuids  = rsp['uuid']
@@ -171,65 +228,58 @@ class Peripheral:
         uuid=UUID(uuidVal)
         if uuid in self.services:
             return self.services[uuid]
-	self._cmdFd.write("svcs %s\n" % uuid)
-        rsp = self._getResp()
-        assert( rsp['rsp'][0]=='find' )
+	self._writeCmd("svcs %s\n" % uuid)
+        rsp = self._getResp('find')
         svc = Service(self, uuid, rsp['hstart'][0], rsp['hend'][0])
         self.services[uuid] = svc
         return svc
 
     def _getIncludedServices(self,startHnd=1,endHnd=0xFFFF):
         # TODO: No working example of this yet
-        self._cmdFd.write("incl %X %X\n" % (startHnd, endHnd) )
-        return self._getResp()
+        self._writeCmd("incl %X %X\n" % (startHnd, endHnd) )
+        return self._getResp('find')
 
     def getCharacteristics(self,startHnd=1,endHnd=0xFFFF, uuid=None):
         cmd = 'char %X %X' % (startHnd, endHnd)
         if uuid:
             cmd += ' '+str(UUID(uuid))
-        self._cmdFd.write(cmd + "\n")
-        rsp = self._getResp()
-        assert( rsp['rsp'][0]=='find' )
+        self._writeCmd(cmd + "\n")
+        rsp = self._getResp('find')
         nChars = len(rsp['hnd'])
         return [ Characteristic(self, rsp['uuid'][i], rsp['hnd'][i],
                                 rsp['props'][i], rsp['vhnd'][i]) for i in range(nChars) ]
 
     def getDescriptors(self,startHnd=1,endHnd=0xFFFF):
-        self._cmdFd.write("desc %X %X\n" % (startHnd, endHnd) )
-        resp = self._getResp()
-        assert(resp['rsp'][0]=='desc')
+        self._writeCmd("desc %X %X\n" % (startHnd, endHnd) )
+        resp = self._getResp('desc')
         nDesc = len(resp['hnd'])
         return [ Descriptor(self, resp['uuid'][i], resp['hnd'][i]) for i in range(nDesc) ]
 
     def readCharacteristic(self,handle):
-        self._cmdFd.write("rd %X\n" % handle)
-        resp = self._getResp()
-        assert(resp['rsp'][0]=='rd')
+        self._writeCmd("rd %X\n" % handle)
+        resp = self._getResp('rd')
         return resp['d'][0]
 
     def _readCharacteristicByUUID(self,uuid,startHnd,endHnd):
         # Not used at present
-        self._cmdFd.write("rdu %s %X %X\n" % (str(UUID(uuid)), startHnd, endHnd) )
-        return self._getResp()
+        self._writeCmd("rdu %s %X %X\n" % (str(UUID(uuid)), startHnd, endHnd) )
+        return self._getResp('rd')
 
     def writeCharacteristic(self,handle,val,withResponse=False):
         cmd="wrr" if withResponse else "wr";
-        self._cmdFd.write("%s %X %s\n" % (cmd, handle, binascii.b2a_hex(val)) )
-        return self._getResp()
+        self._writeCmd("%s %X %s\n" % (cmd, handle, binascii.b2a_hex(val)) )
+        return self._getResp('wr')
 
     def setSecurityLevel(self,level):
-	self._cmdFd.write("secu %s\n" % level)
-        return self._getResp()
+	self._writeCmd("secu %s\n" % level)
+        return self._getResp('stat')
 
     def setMTU(self,mtu):
-        self._cmdFd.write("mtu %x\n" % mtu)
-        return self._getResp()
+        self._writeCmd("mtu %x\n" % mtu)
+        return self._getResp('stat')
   
     def __del__(self):
-        if self._helper != None:
-            self._helper.stdin.write("quit\n")
-            self._helper.wait()
-            self._helper = None
+        self.disconnect()
 
 def strList(l, indent="  "):
     sep = ",\n" + indent
