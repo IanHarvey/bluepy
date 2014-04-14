@@ -281,29 +281,50 @@ class Peripheral:
     def __del__(self):
         self.disconnect()
 
-def strList(l, indent="  "):
-    sep = ",\n" + indent
-    return indent + (sep.join([ str(i) for i in l ]))
-
+class AssignedNumbers:
+    # TODO: full list
+    deviceName   = UUID("2A00")
+    txPowerLevel = UUID("2A07")
+    batteryLevel = UUID("2A19")
+    modelNumberString = UUID("2A24")
+    serialNumberString = UUID("2A25")
+    firmwareRevisionString = UUID("2A26")
+    hardwareRevisionString = UUID("2A27")
+    softwareRevisionString = UUID("2A28")
+    manufacturerNameString = UUID("2A29")
+    
+    nameMap = { 
+    	deviceName : "Device Name",
+        txPowerLevel : "Tx Power Level",
+        batteryLevel : "Battery Level", 
+        modelNumberString : "Model Number String",
+        serialNumberString : "Serial Number String",
+        firmwareRevisionString : "Firmware Revision String",
+        hardwareRevisionString : "Hardware Revision String",
+        softwareRevisionString : "Software Revision String",
+        manufacturerNameString : "Manufacturer Name String",
+    }
+    
+    @staticmethod
+    def getCommonName(uuid):
+        return AssignedNumbers.nameMap.get(uuid, None)
+        
 if __name__ == '__main__':
-    print "Simple test"
-    print UUID(0x270A)
-    print UUID("f000aa11-0451-4000-b000-000000000000")
-    print UUID("f000aa1204514000b000000000000000")
+    if len(sys.argv) < 2:
+        sys.exit("Usage:\n  %s <mac-address>" % sys.argv[0])
 
-    conn = Peripheral("BC:6A:29:AB:D3:7A")
+    Debugging = False
+    devaddr = sys.argv[1]
+    print "Connecting to:", devaddr
+    conn = Peripheral(devaddr)
     try:
         for svc in conn.getServices():
-            print str(svc), ": ----"
-            print strList(svc.getCharacteristics())
-        svc = conn.getServiceByUUID("f000aa10-0451-4000-b000-000000000000") # Accelerometer
-        config = svc.getCharacteristics("f000aa12-0451-4000-b000-000000000000")[0]
-        config.write("\x01") # Enable
-        accel = svc.getCharacteristics("f000aa11-0451-4000-b000-000000000000")[0]
-        for i in range(10):
-            raw = accel.read()
-            (x,y,z) = [ ((ord(db) ^ 0x80) - 0x80)/64.0 for db in raw ]
-            print "X=%.2f Y=%.2f Z=%.2f" % (x,y,z)
+            print str(svc), ":"
+            for ch in svc.getCharacteristics():
+                print "    " + str(ch)
+                chName = AssignedNumbers.getCommonName(ch.uuid)
+                if chName != None:
+                    print "    ->", chName, repr(ch.read())
     finally:
         conn.disconnect()
 

@@ -22,6 +22,9 @@ appropriately for other platforms.
 The sources need glib and dbus headers to compile. On the Pi you can get these with:
   sudo apt-get install libglib2.0-dev libdbus-1-dev
 
+There are general instructions for setting up BlueZ on the Raspberry Pi at:
+  http://www.elinux.org/RPi_Bluetooth_LE
+  
 Once 'bluepy-helper' is built, you can copy it and the two .py files to somewhere
 convenient on your Python path (e.g. /usr/local/lib/python2.7/site-packages/).
 
@@ -35,7 +38,15 @@ The Python files are released into the public domain by their author, Ian Harvey
 Release Notes
 -------------
 
-TODO list 19-Oct-2013:
+Release dated 14-Apr-2014:
+
+- make btle.py useful from the command line
+- add AssignedNumbers class
+
+Release dated 12-Mar-2014
+- add exceptions, and clean up better on failure
+
+Initial release 19-Oct-2013:
 - Make accurate build and install instructions
 - Implement 'hcitool lescan' functionality
 - Implement notifications (and with it SensorTag key press service)
