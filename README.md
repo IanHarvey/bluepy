@@ -47,10 +47,14 @@ Release dated 12-Mar-2014
 - add exceptions, and clean up better on failure
 
 Initial release 19-Oct-2013:
-- Make accurate build and install instructions
+
+TO DO list
+----------
+
+The following are still missing from the current release:
 - Implement 'hcitool lescan' functionality
 - Implement notifications (and with it SensorTag key press service)
-- better demo code and function documentation
+- Sphinx / Doxygen docs
 
 
 
