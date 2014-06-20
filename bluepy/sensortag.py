@@ -1,11 +1,10 @@
-
 from btle import UUID, Peripheral
 import struct
 import math
 
 def _TI_UUID(val):
     return UUID("%08X-0451-4000-b000-000000000000" % (0xF0000000+val))
-       
+
 class SensorBase:
     # Derived classes should set: svcUUID, ctrlUUID, dataUUID
     sensorOn  = chr(0x01)
@@ -18,18 +17,18 @@ class SensorBase:
         self.data = None
 
     def enable(self):
-        if self.ctrl == None:
+        if self.ctrl is None:
             self.ctrl = self.service.getCharacteristics(self.ctrlUUID) [0]
-        if self.data == None:
+        if self.data is None:
             self.data = self.service.getCharacteristics(self.dataUUID) [0]
-        if self.sensorOn != None:
+        if self.sensorOn is not None:
             self.ctrl.write(self.sensorOn,withResponse=True)
 
     def read(self):
         return self.data.read()
 
     def disable(self):
-        if self.ctrl != None:
+        if self.ctrl is not None:
             self.ctrl.write(self.sensorOff)
 
     # Derived class should implement _formatData()
@@ -64,11 +63,11 @@ class IRTemperatureSensor(SensorBase):
         S   = self.S0 * calcPoly(self.Apoly, tDie-self.tRef)
         Vos = calcPoly(self.Bpoly, tDie-self.tRef)
         fObj = calcPoly(self.Cpoly, Vobj-Vos)
-        
+
         tObj = math.pow( math.pow(tDie,4.0) + (fObj/S), 0.25 )
         return (tAmb, tObj - self.zeroC)
 
-       
+
 class AccelerometerSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA10)
     dataUUID = _TI_UUID(0xAA11)
@@ -110,7 +109,7 @@ class MagnetometerSensor(SensorBase):
         '''Returns (x, y, z) in uT units'''
         x_y_z = struct.unpack('<hhh', self.data.read())
         return tuple([ 1000.0 * (v/32768.0) for v in x_y_z ])
-        # Revisit - some absolute calibration is needed 
+        # Revisit - some absolute calibration is needed
 
 class BarometerSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA40)
@@ -134,7 +133,7 @@ class BarometerSensor(SensorBase):
         self.sensPoly = [ c3/1.0, c4/float(1 << 17), c5/float(1<<34) ]
         self.offsPoly = [ c6*float(1<<14), c7/8.0, c8/float(1<<19) ]
         self.ctrl.write( chr(0x01), True )
- 
+
 
     def read(self):
         '''Returns (ambient_temp, pressure_millibars)'''
@@ -144,13 +143,13 @@ class BarometerSensor(SensorBase):
         offs = calcPoly( self.offsPoly, float(rawT) )
         pres = (sens * rawP + offs) / (100.0 * float(1<<14))
         return (temp,pres)
-        
+
 
 class GyroscopeSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA50)
     dataUUID = _TI_UUID(0xAA51)
     ctrlUUID = _TI_UUID(0xAA52)
-    sensorOn = chr(0x07) 
+    sensorOn = chr(0x07)
 
     def __init__(self, periph):
        SensorBase.__init__(self, periph)
@@ -180,11 +179,11 @@ class SensorTag(Peripheral):
 
 if __name__ == "__main__":
     import time
-    
+
     def quickTest(sensor):
         sensor.enable()
         for i in range(10):
-            print "Result", sensor.read()
+            print("Result", sensor.read())
             time.sleep(1.0)
         sensor.disable()
 
@@ -195,10 +194,8 @@ if __name__ == "__main__":
 
     while True:
        ir, hum, baro = [ s.read() for s in sensors ]
-       print "IR", ir, "hum", hum, "baro", baro
+       print("IR", ir, "hum", hum, "baro", baro)
        time.sleep(5.0)
-   
+
     tag.disconnect()
     del tag
-
-
