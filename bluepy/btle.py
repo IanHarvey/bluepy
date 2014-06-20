@@ -375,5 +375,11 @@ if __name__ == '__main__':
                 chName = AssignedNumbers.getCommonName(ch.uuid)
                 if chName is not None:
                     print("    ->", chName, repr(ch.read()))
+                else:
+                    try:
+                        print("    ->", repr(ch.read()))
+                    except BTLEException as e:
+                        print("    ->", e)
+
     finally:
         conn.disconnect()
