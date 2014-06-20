@@ -63,6 +63,8 @@ class UUID:
 
     def __str__(self):
         s = binascii.b2a_hex(self.binVal).decode('utf-8')
+        if s.endswith("00001000800000805f9b34fb"):
+            return s[4:8]
         return "-".join([s[0:8], s[8:12], s[12:16], s[16:20], s[20:32]])
 
     def __eq__(self, other):
