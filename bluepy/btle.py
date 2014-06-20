@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 """Bluetooth Low Energy Python interface"""
 import sys
 import os
