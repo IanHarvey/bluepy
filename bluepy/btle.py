@@ -318,6 +318,31 @@ class AssignedNumbers:
     manufacturerNameString = UUID("2A29")
 
     nameMap = {
+        # Service UUIDs
+        UUID(0x1811) : "Alert Notification Service",
+        UUID(0x180F) : "Battery Service",
+        UUID(0x1810) : "Blood Pressure",
+        UUID(0x1805) : "Current Time Service",
+        UUID(0x1818) : "Cycling Power",
+        UUID(0x1816) : "Cycling Speed and Cadence",
+        UUID(0x180A) : "Device Information",
+        UUID(0x1800) : "Generic Access",
+        UUID(0x1801) : "Generic Attribute",
+        UUID(0x1808) : "Glucose",
+        UUID(0x1809) : "Health Thermometer",
+        UUID(0x180D) : "Heart Rate",
+        UUID(0x1812) : "Human Interface Device",
+        UUID(0x1802) : "Immediate Alert",
+        UUID(0x1803) : "Link Loss",
+        UUID(0x1819) : "Location and Navigation",
+        UUID(0x1807) : "Next DST Change Service",
+        UUID(0x180E) : "Phone Alert Status Service",
+        UUID(0x1806) : "Reference Time Update Service",
+        UUID(0x1814) : "Running Speed and Cadence",
+        UUID(0x1813) : "Scan Parameters",
+        UUID(0x1804) : "Tx Power",
+        UUID(0x181C) : "User Data",
+        # Characteristic UUIDs
     	deviceName : "Device Name",
         txPowerLevel : "Tx Power Level",
         batteryLevel : "Battery Level",
@@ -343,7 +368,8 @@ if __name__ == '__main__':
     conn = Peripheral(devaddr)
     try:
         for svc in conn.getServices():
-            print(str(svc), ":")
+            svc_name = AssignedNumbers.getCommonName(svc.uuid) or ""
+            print(str(svc), ":", svc_name)
             for ch in svc.getCharacteristics():
                 print("    " + str(ch))
                 chName = AssignedNumbers.getCommonName(ch.uuid)
