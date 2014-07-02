@@ -38,6 +38,11 @@ The Python files are released into the public domain by their author, Ian Harvey
 Release Notes
 -------------
 
+Release dated 2-Jul-2014
+
+- expand AssignedNumbers class definitions
+- add getCommonName() to UUID type, returns human-friendly string
+
 Release dated 14-Apr-2014:
 
 - make btle.py useful from the command line
@@ -55,6 +60,7 @@ The following are still missing from the current release:
 - Implement 'hcitool lescan' functionality
 - Implement notifications (and with it SensorTag key press service)
 - Sphinx / Doxygen docs
+- Unit test 
 
 
 
