@@ -9,8 +9,6 @@ import binascii
 
 Debugging = False
 helperExe = os.path.join(os.path.abspath(os.path.dirname(__file__)), "bluepy-helper")
-if not os.path.isfile(helperExe):
-    raise ImportError("Cannot find required executable '%s'" % helperExe)
 
 SEC_LEVEL_LOW = "low"
 SEC_LEVEL_MEDIUM = "medium"
@@ -378,6 +376,9 @@ AssignedNumbers = _UUIDNameMap( [
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         sys.exit("Usage:\n  %s <mac-address>" % sys.argv[0])
+
+    if not os.path.isfile(helperExe):
+        raise ImportError("Cannot find required executable '%s'" % helperExe)
 
     Debugging = False
     devaddr = sys.argv[1]
