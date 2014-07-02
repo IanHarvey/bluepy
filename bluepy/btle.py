@@ -77,9 +77,16 @@ class UUID:
     def __hash__(self):
         return hash(self.binVal)
 
-    def friendlyName(self):
-        #TODO
-        return str(self)
+    def getCommonName(self):
+        s = AssignedNumbers.getCommonName(self)
+        if s:
+            return s
+        s = str(self)
+        if s.endswith("-0000-1000-8000-00805f9b34fb"):
+            s = s[0:8]
+            if s.startswith("0000"):
+                s = s[4:]    
+        return s
 
 class Service:
     def __init__(self, *args):
@@ -96,7 +103,7 @@ class Service:
         return self.chars
 
     def __str__(self):
-        return "Service <uuid=%s hadleStart=%s handleEnd=%s>" % (self.uuid,
+        return "Service <uuid=%s handleStart=%s handleEnd=%s>" % (self.uuid.getCommonName(),
                                                                  self.hndStart,
                                                                  self.hndEnd)
 
@@ -114,7 +121,7 @@ class Characteristic:
     # TODO: descriptors
 
     def __str__(self):
-        return "Characteristic <%s>" % self.uuid
+        return "Characteristic <%s>" % self.uuid.getCommonName()
 
 class Descriptor:
     def __init__(self, *args):
@@ -122,7 +129,7 @@ class Descriptor:
         self.uuid = UUID(uuidVal)
 
     def __str__(self):
-        return "Descriptor <%s>" % self.uuid
+        return "Descriptor <%s>" % self.uuid.getCommonName()
 
 class Peripheral:
     def __init__(self, deviceAddr=None):
@@ -378,18 +385,14 @@ if __name__ == '__main__':
     conn = Peripheral(devaddr)
     try:
         for svc in conn.getServices():
-            svc_name = AssignedNumbers.getCommonName(svc.uuid) or ""
-            print(str(svc), ":", svc_name)
+            print(str(svc), ":")
             for ch in svc.getCharacteristics():
                 print("    " + str(ch))
                 chName = AssignedNumbers.getCommonName(ch.uuid)
-                if chName is not None:
-                    print("    ->", chName, repr(ch.read()))
-                else:
-                    try:
-                        print("    ->", repr(ch.read()))
-                    except BTLEException as e:
-                        print("    ->", e)
+                try:
+                    print("    ->", repr(ch.read()))
+                except BTLEException as e:
+                    print("    ->", e)
 
     finally:
         conn.disconnect()
