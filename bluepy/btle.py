@@ -40,7 +40,7 @@ class BTLEException(Exception):
 
 
 class UUID:
-    def __init__(self, val):
+    def __init__(self, val, commonName=None):
         '''We accept: 32-digit hex strings, with and without '-' characters,
            4 to 8 digit hex strings, and integers'''
         if isinstance(val, int):
@@ -62,11 +62,10 @@ class UUID:
             raise ValueError(
                 "UUID must be 16 bytes, got '%s' (len=%d)" % (val,
                                                               len(self.binVal)))
+        self.commonName = commonName
 
     def __str__(self):
         s = binascii.b2a_hex(self.binVal).decode('utf-8')
-        if s.endswith("00001000800000805f9b34fb"):
-            return s[4:8]
         return "-".join([s[0:8], s[8:12], s[12:16], s[16:20], s[20:32]])
 
     def __eq__(self, other):
@@ -307,58 +306,67 @@ class Peripheral:
     def __del__(self):
         self.disconnect()
 
-class AssignedNumbers:
-    # TODO: full list
-    deviceName   = UUID("2A00")
-    txPowerLevel = UUID("2A07")
-    batteryLevel = UUID("2A19")
-    modelNumberString = UUID("2A24")
-    serialNumberString = UUID("2A25")
-    firmwareRevisionString = UUID("2A26")
-    hardwareRevisionString = UUID("2A27")
-    softwareRevisionString = UUID("2A28")
-    manufacturerNameString = UUID("2A29")
+def capitaliseName(descr):
+    words = descr.split(" ")
+    capWords =  [ words[0].lower() ]
+    capWords += [ w[0:1].upper() + w[1:].lower() for w in words[1:] ]
+    return "".join(capWords)
 
-    nameMap = {
-        # Service UUIDs
-        UUID(0x1811) : "Alert Notification Service",
-        UUID(0x180F) : "Battery Service",
-        UUID(0x1810) : "Blood Pressure",
-        UUID(0x1805) : "Current Time Service",
-        UUID(0x1818) : "Cycling Power",
-        UUID(0x1816) : "Cycling Speed and Cadence",
-        UUID(0x180A) : "Device Information",
-        UUID(0x1800) : "Generic Access",
-        UUID(0x1801) : "Generic Attribute",
-        UUID(0x1808) : "Glucose",
-        UUID(0x1809) : "Health Thermometer",
-        UUID(0x180D) : "Heart Rate",
-        UUID(0x1812) : "Human Interface Device",
-        UUID(0x1802) : "Immediate Alert",
-        UUID(0x1803) : "Link Loss",
-        UUID(0x1819) : "Location and Navigation",
-        UUID(0x1807) : "Next DST Change Service",
-        UUID(0x180E) : "Phone Alert Status Service",
-        UUID(0x1806) : "Reference Time Update Service",
-        UUID(0x1814) : "Running Speed and Cadence",
-        UUID(0x1813) : "Scan Parameters",
-        UUID(0x1804) : "Tx Power",
-        UUID(0x181C) : "User Data",
-        # Characteristic UUIDs
-    	deviceName : "Device Name",
-        txPowerLevel : "Tx Power Level",
-        batteryLevel : "Battery Level",
-        modelNumberString : "Model Number String",
-        serialNumberString : "Serial Number String",
-        firmwareRevisionString : "Firmware Revision String",
-        hardwareRevisionString : "Hardware Revision String",
-        softwareRevisionString : "Software Revision String",
-        manufacturerNameString : "Manufacturer Name String",
-    }
+class _UUIDNameMap:
+    # Constructor sets self.currentTimeService, self.txPower, and so on
+    # from names.
+    def __init__(self, idList):
+        self.idMap = {}
+        
+        for uuid in idList:
+            attrName = capitaliseName(uuid.commonName)
+            vars(self) [attrName] = uuid
+            self.idMap[uuid] = uuid
 
-    @staticmethod
-    def getCommonName(uuid):
-        return AssignedNumbers.nameMap.get(uuid, None)
+    def getCommonName(self, uuid):
+        if uuid in self.idMap:
+            return self.idMap[uuid].commonName
+        return None
+        
+AssignedNumbers = _UUIDNameMap( [    
+    # Service UUIDs
+    UUID(0x1811, "Alert Notification Service"),
+    UUID(0x180F, "Battery Service"),
+    UUID(0x1810, "Blood Pressure"),
+    UUID(0x1805, "Current Time Service"),
+    UUID(0x1818, "Cycling Power"),
+    UUID(0x1816, "Cycling Speed and Cadence"),
+    UUID(0x180A, "Device Information"),
+    UUID(0x1800, "Generic Access"),
+    UUID(0x1801, "Generic Attribute"),
+    UUID(0x1808, "Glucose"),
+    UUID(0x1809, "Health Thermometer"),
+    UUID(0x180D, "Heart Rate"),
+    UUID(0x1812, "Human Interface Device"),
+    UUID(0x1802, "Immediate Alert"),
+    UUID(0x1803, "Link Loss"),
+    UUID(0x1819, "Location and Navigation"),
+    UUID(0x1807, "Next DST Change Service"),
+    UUID(0x180E, "Phone Alert Status Service"),
+    UUID(0x1806, "Reference Time Update Service"),
+    UUID(0x1814, "Running Speed and Cadence"),
+    UUID(0x1813, "Scan Parameters"),
+    UUID(0x1804, "Tx Power"),
+    UUID(0x181C, "User Data"),
+
+    # Characteristic UUIDs
+    UUID(0x2A00, "Device Name"),
+    UUID(0x2A07, "Tx Power Level"),
+    UUID(0x2A19, "Battery Level"),
+    UUID(0x2A24, "Model Number String"),
+    UUID(0x2A25, "Serial Number String"),
+    UUID(0x2A26, "Firmware Revision String"),
+    UUID(0x2A27, "Hardware Revision String"),
+    UUID(0x2A28, "Software Revision String"),
+    UUID(0x2A29, "Manufacturer Name String"),
+
+    ])
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
