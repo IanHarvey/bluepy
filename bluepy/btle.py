@@ -192,23 +192,27 @@ class Peripheral:
 
             rv = self._helper.stdout.readline()
             DBG("Got:", repr(rv))
-            if not rv.startswith('#'):
-                resp = Peripheral.parseResp(rv)
-                break
-        if 'rsp' not in resp:
-            raise BTLEException(BTLEException.INTERNAL_ERROR,
+            if rv.startswith('#'):
+                continue
+
+            resp = Peripheral.parseResp(rv)
+            if 'rsp' not in resp:
+                raise BTLEException(BTLEException.INTERNAL_ERROR,
                                 "No response type indicator")
-        respType = resp['rsp'][0]
-        if respType == wantType:
-            return resp
-        elif respType == 'stat' and resp['state'][0] == 'disc':
-            self._stopHelper()
-            raise BTLEException(BTLEException.DISCONNECTED, "Device disconnected")
-        elif respType == 'err':
-            errcode=resp['code'][0]
-            raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode)
-        else:
-            raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response (%s)" % respType)
+            respType = resp['rsp'][0]
+            if respType == wantType:
+                return resp
+            elif respType == 'stat' and resp['state'][0] == 'disc':
+                self._stopHelper()
+                raise BTLEException(BTLEException.DISCONNECTED, "Device disconnected")
+            elif respType == 'err':
+                errcode=resp['code'][0]
+                raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode)
+            elif respType == 'ntfy':
+                DBG("Ignoring notification")
+                continue
+            else:
+                raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response (%s)" % respType)
 
     def status(self):
         self._writeCmd("stat\n")
