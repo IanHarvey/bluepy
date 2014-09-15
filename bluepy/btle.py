@@ -299,7 +299,7 @@ class Peripheral:
 
     def writeCharacteristic(self, handle, val, withResponse=False):
         cmd = "wrr" if withResponse else "wr"
-        self._writeCmd("%s %X %s\n" % (cmd, handle, binascii.b2a_hex(val)))
+        self._writeCmd("%s %X %s\n" % (cmd, handle, binascii.b2a_hex(val).decode('utf-8')))
         return self._getResp('wr')
 
     def setSecurityLevel(self, level):

@@ -7,8 +7,8 @@ def _TI_UUID(val):
 
 class SensorBase:
     # Derived classes should set: svcUUID, ctrlUUID, dataUUID
-    sensorOn  = chr(0x01)
-    sensorOff = chr(0x00)
+    sensorOn  = struct.pack("B", 0x01)
+    sensorOff = struct.pack("B", 0x00)
 
     def __init__(self, periph):
         self.periph = periph
@@ -126,13 +126,13 @@ class BarometerSensor(SensorBase):
         self.calChr = self.service.getCharacteristics(self.calUUID) [0]
 
         # Read calibration data
-        self.ctrl.write( chr(0x02), True )
+        self.ctrl.write( struct.pack("B", 0x02), True )
         (c1,c2,c3,c4,c5,c6,c7,c8) = struct.unpack("<HHHHhhhh", self.calChr.read())
         self.c1_s = c1/float(1 << 24)
         self.c2_s = c2/float(1 << 10)
         self.sensPoly = [ c3/1.0, c4/float(1 << 17), c5/float(1<<34) ]
         self.offsPoly = [ c6*float(1<<14), c7/8.0, c8/float(1<<19) ]
-        self.ctrl.write( chr(0x01), True )
+        self.ctrl.write( struct.pack("B", 0x01), True )
 
 
     def read(self):
@@ -149,7 +149,7 @@ class GyroscopeSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA50)
     dataUUID = _TI_UUID(0xAA51)
     ctrlUUID = _TI_UUID(0xAA52)
-    sensorOn = chr(0x07)
+    sensorOn = struct.pack("B",0x07)
 
     def __init__(self, periph):
        SensorBase.__init__(self, periph)
@@ -187,7 +187,7 @@ if __name__ == "__main__":
             time.sleep(1.0)
         sensor.disable()
 
-    tag = SensorTag("BC:6A:29:AB:D3:7A")
+    tag = SensorTag("BC:6A:29:AE:D2:BC")
 
     sensors = [tag.IRtemperature, tag.humidity, tag.barometer]
     [ s.enable() for s in sensors ]
