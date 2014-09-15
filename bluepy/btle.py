@@ -149,6 +149,7 @@ class Peripheral:
         if self._helper is not None:
             DBG("Stopping ", helperExe)
             self._helper.stdin.write("quit\n")
+            self._helper.stdin.flush()
             self._helper.wait()
             self._helper = None
 
@@ -158,6 +159,7 @@ class Peripheral:
                                 "Helper not started (did you call connect()?)")
         DBG("Sent: ", cmd)
         self._helper.stdin.write(cmd)
+        self._helper.stdin.flush()
 
 
     @staticmethod
