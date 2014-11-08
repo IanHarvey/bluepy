@@ -179,6 +179,25 @@ class SensorTag(Peripheral):
 
 if __name__ == "__main__":
     import time
+    import sys
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('host', action='store',help='MAC of BT device')
+    parser.add_argument('-n', action='store', dest='count', default=0,
+            type=int, help="Number of times to loop data")
+    parser.add_argument('-t',action='store',type=float, default=5.0, help='time between polling')
+    parser.add_argument('-T','--temperature', action="store_true",default=False)
+    parser.add_argument('-A','--accelerometer', action='store_true',
+            default=False)
+    parser.add_argument('-H','--humidity', action='store_true', default=False)
+    parser.add_argument('-M','--magnetometer', action='store_true',
+            default=False)
+    parser.add_argument('-B','--barometer', action='store_true', default=False)
+    parser.add_argument('-G','--gyroscope', action='store_true', default=False)
+    parser.add_argument('--all', action='store_true', default=False)
+
+    arg = parser.parse_args(sys.argv[1:])
 
     def quickTest(sensor):
         sensor.enable()
@@ -186,16 +205,32 @@ if __name__ == "__main__":
             print("Result", sensor.read())
             time.sleep(1.0)
         sensor.disable()
+    print 'Connecting to %s' % str(sys.argv[1])
+    tag = SensorTag(arg.host)
 
-    tag = SensorTag("BC:6A:29:AE:D2:BC")
-
-    sensors = [tag.IRtemperature, tag.humidity, tag.barometer]
+    sensors = [tag.IRtemperature, tag.humidity, tag.barometer,
+            tag.accelerometer, tag.magnetometer, tag.gyroscope]
     [ s.enable() for s in sensors ]
-
+    
+    counter=1
     while True:
-       ir, hum, baro = [ s.read() for s in sensors ]
-       print("IR", ir, "hum", hum, "baro", baro)
-       time.sleep(5.0)
+       ir, hum, baro, accel, magn, gyro = [ s.read() for s in sensors ]
+       if arg.temperature or arg.all:
+           print 'Temp: ', ir
+       if arg.humidity or arg.all:
+           print "Humidity: ", hum
+       if arg.barometer or arg.all:
+           print "Barometer: ", baro
+       if arg.accelerometer or arg.all:
+           print "Accelerometer: ", accel
+       if arg.magnetometer or arg.all:
+           print "Magnetometer: ", magn
+       if arg.gyroscope or arg.all:
+           print "Gyroscope: ", gyro
+       if counter >= arg.count:
+           break
+       counter += 1
+       time.sleep(arg.t)
 
     tag.disconnect()
     del tag
