@@ -38,6 +38,8 @@ The Python files are released into the public domain by their author, Ian Harvey
 Release Notes
 -------------
 
+- Added .gitignore file (github issue #17)
+
 Release 0.1.0
 - this has received limited testing and bug fixes on Python 3.4.1
 - fix for exceptions thrown if peripheral sends notifications

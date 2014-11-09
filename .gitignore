@@ -1,0 +1,5 @@
+.DS_Store
+*.pyc
+__pycache__
+bluepy/*.o
+bluepy/bluepy-helper
