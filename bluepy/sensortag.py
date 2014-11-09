@@ -205,7 +205,7 @@ if __name__ == "__main__":
             print("Result", sensor.read())
             time.sleep(1.0)
         sensor.disable()
-    print 'Connecting to %s' % str(sys.argv[1])
+    print 'Connecting to %s' % str(arg.host)
     tag = SensorTag(arg.host)
 
     sensors = [tag.IRtemperature, tag.humidity, tag.barometer,
@@ -227,7 +227,7 @@ if __name__ == "__main__":
            print "Magnetometer: ", magn
        if arg.gyroscope or arg.all:
            print "Gyroscope: ", gyro
-       if counter >= arg.count:
+       if counter >= arg.count and arg.count != 0:
            break
        counter += 1
        time.sleep(arg.t)
