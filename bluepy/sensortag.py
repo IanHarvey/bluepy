@@ -205,7 +205,7 @@ if __name__ == "__main__":
             print("Result", sensor.read())
             time.sleep(1.0)
         sensor.disable()
-    print 'Connecting to %s' % str(arg.host)
+    print('Connecting to ', arg.host)
     tag = SensorTag(arg.host)
 
     sensors = [tag.IRtemperature, tag.humidity, tag.barometer,
@@ -216,17 +216,17 @@ if __name__ == "__main__":
     while True:
        ir, hum, baro, accel, magn, gyro = [ s.read() for s in sensors ]
        if arg.temperature or arg.all:
-           print 'Temp: ', ir
+           print('Temp: ', ir)
        if arg.humidity or arg.all:
-           print "Humidity: ", hum
+           print("Humidity: ", hum)
        if arg.barometer or arg.all:
-           print "Barometer: ", baro
+           print("Barometer: ", baro)
        if arg.accelerometer or arg.all:
-           print "Accelerometer: ", accel
+           print("Accelerometer: ", accel)
        if arg.magnetometer or arg.all:
-           print "Magnetometer: ", magn
+           print("Magnetometer: ", magn)
        if arg.gyroscope or arg.all:
-           print "Gyroscope: ", gyro
+           print("Gyroscope: ", gyro)
        if counter >= arg.count and arg.count != 0:
            break
        counter += 1
