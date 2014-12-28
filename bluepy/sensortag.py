@@ -201,12 +201,6 @@ if __name__ == "__main__":
 
     arg = parser.parse_args(sys.argv[1:])
 
-    def quickTest(sensor):
-        sensor.enable()
-        for i in range(10):
-            print("Result", sensor.read())
-            time.sleep(1.0)
-        sensor.disable()
     print('Connecting to ', arg.host)
     tag = SensorTag(arg.host)
 
