@@ -224,6 +224,10 @@ if __name__ == "__main__":
     if arg.gyroscope or arg.all:
         tag.gyroscope.enable()
 
+    # Some sensors (e.g., temperature, accelerometer) need some time for initialization.
+    # Not waiting here after enabling a sensor, the first read value might be empty or incorrect.
+    time.sleep(1.0)
+
     counter=1
     while True:
        if arg.temperature or arg.all:
