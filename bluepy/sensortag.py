@@ -12,11 +12,13 @@ class SensorBase:
 
     def __init__(self, periph):
         self.periph = periph
-        self.service = self.periph.getServiceByUUID(self.svcUUID)
+        self.service = None
         self.ctrl = None
         self.data = None
 
     def enable(self):
+        if self.service is None:
+            self.service = self.periph.getServiceByUUID(self.svcUUID)
         if self.ctrl is None:
             self.ctrl = self.service.getCharacteristics(self.ctrlUUID) [0]
         if self.data is None:
@@ -168,7 +170,7 @@ class GyroscopeSensor(SensorBase):
 class SensorTag(Peripheral):
     def __init__(self,addr):
         Peripheral.__init__(self,addr)
-        self.discoverServices()
+        # self.discoverServices()
         self.IRtemperature = IRTemperatureSensor(self)
         self.accelerometer = AccelerometerSensor(self)
         self.humidity = HumiditySensor(self)
@@ -199,34 +201,41 @@ if __name__ == "__main__":
 
     arg = parser.parse_args(sys.argv[1:])
 
-    def quickTest(sensor):
-        sensor.enable()
-        for i in range(10):
-            print("Result", sensor.read())
-            time.sleep(1.0)
-        sensor.disable()
     print('Connecting to ', arg.host)
     tag = SensorTag(arg.host)
 
-    sensors = [tag.IRtemperature, tag.humidity, tag.barometer,
-            tag.accelerometer, tag.magnetometer, tag.gyroscope]
-    [ s.enable() for s in sensors ]
-    
+    # Enabling selected sensors
+    if arg.temperature or arg.all:
+        tag.IRtemperature.enable()
+    if arg.humidity or arg.all:
+        tag.humidity.enable()
+    if arg.barometer or arg.all:
+        tag.barometer.enable()
+    if arg.accelerometer or arg.all:
+        tag.accelerometer.enable()
+    if arg.magnetometer or arg.all:
+        tag.magnetometer.enable()
+    if arg.gyroscope or arg.all:
+        tag.gyroscope.enable()
+
+    # Some sensors (e.g., temperature, accelerometer) need some time for initialization.
+    # Not waiting here after enabling a sensor, the first read value might be empty or incorrect.
+    time.sleep(1.0)
+
     counter=1
     while True:
-       ir, hum, baro, accel, magn, gyro = [ s.read() for s in sensors ]
        if arg.temperature or arg.all:
-           print('Temp: ', ir)
+           print('Temp: ', tag.IRtemperature.read())
        if arg.humidity or arg.all:
-           print("Humidity: ", hum)
+           print("Humidity: ", tag.humidity.read())
        if arg.barometer or arg.all:
-           print("Barometer: ", baro)
+           print("Barometer: ", tag.barometer.read())
        if arg.accelerometer or arg.all:
-           print("Accelerometer: ", accel)
+           print("Accelerometer: ", tag.accelerometer.read())
        if arg.magnetometer or arg.all:
-           print("Magnetometer: ", magn)
+           print("Magnetometer: ", tag.magnetometer.read())
        if arg.gyroscope or arg.all:
-           print("Gyroscope: ", gyro)
+           print("Gyroscope: ", tag.gyroscope.read())
        if counter >= arg.count and arg.count != 0:
            break
        counter += 1
