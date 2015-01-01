@@ -77,7 +77,6 @@ TO DO list
 The following are still missing from the current release:
 - Implement 'hcitool lescan' functionality
 - Implement notifications (and with it SensorTag key press service)
-- Sphinx / Doxygen docs
 - Unit test 
 
 
