@@ -130,12 +130,16 @@ class Descriptor:
         return "Descriptor <%s>" % self.uuid.getCommonName()
 
 class Peripheral:
-    def __init__(self, deviceAddr=None):
+    def __init__(self, deviceAddr=None, addressType='public'):
+        if addressType not in ['public', 'random']:
+            raise BTLEException(BTLEException.INTERNAL_ERROR,
+                                "addressType must public or random")
+
         self._helper = None
         self.services = {} # Indexed by UUID
         self.discoveredAllServices = False
         if deviceAddr is not None:
-            self.connect(deviceAddr)
+            self.connect(deviceAddr, addressType)
 
     def _startHelper(self):
         if self._helper is None:
@@ -209,8 +213,7 @@ class Peripheral:
                 errcode=resp['code'][0]
                 raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode)
             elif respType == 'ntfy':
-                DBG("Ignoring notification")
-                continue
+                self.notificationHandler(resp['d'][0])
             else:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response (%s)" % respType)
 
@@ -218,12 +221,12 @@ class Peripheral:
         self._writeCmd("stat\n")
         return self._getResp('stat')
 
-    def connect(self, addr):
+    def connect(self, addr, addrType):
         if len(addr.split(":")) != 6:
             raise ValueError("Expected MAC address, got %s", repr(addr))
         self._startHelper()
         self.deviceAddr = addr
-        self._writeCmd("conn %s\n" % addr)
+        self._writeCmd("conn %s %s\n" % (addr, addrType))
         rsp = self._getResp('stat')
         while rsp['state'][0] == 'tryconn':
             rsp = self._getResp('stat')
@@ -313,6 +316,9 @@ class Peripheral:
     def setMTU(self, mtu):
         self._writeCmd("mtu %x\n" % mtu)
         return self._getResp('stat')
+
+    def notificationHandler(self, data):
+        DBG("Ignoring notification")
 
     def __del__(self):
         self.disconnect()

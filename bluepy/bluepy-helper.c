@@ -453,18 +453,15 @@ static void cmd_connect(int argcp, char **argvp)
 	if (conn_state != STATE_DISCONNECTED)
 		return;
 
-	if (argcp > 1) {
+	if (argcp > 2) {
 		g_free(opt_dst);
-		opt_dst = g_strdup(argvp[1]);
-
 		g_free(opt_dst_type);
-		if (argcp > 2)
-			opt_dst_type = g_strdup(argvp[2]);
-		else
-			opt_dst_type = g_strdup("public");
+
+		opt_dst = g_strdup(argvp[1]);
+		opt_dst_type = g_strdup(argvp[2]);
 	}
 
-	if (opt_dst == NULL) {
+	if (opt_dst == NULL || opt_dst_type == NULL) {
 		resp_error(err_BAD_PARAM);
 		return;
 	}
