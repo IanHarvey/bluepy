@@ -133,7 +133,7 @@ class Peripheral:
     def __init__(self, deviceAddr=None, addressType='public'):
         if addressType not in ['public', 'random']:
             raise BTLEException(BTLEException.INTERNAL_ERROR,
-                                "addressType must public or random")
+                                "addressType must be public or random")
 
         self._helper = None
         self.services = {} # Indexed by UUID
