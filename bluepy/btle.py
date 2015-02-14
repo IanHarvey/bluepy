@@ -556,13 +556,13 @@ if __name__ == '__main__':
         raise ImportError("Cannot find required executable '%s'" % helperExe)
 
     Debugging = False
-    devaddr = sys.argv[1]
+    devAddr = sys.argv[1]
     if len(sys.argv) == 3:
 	    addrType = sys.argv[2]
     else:
 	    addrType = "public"
-    print("Connecting to: {}, address type: {}".format(devaddr, addrType))
-    conn = Peripheral(devaddr, addrType)
+    print("Connecting to: {}, address type: {}".format(devAddr, addrType))
+    conn = Peripheral(devAddr, addrType)
     try:
         for svc in conn.getServices():
             print(str(svc), ":")
