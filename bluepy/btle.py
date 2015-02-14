@@ -130,12 +130,13 @@ class Descriptor:
         return "Descriptor <%s>" % self.uuid.getCommonName()
 
 class Peripheral:
-    def __init__(self, deviceAddr=None):
+    def __init__(self, deviceAddr=None, addrType='public'):
         self._helper = None
         self.services = {} # Indexed by UUID
+	self.addrType = addrType
         self.discoveredAllServices = False
         if deviceAddr is not None:
-            self.connect(deviceAddr)
+            self.connect(deviceAddr, addrType)
 
     def _startHelper(self):
         if self._helper is None:
@@ -218,19 +219,21 @@ class Peripheral:
         self._writeCmd("stat\n")
         return self._getResp('stat')
 
-    def connect(self, addr):
+    def connect(self, addr, addrType):
         if len(addr.split(":")) != 6:
             raise ValueError("Expected MAC address, got %s", repr(addr))
+        if addrType not in ('public', 'random'):
+            raise ValueError("Expected address type public or random, got {}".format(addrType))
         self._startHelper()
         self.deviceAddr = addr
-        self._writeCmd("conn %s\n" % addr)
+        self._writeCmd("conn %s %s\n" % (addr, addrType))
         rsp = self._getResp('stat')
         while rsp['state'][0] == 'tryconn':
             rsp = self._getResp('stat')
         if rsp['state'][0] != 'conn':
             self._stopHelper()
             raise BTLEException(BTLEException.DISCONNECTED,
-                                "Failed to connect to peripheral %s" % addr)
+                                "Failed to connect to peripheral %s, addr type: %s" % (addr, addrType))
 
     def disconnect(self):
         if self._helper is None:
@@ -547,15 +550,19 @@ AssignedNumbers = _UUIDNameMap( [
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        sys.exit("Usage:\n  %s <mac-address>" % sys.argv[0])
+        sys.exit("Usage:\n  %s <mac-address> [random]" % sys.argv[0])
 
     if not os.path.isfile(helperExe):
         raise ImportError("Cannot find required executable '%s'" % helperExe)
 
     Debugging = False
     devaddr = sys.argv[1]
-    print("Connecting to:", devaddr)
-    conn = Peripheral(devaddr)
+    if len(sys.argv) == 3:
+	    addrType = sys.argv[2]
+    else:
+	    addrType = "public"
+    print("Connecting to: {}, address type: {}".format(devaddr, addrType))
+    conn = Peripheral(devaddr, addrType)
     try:
         for svc in conn.getServices():
             print(str(svc), ":")
