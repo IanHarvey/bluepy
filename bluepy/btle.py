@@ -113,6 +113,16 @@ class Characteristic:
              "EXTENDED":     0b10000000,
     }
 
+    propNames = {0b00000001 : "BROADCAST",
+                 0b00000010 : "READ",
+                 0b00000100 : "WRITE NO RESPONSE",
+                 0b00001000 : "WRITE",
+                 0b00010000 : "NOTIFY",
+                 0b00100000 : "INDICATE",
+                 0b01000000 : "WRITE SIGNED",
+                 0b10000000 : "EXTENDED PROPERTIES",
+    }
+
     def __init__(self, *args):
         (self.peripheral, uuidVal, self.handle, self.properties, self.valHandle) = args
         self.uuid = UUID(uuidVal)
@@ -133,6 +143,13 @@ class Characteristic:
             return True
         else:
             return False
+
+    def propertiesToString(self):
+        propStr = ""
+        for p in Characteristic.propNames:
+           if (p & self.properties):
+               propStr += Characteristic.propNames[p] + " "
+        return propStr
 
 class Descriptor:
     def __init__(self, *args):
@@ -580,7 +597,7 @@ if __name__ == '__main__':
         for svc in conn.getServices():
             print(str(svc), ":")
             for ch in svc.getCharacteristics():
-                print("    " + str(ch))
+                print("    {}, supports {}".format(ch, ch.propertiesToString()))
                 chName = AssignedNumbers.getCommonName(ch.uuid)
                 if (ch.supportsRead()):
                     try:
