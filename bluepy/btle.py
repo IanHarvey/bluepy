@@ -101,6 +101,18 @@ class Service:
                                                                  self.hndEnd)
 
 class Characteristic:
+    # Currently only READ is used in supportsRead function,
+    # the rest is included to facilitate supportsXXXX functions if required
+    props = {"BROADCAST":    0b00000001,
+             "READ":         0b00000010,
+             "WRITE_NO_RESP":0b00000100,
+             "WRITE":        0b00001000,
+             "NOTIFY":       0b00010000,
+             "INDICATE":     0b00100000,
+             "WRITE_SIGNED": 0b01000000,
+             "EXTENDED":     0b10000000,
+    }
+
     def __init__(self, *args):
         (self.peripheral, uuidVal, self.handle, self.properties, self.valHandle) = args
         self.uuid = UUID(uuidVal)
@@ -115,6 +127,12 @@ class Characteristic:
 
     def __str__(self):
         return "Characteristic <%s>" % self.uuid.getCommonName()
+
+    def supportsRead(self):
+        if (self.properties & Characteristic.props["READ"]):
+            return True
+        else:
+            return False
 
 class Descriptor:
     def __init__(self, *args):
@@ -564,10 +582,11 @@ if __name__ == '__main__':
             for ch in svc.getCharacteristics():
                 print("    " + str(ch))
                 chName = AssignedNumbers.getCommonName(ch.uuid)
-                try:
-                    print("    ->", repr(ch.read()))
-                except BTLEException as e:
-                    print("    ->", e)
+                if (ch.supportsRead()):
+                    try:
+                        print("    ->", repr(ch.read()))
+                    except BTLEException as e:
+                        print("    ->", e)
 
     finally:
         conn.disconnect()
