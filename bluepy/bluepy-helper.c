@@ -790,6 +790,11 @@ static void cmd_sec_level(int argcp, char **argvp)
                 resp_error(err_COMM_ERR);
 		g_error_free(gerr);
 	}
+	else {
+		/* Tell bluepy the security level 
+		 * has been changed successfuly */
+		cmd_status(0, NULL);
+        }
 }
 
 static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
