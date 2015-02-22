@@ -158,6 +158,9 @@ class Characteristic:
                propStr += Characteristic.propNames[p] + " "
         return propStr
 
+    def getHandle(self):
+        return self.valHandle
+
 class Descriptor:
     def __init__(self, *args):
         (self.peripheral, uuidVal, self.handle) = args
@@ -166,14 +169,26 @@ class Descriptor:
     def __str__(self):
         return "Descriptor <%s>" % self.uuid.getCommonName()
 
+class DefaultDelegate:
+    def __init__(self):
+        pass
+
+    def handleNotification(self, cHandle, data):
+        DBG("Notification:", cHandle, "sent data", binascii.b2a_hex(data))
+
+
 class Peripheral:
     def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC):
         self._helper = None
         self.services = {} # Indexed by UUID
 	self.addrType = addrType
         self.discoveredAllServices = False
+        self.delegate = DefaultDelegate()
         if deviceAddr is not None:
             self.connect(deviceAddr, addrType)
+
+    def setDelegate(self, delegate_):
+        self.delegate = delegate_
 
     def _startHelper(self):
         if self._helper is None:
@@ -247,7 +262,9 @@ class Peripheral:
                 errcode=resp['code'][0]
                 raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode)
             elif respType == 'ntfy':
-                DBG("Ignoring notification")
+                hnd = resp['hnd'][0]
+                data = resp['d'][0]
+                self.delegate.handleNotification(hnd, data)
                 continue
             else:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response (%s)" % respType)
@@ -592,7 +609,6 @@ if __name__ == '__main__':
     if not os.path.isfile(helperExe):
         raise ImportError("Cannot find required executable '%s'" % helperExe)
 
-    Debugging = False
     devAddr = sys.argv[1]
     if len(sys.argv) == 3:
 	    addrType = sys.argv[2]

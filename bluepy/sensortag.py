@@ -1,4 +1,4 @@
-from btle import UUID, Peripheral
+from btle import UUID, Peripheral, DefaultDelegate
 import struct
 import math
 
@@ -161,11 +161,18 @@ class GyroscopeSensor(SensorBase):
         x_y_z = struct.unpack('<hhh', self.data.read())
         return tuple([ 250.0 * (v/32768.0) for v in x_y_z ])
 
-#class KeypressSensor(SensorBase):
-# TODO: only sends notifications, you can't poll it
-#    svcUUID = UUID(0xFFE0)
-# write 0100 to 0x60
-# get notifications on 5F
+class KeypressSensor(SensorBase):
+    svcUUID = UUID(0xFFE0)
+    dataUUID = UUID(0xFFE1)
+
+    def __init__(self, periph):
+        SensorBase.__init__(self, periph)
+ 
+    def enable(self):
+        self.periph.writeCharacteristic(0x60, struct.pack('<bb', 0x01, 0x00))
+
+    def disable(self):
+        self.periph.writeCharacteristic(0x60, struct.pack('<bb', 0x00, 0x00))
 
 class SensorTag(Peripheral):
     def __init__(self,addr):
@@ -177,7 +184,41 @@ class SensorTag(Peripheral):
         self.magnetometer = MagnetometerSensor(self)
         self.barometer = BarometerSensor(self)
         self.gyroscope = GyroscopeSensor(self)
-        # self.keypress = KeypressSensor(self)
+        self.keypress = KeypressSensor(self)
+
+
+class KeypressDelegate(DefaultDelegate):
+    BUTTON_L = 0x02
+    BUTTON_R = 0x01
+    ALL_BUTTONS = (BUTTON_L | BUTTON_R)
+
+    _button_desc = { 
+        BUTTON_L : "Left button",
+        BUTTON_R : "Right button",
+        ALL_BUTTONS : "Both buttons"
+    } 
+
+    def __init__(self):
+        DefaultDelegate.__init__(self)
+        self.lastVal = 0
+
+    def handleNotification(self, hnd, data):
+        # NB: only one source of notifications at present
+        # so we can ignore 'hnd'.
+        val = struct.unpack("B", data)[0]
+        down = (val & ~self.lastVal) & self.ALL_BUTTONS
+        if down != 0:
+            self.onButtonDown(down)
+        up = (~val & self.lastVal) & self.ALL_BUTTONS
+        if up != 0:
+            self.onButtonUp(up)
+        self.lastVal = val
+
+    def onButtonUp(self, but):
+        print ( "** " + self._button_desc[but] + " UP")
+
+    def onButtonDown(self, but):
+        print ( "** " + self._button_desc[but] + " DOWN")
 
 if __name__ == "__main__":
     import time
@@ -197,6 +238,7 @@ if __name__ == "__main__":
             default=False)
     parser.add_argument('-B','--barometer', action='store_true', default=False)
     parser.add_argument('-G','--gyroscope', action='store_true', default=False)
+    parser.add_argument('-K','--keypress', action='store_true', default=False)
     parser.add_argument('--all', action='store_true', default=False)
 
     arg = parser.parse_args(sys.argv[1:])
@@ -217,6 +259,9 @@ if __name__ == "__main__":
         tag.magnetometer.enable()
     if arg.gyroscope or arg.all:
         tag.gyroscope.enable()
+    if arg.keypress or arg.all:
+        tag.keypress.enable()
+        tag.setDelegate(KeypressDelegate())
 
     # Some sensors (e.g., temperature, accelerometer) need some time for initialization.
     # Not waiting here after enabling a sensor, the first read value might be empty or incorrect.
