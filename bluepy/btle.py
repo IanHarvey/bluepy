@@ -14,6 +14,8 @@ SEC_LEVEL_LOW = "low"
 SEC_LEVEL_MEDIUM = "medium"
 SEC_LEVEL_HIGH = "high"
 
+ADDR_TYPE_PUBLIC = "public"
+ADDR_TYPE_RANDOM = "random"
 
 def DBG(*args):
     if Debugging:
@@ -165,7 +167,7 @@ class Descriptor:
         return "Descriptor <%s>" % self.uuid.getCommonName()
 
 class Peripheral:
-    def __init__(self, deviceAddr=None, addrType='public'):
+    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC):
         self._helper = None
         self.services = {} # Indexed by UUID
 	self.addrType = addrType
@@ -256,8 +258,8 @@ class Peripheral:
 
     def connect(self, addr, addrType):
         if len(addr.split(":")) != 6:
-            raise ValueError("Expected MAC address, got %s", repr(addr))
-        if addrType not in ('public', 'random'):
+            raise ValueError("Expected MAC address, got %s" % repr(addr))
+        if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
             raise ValueError("Expected address type public or random, got {}".format(addrType))
         self._startHelper()
         self.deviceAddr = addr
@@ -595,7 +597,7 @@ if __name__ == '__main__':
     if len(sys.argv) == 3:
 	    addrType = sys.argv[2]
     else:
-	    addrType = "public"
+	    addrType = ADDR_TYPE_PUBLIC
     print("Connecting to: {}, address type: {}".format(devAddr, addrType))
     conn = Peripheral(devAddr, addrType)
     try:
