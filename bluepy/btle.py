@@ -10,11 +10,6 @@ import binascii
 Debugging = False
 helperExe = os.path.join(os.path.abspath(os.path.dirname(__file__)), "bluepy-helper")
 
-SEC_LEVEL_LOW = "low"
-SEC_LEVEL_MEDIUM = "medium"
-SEC_LEVEL_HIGH = "high"
-
-
 def DBG(*args):
     if Debugging:
         msg = " ".join([str(a) for a in args])
@@ -106,6 +101,28 @@ class Service:
                                                                  self.hndEnd)
 
 class Characteristic:
+    # Currently only READ is used in supportsRead function,
+    # the rest is included to facilitate supportsXXXX functions if required
+    props = {"BROADCAST":    0b00000001,
+             "READ":         0b00000010,
+             "WRITE_NO_RESP":0b00000100,
+             "WRITE":        0b00001000,
+             "NOTIFY":       0b00010000,
+             "INDICATE":     0b00100000,
+             "WRITE_SIGNED": 0b01000000,
+             "EXTENDED":     0b10000000,
+    }
+
+    propNames = {0b00000001 : "BROADCAST",
+                 0b00000010 : "READ",
+                 0b00000100 : "WRITE NO RESPONSE",
+                 0b00001000 : "WRITE",
+                 0b00010000 : "NOTIFY",
+                 0b00100000 : "INDICATE",
+                 0b01000000 : "WRITE SIGNED",
+                 0b10000000 : "EXTENDED PROPERTIES",
+    }
+
     def __init__(self, *args):
         (self.peripheral, uuidVal, self.handle, self.properties, self.valHandle) = args
         self.uuid = UUID(uuidVal)
@@ -121,6 +138,19 @@ class Characteristic:
     def __str__(self):
         return "Characteristic <%s>" % self.uuid.getCommonName()
 
+    def supportsRead(self):
+        if (self.properties & Characteristic.props["READ"]):
+            return True
+        else:
+            return False
+
+    def propertiesToString(self):
+        propStr = ""
+        for p in Characteristic.propNames:
+           if (p & self.properties):
+               propStr += Characteristic.propNames[p] + " "
+        return propStr
+
 class Descriptor:
     def __init__(self, *args):
         (self.peripheral, uuidVal, self.handle) = args
@@ -130,12 +160,13 @@ class Descriptor:
         return "Descriptor <%s>" % self.uuid.getCommonName()
 
 class Peripheral:
-    def __init__(self, deviceAddr=None):
+    def __init__(self, deviceAddr=None, addrType='public'):
         self._helper = None
         self.services = {} # Indexed by UUID
+	self.addrType = addrType
         self.discoveredAllServices = False
         if deviceAddr is not None:
-            self.connect(deviceAddr)
+            self.connect(deviceAddr, addrType)
 
     def _startHelper(self):
         if self._helper is None:
@@ -218,19 +249,21 @@ class Peripheral:
         self._writeCmd("stat\n")
         return self._getResp('stat')
 
-    def connect(self, addr):
+    def connect(self, addr, addrType):
         if len(addr.split(":")) != 6:
             raise ValueError("Expected MAC address, got %s", repr(addr))
+        if addrType not in ('public', 'random'):
+            raise ValueError("Expected address type public or random, got {}".format(addrType))
         self._startHelper()
         self.deviceAddr = addr
-        self._writeCmd("conn %s\n" % addr)
+        self._writeCmd("conn %s %s\n" % (addr, addrType))
         rsp = self._getResp('stat')
         while rsp['state'][0] == 'tryconn':
             rsp = self._getResp('stat')
         if rsp['state'][0] != 'conn':
             self._stopHelper()
             raise BTLEException(BTLEException.DISCONNECTED,
-                                "Failed to connect to peripheral %s" % addr)
+                                "Failed to connect to peripheral %s, addr type: %s" % (addr, addrType))
 
     def disconnect(self):
         if self._helper is None:
@@ -547,25 +580,30 @@ AssignedNumbers = _UUIDNameMap( [
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        sys.exit("Usage:\n  %s <mac-address>" % sys.argv[0])
+        sys.exit("Usage:\n  %s <mac-address> [random]" % sys.argv[0])
 
     if not os.path.isfile(helperExe):
         raise ImportError("Cannot find required executable '%s'" % helperExe)
 
     Debugging = False
-    devaddr = sys.argv[1]
-    print("Connecting to:", devaddr)
-    conn = Peripheral(devaddr)
+    devAddr = sys.argv[1]
+    if len(sys.argv) == 3:
+	    addrType = sys.argv[2]
+    else:
+	    addrType = "public"
+    print("Connecting to: {}, address type: {}".format(devAddr, addrType))
+    conn = Peripheral(devAddr, addrType)
     try:
         for svc in conn.getServices():
             print(str(svc), ":")
             for ch in svc.getCharacteristics():
-                print("    " + str(ch))
+                print("    {}, supports {}".format(ch, ch.propertiesToString()))
                 chName = AssignedNumbers.getCommonName(ch.uuid)
-                try:
-                    print("    ->", repr(ch.read()))
-                except BTLEException as e:
-                    print("    ->", e)
+                if (ch.supportsRead()):
+                    try:
+                        print("    ->", repr(ch.read()))
+                    except BTLEException as e:
+                        print("    ->", e)
 
     finally:
         conn.disconnect()
