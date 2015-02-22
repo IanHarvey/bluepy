@@ -10,6 +10,11 @@ import binascii
 Debugging = False
 helperExe = os.path.join(os.path.abspath(os.path.dirname(__file__)), "bluepy-helper")
 
+SEC_LEVEL_LOW = "low"
+SEC_LEVEL_MEDIUM = "medium"
+SEC_LEVEL_HIGH = "high"
+
+
 def DBG(*args):
     if Debugging:
         msg = " ".join([str(a) for a in args])
