@@ -243,7 +243,7 @@ if __name__ == "__main__":
 
     arg = parser.parse_args(sys.argv[1:])
 
-    print('Connecting to ', arg.host)
+    print('Connecting to ' + arg.host)
     tag = SensorTag(arg.host)
 
     # Enabling selected sensors
@@ -284,7 +284,7 @@ if __name__ == "__main__":
        if counter >= arg.count and arg.count != 0:
            break
        counter += 1
-       time.sleep(arg.t)
+       tag.waitForNotifications(arg.t)
 
     tag.disconnect()
     del tag

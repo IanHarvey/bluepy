@@ -6,6 +6,7 @@ import os
 import time
 import subprocess
 import binascii
+import select
 
 Debugging = False
 helperExe = os.path.join(os.path.abspath(os.path.dirname(__file__)), "bluepy-helper")
@@ -180,6 +181,7 @@ class DefaultDelegate:
 class Peripheral:
     def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC):
         self._helper = None
+        self._poller = None
         self.services = {} # Indexed by UUID
 	self.addrType = addrType
         self.discoveredAllServices = False
@@ -197,10 +199,13 @@ class Peripheral:
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
                                             universal_newlines=True)
+            self._poller = select.poll()
+            self._poller.register(self._helper.stdout, select.POLLIN)
 
     def _stopHelper(self):
         if self._helper is not None:
             DBG("Stopping ", helperExe)
+            self._poller.unregister(self._helper.stdout)
             self._helper.stdin.write("quit\n")
             self._helper.stdin.flush()
             self._helper.wait()
@@ -238,10 +243,16 @@ class Peripheral:
                 resp[tag].append(val)
         return resp
 
-    def _getResp(self, wantType):
+    def _getResp(self, wantType, timeout=None):
         while True:
             if self._helper.poll() is not None:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Helper exited")
+
+            if timeout:
+                fds = self._poller.poll(timeout*1000)
+                if len(fds) == 0:
+                    DBG("Select timeout")
+                    return None
 
             rv = self._helper.stdout.readline()
             DBG("Got:", repr(rv))
@@ -253,6 +264,13 @@ class Peripheral:
                 raise BTLEException(BTLEException.INTERNAL_ERROR,
                                 "No response type indicator")
             respType = resp['rsp'][0]
+            if respType == 'ntfy':
+                hnd = resp['hnd'][0]
+                data = resp['d'][0]
+                self.delegate.handleNotification(hnd, data)
+                if wantType != respType:
+                    continue
+
             if respType == wantType:
                 return resp
             elif respType == 'stat' and resp['state'][0] == 'disc':
@@ -261,11 +279,6 @@ class Peripheral:
             elif respType == 'err':
                 errcode=resp['code'][0]
                 raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode)
-            elif respType == 'ntfy':
-                hnd = resp['hnd'][0]
-                data = resp['d'][0]
-                self.delegate.handleNotification(hnd, data)
-                continue
             else:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response (%s)" % respType)
 
@@ -370,6 +383,10 @@ class Peripheral:
     def setMTU(self, mtu):
         self._writeCmd("mtu %x\n" % mtu)
         return self._getResp('stat')
+
+    def waitForNotifications(self, timeout):
+         resp = self._getResp('ntfy', timeout)
+         return (resp != None)
 
     def __del__(self):
         self.disconnect()
