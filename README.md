@@ -9,8 +9,6 @@ Raspberry Pi, but it will also run on x86 Debian Linux.
 
 There is also code which uses this to talk to a TI SensorTag (www.ti.com/sensortag).
 
-This is beta-quality code, not all LE functions are implemented.
-
 Installation
 ------------
 
@@ -38,12 +36,20 @@ An online version of this is currently available at: http://ianharvey.github.io/
 License
 -------
 
-This project uses code from the bluez project, which is available under the GPL.
+This project uses code from the bluez project, which is available under the Version 2
+of the GNU Public License.
 
 The Python files are released into the public domain by their author, Ian Harvey.
 
 Release Notes
 -------------
+
+Release 0.9.0
+- Support for Notifications
+- SensorTag code now supports keypress service
+- Bug fix for SetSecurityLevel
+- Support for Random address type
+- More characteristic and service UUIDs added
 
 Release 0.2.0
 
@@ -75,9 +81,9 @@ TO DO list
 ----------
 
 The following are still missing from the current release:
+- Build into easily installable package
 - Implement 'hcitool lescan' functionality
-- Implement notifications (and with it SensorTag key press service)
+- Reading RSSI
 - Unit test 
-
 
 

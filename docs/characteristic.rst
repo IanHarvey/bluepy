@@ -32,4 +32,19 @@ Instance Methods
     Setting the *withResponse* parameter to *True* will make this request. A 
     `BTLEException` will be raised if the confirmation process fails.
     
+.. function:: supportsRead()
+
+    Returns *True* if the characteristic can be read (as indicated by its properties)
+    and *False* otherwise.
  
+.. function:: propertiesToString()
+
+    Returns a string describing the characteristic properties ('READ', 'WRITE', etc).
+
+.. function:: getHandle()
+
+    Returns the 16-bit integer value used to identify the characteristic in the
+    underlying GATT protocol. This may be useful to distinguish between notifications
+    from different characteristics (see :ref:`notifications` for further information).
+
+

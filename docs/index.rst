@@ -22,6 +22,7 @@ Contents:
    service
    characteristic
    descriptor
+   notifications
    assignednumbers
 
 Indices and tables

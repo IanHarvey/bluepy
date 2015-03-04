@@ -8,13 +8,18 @@ Bluepy's ``Peripheral`` class encapsulates a connection to a Bluetooth LE periph
 Constructor
 -----------
 
-.. function:: Peripheral([deviceAddress=None])
+.. function:: Peripheral([deviceAddress=None, [addrType=ADDR_TYPE_PUBLIC]])
 
    If *deviceAddress* is not ``None``, creates a ``Peripheral`` object and makes a connection
    to the device indicated by *deviceAddress* (which should be a string comprising six hex
    bytes separated by colons, e.g. ``"11:22:33:ab:cd:ed"``).
    
    If *deviceAddress* is ``None``, creates an un-connected ``Peripheral`` object. You must call the ``connect()`` method on this object (passing it a device address) before it will be usable.
+
+   The *addrType* parameter can be used to select between fixed (``btle.ADDR_TYPE_PUBLIC``)
+   and random (``btle.ADDR_TYPE_RANDOM``) address types, depending on what the target
+   peripheral requires. See section 10.8 of the Bluetooth 4.0 specification for more
+   details.
 
    The constructor will throw a ``BTLEException`` if connection to the device fails.
    
@@ -72,4 +77,22 @@ Instance Methods
     a particular service.
   
     If no matching descriptors are found, returns an empty list.
+
+.. function:: setDelegate(delegate):
+
+    This stores a reference to a "delegate" object, which is called when asynchronous
+    events such as Bluetooth notifications occur. This should be a subclass of the
+    ``DefaultDelegate`` class. See :ref:`notifications` for more information.
+
+.. function:: waitForNotifications(timeout):
+
+    Blocks until a notification is received from the peripheral, or until the 
+    given *timeout* (in seconds) has elapsed. If a notification is received, the
+    delegate object's ``handleNotification()`` method will be called, and
+    ``waitForNotifications()`` will then return ``True``.
+
+    If nothing is received before the timeout elapses, this will return ``False``.
+
+
+    
 
