@@ -213,12 +213,36 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
 }
 
+static void srv_events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
+{
+	uint8_t *opdu;
+	uint8_t opcode;
+	uint16_t handle, i, olen;
+	size_t plen;
+
+	opcode = pdu[0];
+
+	if ( opcode != ATT_OP_FIND_BY_TYPE_REQ )
+	{
+		printf("#Invalid opcode %02X in server event handler??\n", opcode);
+		return;
+	}
+
+	assert( len >= 3 );
+	handle = att_get_u16(&pdu[1]);
+
+	opdu = g_attrib_get_buffer(attrib, &plen);
+	olen = enc_error_resp(opcode, handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
+	if (olen > 0)
+		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
+}
+
 static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
 {
 	if (err) {
 		set_state(STATE_DISCONNECTED);
 		resp_error(err_CONN_FAIL);
-                printf("# Connect error: %s\n", err->message);
+		printf("# Connect error: %s\n", err->message);
 		return;
 	}
 
@@ -227,6 +251,8 @@ static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
 						events_handler, attrib, NULL);
 	g_attrib_register(attrib, ATT_OP_HANDLE_IND, GATTRIB_ALL_HANDLES,
 						events_handler, attrib, NULL);
+	g_attrib_register(attrib, ATT_OP_FIND_BY_TYPE_REQ, GATTRIB_ALL_HANDLES,
+						srv_events_handler, attrib, NULL);
 	set_state(STATE_CONNECTED);
 }
 
