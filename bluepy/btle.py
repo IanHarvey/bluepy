@@ -355,11 +355,22 @@ class Peripheral:
                 for i in range(nChars)]
 
     def getDescriptors(self, startHnd=1, endHnd=0xFFFF):
+        descriptors = []
         self._writeCmd("desc %X %X\n" % (startHnd, endHnd) )
-        resp = self._getResp('desc')
-        nDesc = len(resp['hnd'])
-        return [Descriptor(self, resp['uuid'][i], resp['hnd'][i]) for i in
-                range(nDesc)]
+        # Certain Bluetooth LE devices are not capable of sending back all
+        # descriptors in one packet due to the limited size of MTU. So the
+        # guest needs to check the response and make retries until all handles
+        # are returned.
+        # In bluez 5.25, gatt_discover_desc() in attrib/gatt.c does the retry
+        # so bluetooth_helper always returns a full list.
+        # In bluez 5.4, gatt_find_info() does not make the retry anymore but
+        # bluetooth_helper does. However bluetoth_helper returns the handles in
+        # multiple response so here we need to wait until all of them are returned
+        while len(descriptors) < endHnd - startHnd + 1:
+            resp = self._getResp('desc')
+            nDesc = len(resp['hnd'])
+            descriptors += [Descriptor(self, resp['uuid'][i], resp['hnd'][i]) for i in range(nDesc)]
+        return descriptors
 
     def readCharacteristic(self, handle):
         self._writeCmd("rd %X\n" % handle)
