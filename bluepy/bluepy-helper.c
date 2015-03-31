@@ -183,25 +183,25 @@ static void set_state(enum state st)
 static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 {
 	uint8_t *opdu;
-        uint8_t evt;
-	uint16_t handle, i, olen;
+	uint8_t evt;
+	uint16_t handle, olen;
 	size_t plen;
 
-        evt = pdu[0];
+	evt = pdu[0];
 
-        if ( evt != ATT_OP_HANDLE_NOTIFY && evt != ATT_OP_HANDLE_IND )
-        {
-          printf("#Invalid opcode %02X in event handler??\n", evt);
-          return;
-        }
+	if ( evt != ATT_OP_HANDLE_NOTIFY && evt != ATT_OP_HANDLE_IND )
+	{
+		printf("#Invalid opcode %02X in event handler??\n", evt);
+		return;
+	}
 
-        assert( len >= 3 );
+	assert( len >= 3 );
 	handle = att_get_u16(&pdu[1]);
 
-        resp_begin( evt==ATT_OP_HANDLE_NOTIFY ? rsp_NOTIFY : rsp_IND );
-        send_uint( tag_HANDLE, handle );
-        send_data( pdu+3, len-3 );
-        resp_end();
+	resp_begin( evt==ATT_OP_HANDLE_NOTIFY ? rsp_NOTIFY : rsp_IND );
+	send_uint( tag_HANDLE, handle );
+	send_data( pdu+3, len-3 );
+	resp_end();
 
 	if (evt == ATT_OP_HANDLE_NOTIFY)
 		return;
@@ -213,12 +213,214 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
 }
 
+static void gatts_find_info_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
+{
+	uint8_t *opdu;
+	uint8_t opcode;
+	uint16_t starting_handle, ending_handle, olen;
+	size_t plen;
+
+	assert( len == 5 );
+	opcode = pdu[0];
+	starting_handle = att_get_u16(&pdu[1]);
+	ending_handle = att_get_u16(&pdu[3]);
+
+	opdu = g_attrib_get_buffer(attrib, &plen);
+	olen = enc_error_resp(opcode, starting_handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
+	if (olen > 0)
+		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
+}
+
+static void gatts_find_by_type_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
+{
+	uint8_t *opdu;
+	uint8_t opcode;
+	uint16_t starting_handle, ending_handle, att_type, olen;
+	size_t plen;
+
+	assert( len >= 7 );
+	opcode = pdu[0];
+	starting_handle = att_get_u16(&pdu[1]);
+	ending_handle = att_get_u16(&pdu[3]);
+	att_type = att_get_u16(&pdu[5]);
+
+	opdu = g_attrib_get_buffer(attrib, &plen);
+	olen = enc_error_resp(opcode, starting_handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
+	if (olen > 0)
+		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
+}
+
+static void gatts_read_by_type_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
+{
+	uint8_t *opdu;
+	uint8_t opcode;
+	uint16_t starting_handle, ending_handle, att_type, olen;
+	size_t plen;
+
+	assert( len == 7 || len == 21 );
+	opcode = pdu[0];
+	starting_handle = att_get_u16(&pdu[1]);
+	ending_handle = att_get_u16(&pdu[3]);
+	if (len == 7) {
+		att_type = att_get_u16(&pdu[5]);
+	}
+
+	opdu = g_attrib_get_buffer(attrib, &plen);
+	olen = enc_error_resp(opcode, starting_handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
+	if (olen > 0)
+		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
+}
+
+static void gatts_read_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
+{
+	uint8_t *opdu;
+	uint8_t opcode;
+	uint16_t handle, olen;
+	size_t plen;
+
+	assert( len == 3 );
+	opcode = pdu[0];
+	handle = att_get_u16(&pdu[1]);
+
+	opdu = g_attrib_get_buffer(attrib, &plen);
+	olen = enc_error_resp(opcode, handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
+	if (olen > 0)
+		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
+}
+
+static void gatts_read_blob_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
+{
+	uint8_t *opdu;
+	uint8_t opcode;
+	uint16_t handle, offset, olen;
+	size_t plen;
+
+	assert( len == 5 );
+	opcode = pdu[0];
+	handle = att_get_u16(&pdu[1]);
+	offset = att_get_u16(&pdu[3]);
+
+	opdu = g_attrib_get_buffer(attrib, &plen);
+	olen = enc_error_resp(opcode, handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
+	if (olen > 0)
+		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
+}
+
+static void gatts_read_multi_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
+{
+	uint8_t *opdu;
+	uint8_t opcode;
+	uint16_t handle1, handle2, offset, olen;
+	size_t plen;
+
+	assert( len >= 5 );
+	opcode = pdu[0];
+	handle1 = att_get_u16(&pdu[1]);
+	handle2 = att_get_u16(&pdu[3]);
+
+	opdu = g_attrib_get_buffer(attrib, &plen);
+	olen = enc_error_resp(opcode, handle1, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
+	if (olen > 0)
+		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
+}
+
+static void gatts_read_by_group_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
+{
+	uint8_t *opdu;
+	uint8_t opcode;
+	uint16_t starting_handle, ending_handle, att_group_type, olen;
+	size_t plen;
+
+	assert( len >= 7 );
+	opcode = pdu[0];
+	starting_handle = att_get_u16(&pdu[1]);
+	ending_handle = att_get_u16(&pdu[3]);
+	att_group_type = att_get_u16(&pdu[5]);
+
+	opdu = g_attrib_get_buffer(attrib, &plen);
+	olen = enc_error_resp(opcode, starting_handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
+	if (olen > 0)
+		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
+}
+
+static void gatts_write_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
+{
+	uint8_t *opdu;
+	uint8_t opcode;
+	uint16_t handle, olen;
+	size_t plen;
+
+	assert( len >= 3 );
+	opcode = pdu[0];
+	handle = att_get_u16(&pdu[1]);
+
+	opdu = g_attrib_get_buffer(attrib, &plen);
+	olen = enc_error_resp(opcode, handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
+	if (olen > 0)
+		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
+}
+
+static void gatts_write_cmd(const uint8_t *pdu, uint16_t len, gpointer user_data)
+{
+	uint8_t opcode;
+	uint16_t handle;
+
+	assert( len >= 3 );
+	opcode = pdu[0];
+	handle = att_get_u16(&pdu[1]);
+}
+
+static void gatts_signed_write_cmd(const uint8_t *pdu, uint16_t len, gpointer user_data)
+{
+	uint8_t opcode;
+	uint16_t handle;
+
+	assert( len >= 15 );
+	opcode = pdu[0];
+	handle = att_get_u16(&pdu[1]);
+}
+
+static void gatts_prep_write_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
+{
+	uint8_t *opdu;
+	uint8_t opcode;
+	uint16_t handle, offset, olen;
+	size_t plen;
+
+	assert( len >= 5 );
+	opcode = pdu[0];
+	handle = att_get_u16(&pdu[1]);
+	offset = att_get_u16(&pdu[3]);
+
+	opdu = g_attrib_get_buffer(attrib, &plen);
+	olen = enc_error_resp(opcode, handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
+	if (olen > 0)
+		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
+}
+
+static void gatts_exec_write_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
+{
+	uint8_t *opdu;
+	uint8_t opcode, flags;
+	uint16_t olen;
+	size_t plen;
+
+	assert( len == 5 );
+	opcode = pdu[0];
+	flags = pdu[1];
+
+	opdu = g_attrib_get_buffer(attrib, &plen);
+	olen = enc_error_resp(opcode, 0, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
+	if (olen > 0)
+		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
+}
+
 static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
 {
 	if (err) {
 		set_state(STATE_DISCONNECTED);
 		resp_error(err_CONN_FAIL);
-                printf("# Connect error: %s\n", err->message);
+		printf("# Connect error: %s\n", err->message);
 		return;
 	}
 
@@ -227,6 +429,31 @@ static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
 						events_handler, attrib, NULL);
 	g_attrib_register(attrib, ATT_OP_HANDLE_IND, GATTRIB_ALL_HANDLES,
 						events_handler, attrib, NULL);
+	g_attrib_register(attrib, ATT_OP_FIND_INFO_REQ, GATTRIB_ALL_HANDLES,
+	                  gatts_find_info_req, attrib, NULL);
+	g_attrib_register(attrib, ATT_OP_FIND_BY_TYPE_REQ, GATTRIB_ALL_HANDLES,
+	                  gatts_find_by_type_req, attrib, NULL);
+	g_attrib_register(attrib, ATT_OP_READ_BY_TYPE_REQ, GATTRIB_ALL_HANDLES,
+	                  gatts_read_by_type_req, attrib, NULL);
+	g_attrib_register(attrib, ATT_OP_READ_REQ, GATTRIB_ALL_HANDLES,
+	                  gatts_read_req, attrib, NULL);
+	g_attrib_register(attrib, ATT_OP_READ_BLOB_REQ, GATTRIB_ALL_HANDLES,
+	                  gatts_read_blob_req, attrib, NULL);
+	g_attrib_register(attrib, ATT_OP_READ_MULTI_REQ, GATTRIB_ALL_HANDLES,
+	                  gatts_read_multi_req, attrib, NULL);
+	g_attrib_register(attrib, ATT_OP_READ_BY_GROUP_REQ, GATTRIB_ALL_HANDLES,
+	                  gatts_read_by_group_req, attrib, NULL);
+	g_attrib_register(attrib, ATT_OP_WRITE_REQ, GATTRIB_ALL_HANDLES,
+	                  gatts_write_req, attrib, NULL);
+	g_attrib_register(attrib, ATT_OP_WRITE_CMD, GATTRIB_ALL_HANDLES,
+	                  gatts_write_cmd, attrib, NULL);
+	g_attrib_register(attrib, ATT_OP_SIGNED_WRITE_CMD, GATTRIB_ALL_HANDLES,
+	                  gatts_signed_write_cmd, attrib, NULL);
+	g_attrib_register(attrib, ATT_OP_PREP_WRITE_REQ, GATTRIB_ALL_HANDLES,
+	                  gatts_prep_write_req, attrib, NULL);
+	g_attrib_register(attrib, ATT_OP_EXEC_WRITE_REQ, GATTRIB_ALL_HANDLES,
+	                  gatts_exec_write_req, attrib, NULL);
+
 	set_state(STATE_CONNECTED);
 }
 

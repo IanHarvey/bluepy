@@ -3,3 +3,10 @@
 __pycache__
 bluepy/*.o
 bluepy/bluepy-helper
+# eclipse project related files
+.settings/
+.cproject
+.project
+# cygwin modified files
+bluez-5.4/src/bluetoothd
+bluez-5.4/attrib/gatttool
