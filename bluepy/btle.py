@@ -260,7 +260,8 @@ class Peripheral:
             if respType == 'ntfy':
                 hnd = resp['hnd'][0]
                 data = resp['d'][0]
-                self.delegate.handleNotification(hnd, data)
+                if self.delegate is not None:
+                    self.delegate.handleNotification(hnd, data)
                 if wantType != respType:
                     continue
 
@@ -298,6 +299,9 @@ class Peripheral:
     def disconnect(self):
         if self._helper is None:
             return
+        # Unregister the delegate first
+        self.setDelegate(None)
+
         self._writeCmd("disc\n")
         self._getResp('stat')
         self._stopHelper()
