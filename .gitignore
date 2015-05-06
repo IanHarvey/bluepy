@@ -10,3 +10,4 @@ bluepy/bluepy-helper
 # cygwin modified files
 bluez-5.4/src/bluetoothd
 bluez-5.4/attrib/gatttool
+*.swp
