@@ -273,11 +273,11 @@ class Peripheral:
                     continue
                     
             if respType == 'ind':
-		hnd = resp['hnd'][0]
-		data = resp['d'][0]
-		self.delegate.handleNotification(hnd, data)
-		if wantType != respType:
-		    continue
+                hnd = resp['hnd'][0]
+                data = resp['d'][0]
+                self.delegate.handleNotification(hnd, data)
+                if wantType != respType:
+                    continue
 
             if respType == wantType:
                 return resp
@@ -650,9 +650,9 @@ if __name__ == '__main__':
 
     devAddr = sys.argv[1]
     if len(sys.argv) == 3:
-	    addrType = sys.argv[2]
+        addrType = sys.argv[2]
     else:
-	    addrType = ADDR_TYPE_PUBLIC
+        addrType = ADDR_TYPE_PUBLIC
     print("Connecting to: {}, address type: {}".format(devAddr, addrType))
     conn = Peripheral(devAddr, addrType)
     try:
