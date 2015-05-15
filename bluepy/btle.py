@@ -6,7 +6,7 @@ import os
 import time
 import subprocess
 import binascii
-from .line_reader import LineReader
+import select
 
 Debugging = False
 helperExe = os.path.join(os.path.abspath(os.path.dirname(__file__)), "bluepy-helper")
@@ -22,6 +22,7 @@ def DBG(*args):
     if Debugging:
         msg = " ".join([str(a) for a in args])
         print(msg)
+
 
 class BTLEException(Exception):
 
@@ -176,10 +177,11 @@ class DefaultDelegate:
     def handleNotification(self, cHandle, data):
         DBG("Notification:", cHandle, "sent data", binascii.b2a_hex(data))
 
+
 class Peripheral:
     def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC):
         self._helper = None
-        self._linereader = None
+        self._poller = None
         self.services = {} # Indexed by UUID
         self.addrType = addrType
         self.discoveredAllServices = False
@@ -193,15 +195,17 @@ class Peripheral:
     def _startHelper(self):
         if self._helper is None:
             DBG("Running ", helperExe)
-            self._helper = subprocess.Popen([helperExe], bufsize=0,
+            self._helper = subprocess.Popen([helperExe],
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
                                             universal_newlines=True)
-            self._linereader = LineReader(self._helper.stdout.fileno())
+            self._poller = select.poll()
+            self._poller.register(self._helper.stdout, select.POLLIN)
 
     def _stopHelper(self):
         if self._helper is not None:
             DBG("Stopping ", helperExe)
+            self._poller.unregister(self._helper.stdout)
             self._helper.stdin.write("quit\n")
             self._helper.stdin.flush()
             self._helper.wait()
@@ -240,14 +244,17 @@ class Peripheral:
         return resp
 
     def _getResp(self, wantType, timeout=None):
-        start_time = time.time()
-        while timeout is None or time.time() - start_time < timeout:
-            rv = self._linereader.readline(timeout)
+        while True:
+            if self._helper.poll() is not None:
+                raise BTLEException(BTLEException.INTERNAL_ERROR, "Helper exited")
 
-            if rv is None:
-                continue
-            # Convert from bytearray to string
-            rv = ''.join(map(chr, rv))
+            if timeout:
+                fds = self._poller.poll(timeout*1000)
+                if len(fds) == 0:
+                    DBG("Select timeout")
+                    return None
+
+            rv = self._helper.stdout.readline()
             DBG("Got:", repr(rv))
             if rv.startswith('#'):
                 continue
