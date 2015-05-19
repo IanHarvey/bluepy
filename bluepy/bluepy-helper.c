@@ -33,6 +33,8 @@
 #include <glib.h>
 
 
+#include "lib/bluetooth.h"
+#include "lib/bluetooth/sdp.h"
 #include "lib/uuid.h"
 #include <btio/btio.h>
 #include "att.h"
@@ -98,7 +100,6 @@ static const char
   *err_CONN_FAIL = "connfail",
   *err_COMM_ERR  = "comerr",
   *err_PROTO_ERR = "protoerr",
-  *err_NOT_FOUND = "notfound",
   *err_BAD_CMD   = "badcmd",
   *err_BAD_PARAM = "badparam",
   *err_BAD_STATE = "badstate";
@@ -196,7 +197,7 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 	}
 
 	assert( len >= 3 );
-	handle = att_get_u16(&pdu[1]);
+	handle = bt_get_le16(&pdu[1]);
 
 	resp_begin( evt==ATT_OP_HANDLE_NOTIFY ? rsp_NOTIFY : rsp_IND );
 	send_uint( tag_HANDLE, handle );
@@ -217,13 +218,13 @@ static void gatts_find_info_req(const uint8_t *pdu, uint16_t len, gpointer user_
 {
 	uint8_t *opdu;
 	uint8_t opcode;
-	uint16_t starting_handle, ending_handle, olen;
+	uint16_t starting_handle, olen;
 	size_t plen;
 
 	assert( len == 5 );
 	opcode = pdu[0];
-	starting_handle = att_get_u16(&pdu[1]);
-	ending_handle = att_get_u16(&pdu[3]);
+	starting_handle = bt_get_le16(&pdu[1]);
+	/* ending_handle = bt_get_le16(&pdu[3]); */
 
 	opdu = g_attrib_get_buffer(attrib, &plen);
 	olen = enc_error_resp(opcode, starting_handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
@@ -235,14 +236,14 @@ static void gatts_find_by_type_req(const uint8_t *pdu, uint16_t len, gpointer us
 {
 	uint8_t *opdu;
 	uint8_t opcode;
-	uint16_t starting_handle, ending_handle, att_type, olen;
+	uint16_t starting_handle, olen;
 	size_t plen;
 
 	assert( len >= 7 );
 	opcode = pdu[0];
-	starting_handle = att_get_u16(&pdu[1]);
-	ending_handle = att_get_u16(&pdu[3]);
-	att_type = att_get_u16(&pdu[5]);
+	starting_handle = bt_get_le16(&pdu[1]);
+	/* ending_handle = bt_get_le16(&pdu[3]); */
+	/* att_type = bt_get_le16(&pdu[5]); */
 
 	opdu = g_attrib_get_buffer(attrib, &plen);
 	olen = enc_error_resp(opcode, starting_handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
@@ -254,15 +255,15 @@ static void gatts_read_by_type_req(const uint8_t *pdu, uint16_t len, gpointer us
 {
 	uint8_t *opdu;
 	uint8_t opcode;
-	uint16_t starting_handle, ending_handle, att_type, olen;
+	uint16_t starting_handle, olen;
 	size_t plen;
 
 	assert( len == 7 || len == 21 );
 	opcode = pdu[0];
-	starting_handle = att_get_u16(&pdu[1]);
-	ending_handle = att_get_u16(&pdu[3]);
+	starting_handle = bt_get_le16(&pdu[1]);
+	/* ending_handle = bt_get_le16(&pdu[3]); */
 	if (len == 7) {
-		att_type = att_get_u16(&pdu[5]);
+		/* att_type = bt_get_le16(&pdu[5]); */
 	}
 
 	opdu = g_attrib_get_buffer(attrib, &plen);
@@ -280,7 +281,7 @@ static void gatts_read_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
 
 	assert( len == 3 );
 	opcode = pdu[0];
-	handle = att_get_u16(&pdu[1]);
+	handle = bt_get_le16(&pdu[1]);
 
 	opdu = g_attrib_get_buffer(attrib, &plen);
 	olen = enc_error_resp(opcode, handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
@@ -292,13 +293,13 @@ static void gatts_read_blob_req(const uint8_t *pdu, uint16_t len, gpointer user_
 {
 	uint8_t *opdu;
 	uint8_t opcode;
-	uint16_t handle, offset, olen;
+	uint16_t handle, olen;
 	size_t plen;
 
 	assert( len == 5 );
 	opcode = pdu[0];
-	handle = att_get_u16(&pdu[1]);
-	offset = att_get_u16(&pdu[3]);
+	handle = bt_get_le16(&pdu[1]);
+	/* offset = bt_get_le16(&pdu[3]); */
 
 	opdu = g_attrib_get_buffer(attrib, &plen);
 	olen = enc_error_resp(opcode, handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
@@ -310,13 +311,13 @@ static void gatts_read_multi_req(const uint8_t *pdu, uint16_t len, gpointer user
 {
 	uint8_t *opdu;
 	uint8_t opcode;
-	uint16_t handle1, handle2, offset, olen;
+	uint16_t handle1, olen;
 	size_t plen;
 
 	assert( len >= 5 );
 	opcode = pdu[0];
-	handle1 = att_get_u16(&pdu[1]);
-	handle2 = att_get_u16(&pdu[3]);
+	handle1 = bt_get_le16(&pdu[1]);
+	/* handle2 = bt_get_le16(&pdu[3]); */
 
 	opdu = g_attrib_get_buffer(attrib, &plen);
 	olen = enc_error_resp(opcode, handle1, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
@@ -328,14 +329,14 @@ static void gatts_read_by_group_req(const uint8_t *pdu, uint16_t len, gpointer u
 {
 	uint8_t *opdu;
 	uint8_t opcode;
-	uint16_t starting_handle, ending_handle, att_group_type, olen;
+	uint16_t starting_handle, olen;
 	size_t plen;
 
 	assert( len >= 7 );
 	opcode = pdu[0];
-	starting_handle = att_get_u16(&pdu[1]);
-	ending_handle = att_get_u16(&pdu[3]);
-	att_group_type = att_get_u16(&pdu[5]);
+	starting_handle = bt_get_le16(&pdu[1]);
+	/* ending_handle = bt_get_le16(&pdu[3]); */
+	/* att_group_type = bt_get_le16(&pdu[5]); */
 
 	opdu = g_attrib_get_buffer(attrib, &plen);
 	olen = enc_error_resp(opcode, starting_handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
@@ -352,7 +353,7 @@ static void gatts_write_req(const uint8_t *pdu, uint16_t len, gpointer user_data
 
 	assert( len >= 3 );
 	opcode = pdu[0];
-	handle = att_get_u16(&pdu[1]);
+	handle = bt_get_le16(&pdu[1]);
 
 	opdu = g_attrib_get_buffer(attrib, &plen);
 	olen = enc_error_resp(opcode, handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
@@ -362,35 +363,29 @@ static void gatts_write_req(const uint8_t *pdu, uint16_t len, gpointer user_data
 
 static void gatts_write_cmd(const uint8_t *pdu, uint16_t len, gpointer user_data)
 {
-	uint8_t opcode;
-	uint16_t handle;
-
 	assert( len >= 3 );
-	opcode = pdu[0];
-	handle = att_get_u16(&pdu[1]);
+	/* opcode = pdu[0]; */
+	/* handle = bt_get_le16(&pdu[1]); */
 }
 
 static void gatts_signed_write_cmd(const uint8_t *pdu, uint16_t len, gpointer user_data)
 {
-	uint8_t opcode;
-	uint16_t handle;
-
 	assert( len >= 15 );
-	opcode = pdu[0];
-	handle = att_get_u16(&pdu[1]);
+	/* opcode = pdu[0]; */
+	/* handle = bt_get_le16(&pdu[1]); */
 }
 
 static void gatts_prep_write_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
 {
 	uint8_t *opdu;
-	uint8_t opcode;
-	uint16_t handle, offset, olen;
+	uint8_t opcode, handle;
+	uint16_t olen;
 	size_t plen;
 
 	assert( len >= 5 );
 	opcode = pdu[0];
-	handle = att_get_u16(&pdu[1]);
-	offset = att_get_u16(&pdu[3]);
+	handle = bt_get_le16(&pdu[1]);
+	/* offset = bt_get_le16(&pdu[3]); */
 
 	opdu = g_attrib_get_buffer(attrib, &plen);
 	olen = enc_error_resp(opcode, handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
@@ -401,13 +396,13 @@ static void gatts_prep_write_req(const uint8_t *pdu, uint16_t len, gpointer user
 static void gatts_exec_write_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
 {
 	uint8_t *opdu;
-	uint8_t opcode, flags;
+	uint8_t opcode;
 	uint16_t olen;
 	size_t plen;
 
 	assert( len == 5 );
 	opcode = pdu[0];
-	flags = pdu[1];
+	/* flags = pdu[1]; */
 
 	opdu = g_attrib_get_buffer(attrib, &plen);
 	olen = enc_error_resp(opcode, 0, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
@@ -417,6 +412,10 @@ static void gatts_exec_write_req(const uint8_t *pdu, uint16_t len, gpointer user
 
 static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
 {
+	uint16_t mtu;
+	uint16_t cid;
+	GError *gerr = NULL;
+
 	if (err) {
 		set_state(STATE_DISCONNECTED);
 		resp_error(err_CONN_FAIL);
@@ -424,7 +423,19 @@ static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
 		return;
 	}
 
-	attrib = g_attrib_new(iochannel);
+	bt_io_get(io, &gerr, BT_IO_OPT_IMTU, &mtu,
+				BT_IO_OPT_CID, &cid, BT_IO_OPT_INVALID);
+
+	if (gerr) {
+		printf("# Can't detect MTU, using default");
+		g_error_free(gerr);
+		mtu = ATT_DEFAULT_LE_MTU;
+	}
+	else if (cid == ATT_CID)
+		mtu = ATT_DEFAULT_LE_MTU;
+
+	attrib = g_attrib_new(iochannel, mtu);
+
 	g_attrib_register(attrib, ATT_OP_HANDLE_NOTIFY, GATTRIB_ALL_HANDLES,
 						events_handler, attrib, NULL);
 	g_attrib_register(attrib, ATT_OP_HANDLE_IND, GATTRIB_ALL_HANDLES,
@@ -473,7 +484,7 @@ static void disconnect_io()
 	set_state(STATE_DISCONNECTED);
 }
 
-static void primary_all_cb(GSList *services, guint8 status, gpointer user_data)
+static void primary_all_cb(uint8_t status, GSList *services, void *user_data)
 {
 	GSList *l;
 
@@ -493,8 +504,7 @@ static void primary_all_cb(GSList *services, guint8 status, gpointer user_data)
 
 }
 
-static void primary_by_uuid_cb(GSList *ranges, guint8 status,
-							gpointer user_data)
+static void primary_by_uuid_cb(uint8_t status, GSList *ranges, void *user_data)
 {
 	GSList *l;
 
@@ -512,7 +522,7 @@ static void primary_by_uuid_cb(GSList *ranges, guint8 status,
         resp_end();
 }
 
-static void included_cb(GSList *includes, guint8 status, gpointer user_data)
+static void included_cb(uint8_t status, GSList *includes, void *user_data)
 {
 	GSList *l;
 
@@ -532,7 +542,7 @@ static void included_cb(GSList *includes, guint8 status, gpointer user_data)
         resp_end();
 }
 
-static void char_cb(GSList *characteristics, guint8 status, gpointer user_data)
+static void char_cb(uint8_t status, GSList *characteristics, void *user_data)
 {
 	GSList *l;
 
@@ -552,49 +562,22 @@ static void char_cb(GSList *characteristics, guint8 status, gpointer user_data)
         resp_end();
 }
 
-static void char_desc_cb(guint8 status, const guint8 *pdu, guint16 plen,
-							gpointer user_data)
+static void char_desc_cb(uint8_t status, GSList *descriptors, void *user_data)
 {
-	struct att_data_list *list;
-	guint8 format;
-	uint16_t handle = 0xffff;
-	int i;
+	GSList *l;
 
 	if (status != 0) {
 		resp_error(err_COMM_ERR); // Todo: status
 		return;
 	}
 
-	list = dec_find_info_resp(pdu, plen, &format);
-	if (list == NULL) {
-		resp_error(err_NOT_FOUND); // Todo: what does this mean?
-		return;
-	}
-
 	resp_begin(rsp_DESCRIPTORS);
-	for (i = 0; i < list->num; i++) {
-		char uuidstr[MAX_LEN_UUID_STR];
-		uint8_t *value;
-		bt_uuid_t uuid;
-
-		value = list->data[i];
-		handle = att_get_u16(value);
-
-		if (format == 0x01)
-			uuid = att_get_uuid16(&value[2]);
-		else
-			uuid = att_get_uuid128(&value[2]);
-
-		bt_uuid_to_string(&uuid, uuidstr, MAX_LEN_UUID_STR);
-		send_uint(tag_HANDLE, handle);
-                send_str (tag_UUID, uuidstr);
+	for (l = descriptors; l != NULL; l = l->next) {
+		struct gatt_desc *desc = (struct gatt_desc *)l->data;
+		send_uint(tag_HANDLE, desc->handle);
+                send_str (tag_UUID, desc->uuid);
 	}
         resp_end();
-
-	att_data_list_free(list);
-
-	if (handle != 0xffff && handle < end)
-		gatt_find_info(attrib, handle + 1, end, char_desc_cb, NULL);
 }
 
 static void char_read_cb(guint8 status, const guint8 *pdu, guint16 plen,
@@ -646,11 +629,10 @@ static void char_read_by_uuid_cb(guint8 status, const guint8 *pdu,
 
 	for (i = 0; i < list->num; i++) {
 		uint8_t *value = list->data[i];
-		int j;
 
-		char_data->start = att_get_u16(value) + 1;
+		char_data->start = bt_get_le16(value) + 1;
 
-		send_uint(tag_HANDLE, att_get_u16(value));
+		send_uint(tag_HANDLE, bt_get_le16(value));
                 send_data(value+2, list->len-2); // All the same length??
 	}
 
@@ -677,6 +659,7 @@ static gboolean channel_watcher(GIOChannel *chan, GIOCondition cond,
 
 static void cmd_connect(int argcp, char **argvp)
 {
+	GError *gerr = NULL;
 	if (conn_state != STATE_DISCONNECTED)
 		return;
 
@@ -698,10 +681,13 @@ static void cmd_connect(int argcp, char **argvp)
 
 	set_state(STATE_CONNECTING);
 	iochannel = gatt_connect(opt_src, opt_dst, opt_dst_type, opt_sec_level,
-						opt_psm, opt_mtu, connect_cb);
+						opt_psm, opt_mtu, connect_cb, &gerr);
 
 	if (iochannel == NULL)
+	{
 		set_state(STATE_DISCONNECTED);
+		g_error_free(gerr);
+        }
 	else
 		g_io_add_watch(iochannel, G_IO_HUP, channel_watcher, NULL);
 }
@@ -842,7 +828,7 @@ static void cmd_char_desc(int argcp, char **argvp)
 	} else
 		end = 0xffff;
 
-	gatt_find_info(attrib, start, end, char_desc_cb, NULL);
+	gatt_discover_desc(attrib, start, end, NULL, char_desc_cb, NULL);
 }
 
 static void cmd_read_hnd(int argcp, char **argvp)
@@ -1164,7 +1150,6 @@ static gboolean prompt_read(GIOChannel *chan, GIOCondition cond,
 							gpointer user_data)
 {
 	gchar *myline;
-        GError *err;
 
 	if (cond & (G_IO_HUP | G_IO_ERR | G_IO_NVAL)) {
 		g_io_channel_unref(chan);

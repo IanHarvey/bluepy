@@ -182,6 +182,7 @@ class Peripheral:
     def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC):
         self._helper = None
         self._poller = None
+        self._stderr = None
         self.services = {} # Indexed by UUID
         self.addrType = addrType
         self.discoveredAllServices = False
@@ -195,9 +196,11 @@ class Peripheral:
     def _startHelper(self):
         if self._helper is None:
             DBG("Running ", helperExe)
+            self._stderr = open(os.devnull, "w") 
             self._helper = subprocess.Popen([helperExe],
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
+                                            stderr=self._stderr,
                                             universal_newlines=True)
             self._poller = select.poll()
             self._poller.register(self._helper.stdout, select.POLLIN)
@@ -210,6 +213,9 @@ class Peripheral:
             self._helper.stdin.flush()
             self._helper.wait()
             self._helper = None
+        if self._stderr is not None:
+            self._stderr.close()
+            self._stderr = None
 
     def _writeCmd(self, cmd):
         if self._helper is None:
