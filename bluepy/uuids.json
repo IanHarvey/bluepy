@@ -838,6 +838,152 @@
             "Environmental Sensing Trigger Setting"
         ]
     ], 
+    "formats": [
+        [
+            "rfu", 
+            "Reserved for future use"
+        ], 
+        [
+            "gatt_uuid", 
+            "unsigned 16-bit integer or unsigned 128-bit integer"
+        ], 
+        [
+            "boolean", 
+            "unsigned 1-bit; 0 = false, 1 = true"
+        ], 
+        [
+            "2bit", 
+            "2-bit value"
+        ], 
+        [
+            "nibble", 
+            "4-bit value"
+        ], 
+        [
+            "8bit", 
+            "8-bit value"
+        ], 
+        [
+            "16bit", 
+            "16-bit value"
+        ], 
+        [
+            "24bit", 
+            "24-bit value"
+        ], 
+        [
+            "32bit", 
+            "32-bit value"
+        ], 
+        [
+            "uint8", 
+            "unsigned 8-bit integer"
+        ], 
+        [
+            "uint12", 
+            "unsigned 12-bit integer"
+        ], 
+        [
+            "uint16", 
+            "unsigned 16-bit integer"
+        ], 
+        [
+            "uint24", 
+            "unsigned 24-bit integer"
+        ], 
+        [
+            "uint32", 
+            "unsigned 32-bit integer"
+        ], 
+        [
+            "uint40", 
+            "unsigned 40-bit integer"
+        ], 
+        [
+            "uint48", 
+            "unsigned 48-bit integer"
+        ], 
+        [
+            "uint64", 
+            "unsigned 64-bit integer"
+        ], 
+        [
+            "uint128", 
+            "unsigned 128-bit integer"
+        ], 
+        [
+            "sint8", 
+            "signed 8-bit integer"
+        ], 
+        [
+            "sint12", 
+            "signed 12-bit integer"
+        ], 
+        [
+            "sint16", 
+            "signed 16-bit integer"
+        ], 
+        [
+            "sint24", 
+            "signed 24-bit integer"
+        ], 
+        [
+            "sint32", 
+            "signed 32-bit integer"
+        ], 
+        [
+            "sint48", 
+            "signed 48-bit integer"
+        ], 
+        [
+            "sint64", 
+            "signed 64-bit integer"
+        ], 
+        [
+            "sint128", 
+            "signed 128-bit integer"
+        ], 
+        [
+            "float32", 
+            "IEEE-754 32-bit floating point"
+        ], 
+        [
+            "float64", 
+            "IEEE-754 64-bit floating point"
+        ], 
+        [
+            "SFLOAT", 
+            "IEEE-11073 16-bit SFLOAT"
+        ], 
+        [
+            "FLOAT", 
+            "IEEE-11073 32-bit FLOAT"
+        ], 
+        [
+            "dunit16", 
+            "double unsigned 16-bit integer"
+        ], 
+        [
+            "utf8s", 
+            "UTF-8 string"
+        ], 
+        [
+            "utf16s", 
+            "UTF-16 string"
+        ], 
+        [
+            "reg-cert-data-list", 
+            "Regulatory Certification Data List - Refer to IEEE 11073-20601 Regulatory Certification Data List characteristic"
+        ], 
+        [
+            "variable", 
+            "Defined by the Service Specification"
+        ], 
+        [
+            "Array[]", 
+            "Example: uint8[]"
+        ]
+    ], 
     "service_UUIDs": [
         [
             6161, 

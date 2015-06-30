@@ -99,6 +99,13 @@ def get_units():
                           ('Type',None))):
         row['cname'] = row['Type'].split('.')[-1]
         yield row
+
+def get_formats():
+    for row in get_table('https://developer.bluetooth.org/gatt/Pages/FormatTypes.aspx','formats.html',
+                         (('Name',None),
+                          ('Description',None))):
+        row['cname'] = row['Name']
+        yield row
  
 class Definitions(object):
     def __init__(self):
@@ -106,6 +113,7 @@ class Definitions(object):
         self._units = None
         self._services = None
         self._descriptors = None
+        self._formats = None
 
     @property
     def characteristics(self):
@@ -131,7 +139,12 @@ class Definitions(object):
             self._descriptors = list(get_descriptors())
         return self._descriptors
 
-    
+    @property
+    def formats(self):
+        if not self._formats:
+            self._formats = list(get_formats())
+        return self._formats
+
     def data(self):
         """
         Makes tables like this:
@@ -140,22 +153,28 @@ class Definitions(object):
         return {'characteristic_UUIDs': 
                 [(row['Number'], 
                   row['cname'], 
-                  row['Name']) for row in d.characteristics],
+                  row['Name']) for row in self.characteristics],
 
                 'service_UUIDs':
                 [(row['Number'],
                   row['cname'],
-                  row['Name']) for row in d.services],
+                  row['Name']) for row in self.services],
                 
                 'descriptor_UUIDs':
                 [(row['Number'],
                   row['cname'],
-                  row['Name']) for row in d.descriptors],
+                  row['Name']) for row in self.descriptors],
                 
                 'units_UUIDs':
                 [(row['Number'],
                   row['cname'],
-                  row['Name']) for row in d.units]}
+                  row['Name']) for row in self.units],
+        
+                'formats':
+                [(row['Name'],
+                  row['Description']) for row in self.formats],
+              
+              }
 
 if __name__=="__main__":
     d=Definitions()

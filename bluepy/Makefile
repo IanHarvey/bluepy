@@ -27,6 +27,10 @@ GET_SERVICES=get_services.py
 uuids.json: $(GET_SERVICES)
 	python $(GET_SERVICES) > uuids.json
 
+TAGS: *.c $(BLUEZ_PATH)/attrib/*.[ch] $(BLUEZ_PATH)/btio/*.[ch]
+	etags $^
+
 clean:
-	rm -f *.o bluepy-helper
+	rm -f *.o bluepy-helper TAGS
+
 
