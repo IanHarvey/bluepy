@@ -7,7 +7,7 @@ This is a project to provide an API to allow access to Bluetooth Low Energy devi
 from Python. At present it runs on Linux only; I've mostly developed it using a
 Raspberry Pi, but it will also run on x86 Debian Linux.
 
-There is also code which uses this to talk to a TI SensorTag (www.ti.com/sensortag).
+There is also code which uses this to talk to a TI SensorTag  and Ti SensorTag 2 (www.ti.com/sensortag).
 
 Installation
 ------------
