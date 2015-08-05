@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <glib.h>
+#include <fcntl.h>
 
 
 #include "lib/uuid.h"
@@ -52,6 +53,7 @@ static const int opt_psm = 0;
 static int opt_mtu = 0;
 static int start;
 static int end;
+static FILE *fd;
 
 struct characteristic_data {
 	uint16_t orig_start;
@@ -142,6 +144,21 @@ static void resp_end()
   fflush(stdout);
 }
 
+static void noti(const char *rsptype, const char *tag, unsigned int val,
+                 const unsigned char *data, size_t len) 
+{
+    fprintf(fd, "%s=$%s %s=h%X %s=$%s\n", tag_RESPONSE, rsptype, tag, val,
+            tag_DATA, data);
+    fflush(fd);
+}
+
+static void noti_disconnected() 
+{
+    fprintf(fd, "%s=$%s %s=$%s\n", tag_RESPONSE, rsp_STATUS, tag_CONNSTATE,
+            st_DISCONNECTED);
+    fflush(fd);
+}
+
 static void resp_error(const char *errcode)
 {
   resp_begin(rsp_ERROR);
@@ -166,6 +183,7 @@ static void cmd_status(int argcp, char **argvp)
 
     default:
       send_sym(tag_CONNSTATE, st_DISCONNECTED);
+      noti_disconnected();
       break;
   }
 
@@ -198,11 +216,8 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 	assert( len >= 3 );
 	handle = att_get_u16(&pdu[1]);
 
-	resp_begin( evt==ATT_OP_HANDLE_NOTIFY ? rsp_NOTIFY : rsp_IND );
-	send_uint( tag_HANDLE, handle );
-	send_data( pdu+3, len-3 );
-	resp_end();
-
+	noti( evt==ATT_OP_HANDLE_NOTIFY ? rsp_NOTIFY : rsp_IND, tag_HANDLE, handle,
+          pdu+3, len-3);
 	if (evt == ATT_OP_HANDLE_NOTIFY)
 		return;
 
@@ -1197,8 +1212,20 @@ int main(int argc, char *argv[])
 	opt_dst = NULL;
 	opt_dst_type = g_strdup("public");
 
-        printf("# " __FILE__ " built at " __TIME__ " on " __DATE__ "\n");
+    printf("# " __FILE__ " built at " __TIME__ " on " __DATE__ "\n");
+    fflush(stdout);
+
+    char *path = argv[1];
+    fd = fopen(path, "wr");
+    if (fd < 0)
+    {
+        printf("# Fail to open fifo file\n");
         fflush(stdout);
+        return -1;
+    }
+
+    printf("#Open fifo\n");
+    fflush(stdout);
 
 	event_loop = g_main_loop_new(NULL, FALSE);
 
@@ -1217,6 +1244,7 @@ int main(int argc, char *argv[])
 	g_free(opt_src);
 	g_free(opt_dst);
 	g_free(opt_sec_level);
+    fclose(fd);
 
 	return EXIT_SUCCESS;
 }

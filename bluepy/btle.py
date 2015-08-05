@@ -3,13 +3,15 @@ from __future__ import print_function
 """Bluetooth Low Energy Python interface"""
 import sys
 import os
-import time
 import subprocess
 import binascii
 import select
+from stat import S_IRWXU
+from threading import Thread
+from threading import Event
 
 Debugging = False
-helperExe = os.path.join(os.path.abspath(os.path.dirname(__file__)), "bluepy-helper")
+helperExe = 'bluepy-helper'
 
 SEC_LEVEL_LOW = "low"
 SEC_LEVEL_MEDIUM = "medium"
@@ -78,10 +80,11 @@ class UUID:
     def __hash__(self):
         return hash(self.binVal)
 
-    def getCommonName(self):
-        s = AssignedNumbers.getCommonName(self)
-        if s:
-            return s
+    def getCommonName(self, raw=False):
+        if not raw:
+            s = AssignedNumbers.getCommonName(self)
+            if s:
+                return s
         s = str(self)
         if s.endswith("-0000-1000-8000-00805f9b34fb"):
             s = s[0:8]
@@ -155,8 +158,8 @@ class Characteristic:
     def propertiesToString(self):
         propStr = ""
         for p in Characteristic.propNames:
-           if (p & self.properties):
-               propStr += Characteristic.propNames[p] + " "
+            if (p & self.properties):
+                propStr += Characteristic.propNames[p] + " "
         return propStr
 
     def getHandle(self):
@@ -170,6 +173,12 @@ class Descriptor:
     def __str__(self):
         return "Descriptor <%s>" % self.uuid.getCommonName()
 
+    def read(self):
+        return self.peripheral.readCharacteristic(self.handle)
+
+    def write(self, val, withResponse=False):
+        self.peripheral.writeCharacteristic(self.handle, val, withResponse)
+
 class DefaultDelegate:
     def __init__(self):
         pass
@@ -177,11 +186,19 @@ class DefaultDelegate:
     def handleNotification(self, cHandle, data):
         DBG("Notification:", cHandle, "sent data", binascii.b2a_hex(data))
 
+    def on_disconnected(self):
+        DBG("Disconnected")
 
 class Peripheral:
-    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC):
+    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC,
+                 fifo_path=None, polling_timeout=2000):
         self._helper = None
         self._poller = None
+        self._noti_poller = None
+        self._fifo_path = fifo_path
+        self._blefifo = None
+        self._stop = None
+        self._polling_timeout = polling_timeout  # 2sec
         self.services = {} # Indexed by UUID
         self.addrType = addrType
         self.discoveredAllServices = False
@@ -194,13 +211,25 @@ class Peripheral:
 
     def _startHelper(self):
         if self._helper is None:
+            if not os.path.exists(self._fifo_path):
+              try:
+                os.mkfifo(self._fifo_path, S_IRWXU)
+              except:
+                DBG("Fail to mkfifo: ", self._fifo_path)
+                pass
             DBG("Running ", helperExe)
-            self._helper = subprocess.Popen([helperExe],
+
+            self._helper = subprocess.Popen([helperExe, self._fifo_path],
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
                                             universal_newlines=True)
+            self._blefifo = open(self._fifo_path, 'rw')
+            self._noti_poller = select.poll()
+            self._noti_poller.register(self._blefifo, select.POLLIN)
             self._poller = select.poll()
             self._poller.register(self._helper.stdout, select.POLLIN)
+            self._stop = Event()
+            Thread(target=self._start_listening).start()
 
     def _stopHelper(self):
         if self._helper is not None:
@@ -210,6 +239,8 @@ class Peripheral:
             self._helper.stdin.flush()
             self._helper.wait()
             self._helper = None
+            self._stop.set()
+            self._noti_poller.unregister(self._blefifo)
 
     def _writeCmd(self, cmd):
         if self._helper is None:
@@ -219,6 +250,38 @@ class Peripheral:
         self._helper.stdin.write(cmd)
         self._helper.stdin.flush()
 
+    def _start_listening(self):
+        while not self._stop.isSet():
+            try:
+                fds = self._noti_poller.poll(self._polling_timeout)
+                if fds is not None and len(fds) > 0:
+                    rv = self._blefifo.readline()
+                    if not rv or rv.startswith('#'):
+                        continue
+                    resp = Peripheral.parseResp(rv)
+                    if 'rsp' not in resp:
+                        continue
+                    respType = resp['rsp'][0]
+                    if respType == 'stat' and resp['state'][0] == 'disc':
+                        self._stopHelper()
+                        if self.delegate is not None:
+                          self.delegate.on_disconnected()
+                    if respType == 'ntfy' or respType == 'ind':
+                        hnd = resp['hnd'][0]
+                        data = resp['d'][0]
+                        if self.delegate is not None:
+                          self.delegate.handleNotification(hnd, data)
+                    else:
+                        DBG("Invalid resp type:%s" % respType)
+
+                else:
+                    DBG("Invalid event")
+            except:
+              continue
+        DBG("Finish listening")
+
+    def _stop_listening(self):
+        self._stop.set()
 
     @staticmethod
     def parseResp(line):
@@ -264,21 +327,6 @@ class Peripheral:
                 raise BTLEException(BTLEException.INTERNAL_ERROR,
                                 "No response type indicator")
             respType = resp['rsp'][0]
-            if respType == 'ntfy':
-                hnd = resp['hnd'][0]
-                data = resp['d'][0]
-                if self.delegate is not None:
-                    self.delegate.handleNotification(hnd, data)
-                if wantType != respType:
-                    continue
-                    
-            if respType == 'ind':
-                hnd = resp['hnd'][0]
-                data = resp['d'][0]
-                self.delegate.handleNotification(hnd, data)
-                if wantType != respType:
-                    continue
-
             if respType == wantType:
                 return resp
             elif respType == 'stat' and resp['state'][0] == 'disc':
@@ -299,6 +347,8 @@ class Peripheral:
             raise ValueError("Expected MAC address, got %s" % repr(addr))
         if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
             raise ValueError("Expected address type public or random, got {}".format(addrType))
+        if not self._fifo_path:
+          self._fifo_path = os.path.join(os.path.abspath(os.path.dirname(__file__), addr))
         self._startHelper()
         self.deviceAddr = addr
         self._writeCmd("conn %s %s\n" % (addr, addrType))
@@ -378,7 +428,10 @@ class Peripheral:
         # bluetooth_helper does. However bluetoth_helper returns the handles in
         # multiple response so here we need to wait until all of them are returned
         while len(descriptors) < endHnd - startHnd + 1:
-            resp = self._getResp('desc')
+            try:
+              resp = self._getResp('desc')
+            except:
+              break
             nDesc = len(resp['hnd'])
             descriptors += [Descriptor(self, resp['uuid'][i], resp['hnd'][i]) for i in range(nDesc)]
         return descriptors
@@ -405,10 +458,6 @@ class Peripheral:
     def setMTU(self, mtu):
         self._writeCmd("mtu %x\n" % mtu)
         return self._getResp('stat')
-
-    def waitForNotifications(self, timeout):
-         resp = self._getResp('ntfy', timeout)
-         return (resp != None)
 
     def __del__(self):
         self.disconnect()
