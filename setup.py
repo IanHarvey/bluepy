@@ -53,7 +53,7 @@ setup (
     ],
     packages=['bluepy'],
     package_data={
-        'bluepy': ['bluepy-helper']
+        'bluepy': ['bluepy-helper', '*.json']
     },
     cmdclass={'install': BluepyInstall, 'develop': BluepyDevelop},
     entry_points={
