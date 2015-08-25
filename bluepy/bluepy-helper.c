@@ -1181,43 +1181,6 @@ static void pair_device_complete(uint8_t status, uint16_t length,
 	}
 
 	resp_mgmt(err_SUCCESS);
-
-#if 0
-    const struct mgmt_rp_pair_device *rp = param;
-    struct pair_device_data *data = user_data;
-    struct btd_adapter *adapter = data->adapter;
-
-    DBG("%s (0x%02x)", mgmt_errstr(status), status);
-
-    adapter->pair_device_id = 0;
-
-    if (adapter->pair_device_timeout > 0) {
-        g_source_remove(adapter->pair_device_timeout);
-        adapter->pair_device_timeout = 0;
-    }
-
-    /* Workaround for a kernel bug
-     *
-     * Broken kernels may reply to device pairing command with command
-     * status instead of command complete event e.g. if adapter was not
-     * powered.
-     */
-    if (status != MGMT_STATUS_SUCCESS && length < sizeof(*rp)) {
-        error("Pair device failed: %s (0x%02x)",
-                        mgmt_errstr(status), status);
-
-        bonding_complete(adapter, &data->bdaddr,
-                        data->addr_type, status);
-        return;
-    }
-
-    if (length < sizeof(*rp)) {
-        error("Too small pair device response");
-        return;
-    }
-
-    bonding_complete(adapter, &rp->addr.bdaddr, rp->addr.type, status);
-#endif
 }
 
 static void cmd_pair(int argcp, char **argvp)
