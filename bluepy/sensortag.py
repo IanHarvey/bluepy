@@ -220,7 +220,7 @@ class KeypressDelegate(DefaultDelegate):
     def onButtonDown(self, but):
         print ( "** " + self._button_desc[but] + " DOWN")
 
-if __name__ == "__main__":
+def main():
     import time
     import sys
     import argparse
@@ -288,3 +288,6 @@ if __name__ == "__main__":
 
     tag.disconnect()
     del tag
+
+if __name__ == "__main__":
+    main()

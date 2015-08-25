@@ -9,7 +9,8 @@ import binascii
 import select
 
 Debugging = False
-helperExe = os.path.join(os.path.abspath(os.path.dirname(__file__)), "bluepy-helper")
+script_path = os.path.join(os.path.abspath(os.path.dirname(__file__)))
+helperExe = os.path.join(script_path, "bluepy-helper")
 
 SEC_LEVEL_LOW = "low"
 SEC_LEVEL_MEDIUM = "medium"
@@ -58,7 +59,7 @@ class UUID:
         if len(val) <= 8:  # Short form
             val = ("0" * (8 - len(val))) + val + "00001000800000805F9B34FB"
 
-        self.binVal = binascii.a2b_hex(val)
+        self.binVal = binascii.a2b_hex(val.encode('utf-8'))
         if len(self.binVal) != 16:
             raise ValueError(
                 "UUID must be 16 bytes, got '%s' (len=%d)" % (val,
@@ -189,6 +190,12 @@ class Peripheral:
         if deviceAddr is not None:
             self.connect(deviceAddr, addrType)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.disconnect()
+
     def setDelegate(self, delegate_):
         self.delegate = delegate_
 
@@ -233,7 +240,7 @@ class Peripheral:
             elif tval[0]=="h":
                 val = int(tval[1:], 16)
             elif tval[0]=='b':
-                val = binascii.a2b_hex(tval[1:])
+                val = binascii.a2b_hex(tval[1:].encode('utf-8'))
             else:
                 raise BTLEException(BTLEException.INTERNAL_ERROR,
                              "Cannot understand response value %s" % repr(tval))
@@ -437,211 +444,19 @@ class _UUIDNameMap:
             return self.idMap[uuid].commonName
         return None
 
-AssignedNumbers = _UUIDNameMap( [
-    # Service UUIDs
-    UUID(0x1811, "Alert Notification Service"),
-    UUID(0x180F, "Battery Service"),
-    UUID(0x1810, "Blood Pressure"),
-    UUID(0x181B, "Body Composition"),
-    UUID(0x181E, "Bond Management"),
-    UUID(0x181F, "Continuous Glucose Monitoring"),
-    UUID(0x1805, "Current Time Service"),
-    UUID(0x1818, "Cycling Power"),
-    UUID(0x1816, "Cycling Speed and Cadence"),
-    UUID(0x180A, "Device Information"),
-    UUID(0x181A, "Environmental Sensing"),
-    UUID(0x1800, "Generic Access"),
-    UUID(0x1801, "Generic Attribute"),
-    UUID(0x1808, "Glucose"),
-    UUID(0x1809, "Health Thermometer"),
-    UUID(0x180D, "Heart Rate"),
-    UUID(0x1812, "Human Interface Device"),
-    UUID(0x1802, "Immediate Alert"),
-    UUID(0x1820, "Internet Protocol Support"),
-    UUID(0x1803, "Link Loss"),
-    UUID(0x1819, "Location and Navigation"),
-    UUID(0x1807, "Next DST Change Service"),
-    UUID(0x180E, "Phone Alert Status Service"),
-    UUID(0x1806, "Reference Time Update Service"),
-    UUID(0x1814, "Running Speed and Cadence"),
-    UUID(0x1813, "Scan Parameters"),
-    UUID(0x1804, "Tx Power"),
-    UUID(0x181C, "User Data"),
-    UUID(0x181D, "Weight Scale"),
+def get_json_uuid():
+    import json
+    uuid_data = json.load(file(os.path.join(script_path, 'uuids.json')))
+    all_uuids = reduce(lambda a,b: a+b, (uuid_data[x] for x in ['service_UUIDs',
+                                                        'characteristic_UUIDs',
+                                                        'descriptor_UUIDs']))
 
-    # Characteristic UUIDs
-    UUID(0x2A7E, "Aerobic Heart Rate Lower Limit"),
-    UUID(0x2A84, "Aerobic Heart Rate Upper Limit"),
-    UUID(0x2A7F, "Aerobic Threshold"),
-    UUID(0x2A80, "Age"),
-    UUID(0x2A5A, "Aggregate"),
-    UUID(0x2A42, "Alert Category ID Bit Mask"),
-    UUID(0x2A43, "Alert Category ID"),
-    UUID(0x2A06, "Alert Level"),
-    UUID(0x2A44, "Alert Notification Control Point"),
-    UUID(0x2A3F, "Alert Status"),
-    UUID(0x2A81, "Anaerobic Heart Rate Lower Limit"),
-    UUID(0x2A82, "Anaerobic Heart Rate Upper Limit"),
-    UUID(0x2A83, "Anaerobic Threshold"),
-    UUID(0x2A58, "Analog"),
-    UUID(0x2A73, "Apparent Wind Direction"),
-    UUID(0x2A72, "Apparent Wind Speed"),
-    UUID(0x2A01, "Appearance"),
-    UUID(0x2AA3, "Barometric Pressure Trend"),
-    UUID(0x2A19, "Battery Level"),
-    UUID(0x2A49, "Blood Pressure Feature"),
-    UUID(0x2A35, "Blood Pressure Measurement"),
-    UUID(0x2A9B, "Body Composition Feature"),
-    UUID(0x2A9C, "Body Composition Measurement"),
-    UUID(0x2A38, "Body Sensor Location"),
-    UUID(0x2AA4, "Bond Management Control Point"),
-    UUID(0x2AA5, "Bond Management Feature"),
-    UUID(0x2A22, "Boot Keyboard Input Report"),
-    UUID(0x2A32, "Boot Keyboard Output Report"),
-    UUID(0x2A33, "Boot Mouse Input Report"),
-    UUID(0x2AA8, "CGM Feature"),
-    UUID(0x2AA7, "CGM Measurement"),
-    UUID(0x2AAB, "CGM Session Run Time"),
-    UUID(0x2AAA, "CGM Session Start Time"),
-    UUID(0x2AAC, "CGM Specific Ops Control Point"),
-    UUID(0x2AA9, "CGM Status"),
-    UUID(0x2A5C, "CSC Feature"),
-    UUID(0x2A5B, "CSC Measurement"),
-    UUID(0x2AA6, "Central Address Resolution"),
-    UUID(0x2905, "Characteristic Aggregate Formate"),
-    UUID(0x2900, "Characteristic Extended Properties"),
-    UUID(0x2904, "Characteristic Format"),
-    UUID(0x2901, "Characteristic User Description"),
-    UUID(0x2803, "Characteristic"),
-    UUID(0x2902, "Client Characteristic Configuration"),
-    UUID(0x2A2B, "Current Time"),
-    UUID(0x2A66, "Cycling Power Control Point"),
-    UUID(0x2A65, "Cycling Power Feature"),
-    UUID(0x2A63, "Cycling Power Measurement"),
-    UUID(0x2A64, "Cycling Power Vector"),
-    UUID(0x2A0D, "DST Offset"),
-    UUID(0x2A99, "Database Change Increment"),
-    UUID(0x2A08, "Date Time"),
-    UUID(0x2A85, "Date of Birth"),
-    UUID(0x2A86, "Date of Threshold Assessment"),
-    UUID(0x2A0A, "Day Date Time"),
-    UUID(0x2A09, "Day of Week"),
-    UUID(0x2A7D, "Descriptor Value Changed"),
-    UUID(0x2A00, "Device Name"),
-    UUID(0x2A7B, "Dew Point"),
-    UUID(0x2A56, "Digital"),
-    UUID(0x2A6C, "Elevation"),
-    UUID(0x2A87, "Email Address"),
-    UUID(0x290B, "Environmental Sensing Configuration"),
-    UUID(0x290C, "Environmental Sensing Measurement"),
-    UUID(0x290D, "Environmental Sensing Trigger Setting"),
-    UUID(0x2A0C, "Exact Time 256"),
-    UUID(0x2907, "External Report Reference"),
-    UUID(0x2A88, "Fat Burn Heart Rate Lower Limit"),
-    UUID(0x2A89, "Fat Burn Heart Rate Upper Limit"),
-    UUID(0x2A26, "Firmware Revision String"),
-    UUID(0x2A8A, "First Name"),
-    UUID(0x2A8B, "Five Zone Heart Rate Limits"),
-    UUID(0x2A8C, "Gender"),
-    UUID(0x2A51, "Glucose Feature"),
-    UUID(0x2A34, "Glucose Measurement Context"),
-    UUID(0x2A18, "Glucose Measurement"),
-    UUID(0x2A74, "Gust Factor"),
-    UUID(0x2A4C, "HID Control Point"),
-    UUID(0x2A4A, "HID Information"),
-    UUID(0x2A27, "Hardware Revision String"),
-    UUID(0x2A39, "Heart Rate Control Point"),
-    UUID(0x2A8D, "Heart Rate Max"),
-    UUID(0x2A37, "Heart Rate Measurement"),
-    UUID(0x2A7A, "Heat Index"),
-    UUID(0x2A8E, "Height"),
-    UUID(0x2A8F, "Hip Circumference"),
-    UUID(0x2A6F, "Humidity"),
-    UUID(0x2A2A, "IEEE 11073-20601 Regulatory Certification Data List"),
-    UUID(0x2A2A, "IEEE 11073-20601 Regulatory Cert. Data List"),
-    UUID(0x2802, "Include"),
-    UUID(0x2A36, "Intermediate Cuff Pressure"),
-    UUID(0x2A1E, "Intermediate Temperature"),
-    UUID(0x2A77, "Irradiance"),
-    UUID(0x2A6B, "LN Control Point"),
-    UUID(0x2A6A, "LN Feature"),
-    UUID(0x2AA2, "Language"),
-    UUID(0x2A90, "Last Name"),
-    UUID(0x2A0F, "Local Time Information"),
-    UUID(0x2A67, "Location and Speed"),
-    UUID(0x2A2C, "Magnetic Declination"),
-    UUID(0x2AA0, "Magnetic Flux Density - 2D"),
-    UUID(0x2AA1, "Magnetic Flux Density - 3D"),
-    UUID(0x2A29, "Manufacturer Name String"),
-    UUID(0x2A91, "Maximum Recommended Heart Rate"),
-    UUID(0x2A21, "Measurement Interval"),
-    UUID(0x2A24, "Model Number String"),
-    UUID(0x2A68, "Navigation"),
-    UUID(0x2A46, "New Alert"),
-    UUID(0x2909, "Number of Digitals"),
-    UUID(0x2A04, "Peripheral Preferred Connection Parameters"),
-    UUID(0x2A02, "Peripheral Privacy Flag"),
-    UUID(0x2A50, "PnP ID"),
-    UUID(0x2A75, "Pollen Concentration"),
-    UUID(0x2A69, "Position Quality"),
-    UUID(0x2A6D, "Pressure"),
-    UUID(0x2800, "Primary Service"),
-    UUID(0x2A4E, "Protocol Mode"),
-    UUID(0x2A54, "RSC Feature"),
-    UUID(0x2A53, "RSC Measurement"),
-    UUID(0x2A78, "Rainfall"),
-    UUID(0x2A03, "Reconnection Address"),
-    UUID(0x2A52, "Record Access Control Point"),
-    UUID(0x2A14, "Reference Time Information"),
-    UUID(0x2A4B, "Report Map"),
-    UUID(0x2908, "Report Reference"),
-    UUID(0x2A4D, "Report"),
-    UUID(0x2A92, "Resting Heart Rate"),
-    UUID(0x2A40, "Ringer Control Point"),
-    UUID(0x2A41, "Ringer Setting"),
-    UUID(0x2A55, "SC Control Point"),
-    UUID(0x2A4F, "Scan Interval Window"),
-    UUID(0x2A31, "Scan Refresh"),
-    UUID(0x2801, "Secondary Service"),
-    UUID(0x2A5D, "Sensor Location"),
-    UUID(0x2A25, "Serial Number String"),
-    UUID(0x2903, "Server Characteristic Configuration"),
-    UUID(0x2A05, "Service Changed"),
-    UUID(0x2A28, "Software Revision String"),
-    UUID(0x2A93, "Sport Type for Aerobic/Anaerobic Thresholds"),
-    UUID(0x2A47, "Supported New Alert Category"),
-    UUID(0x2A48, "Supported Unread Alert Category"),
-    UUID(0x2A23, "System ID"),
-    UUID(0x2A1C, "Temperature Measurement"),
-    UUID(0x2A1D, "Temperature Type"),
-    UUID(0x2A6E, "Temperature"),
-    UUID(0x2A94, "Three Zone Heart Rate Limits"),
-    UUID(0x2A12, "Time Accuracy"),
-    UUID(0x2A13, "Time Source"),
-    UUID(0x290E, "Time Trigger Setting"),
-    UUID(0x2A16, "Time Update Control Point"),
-    UUID(0x2A17, "Time Update State"),
-    UUID(0x2A0E, "Time Zone"),
-    UUID(0x2A11, "Time with DST"),
-    UUID(0x2A7C, "Trend"),
-    UUID(0x2A71, "True Wind Direction"),
-    UUID(0x2A70, "True Wind Speed"),
-    UUID(0x2A95, "Two Zone Heart Rate Limit"),
-    UUID(0x2A07, "Tx Power Level"),
-    UUID(0x2A76, "UV Index"),
-    UUID(0x2A45, "Unread Alert Status"),
-    UUID(0x2A9F, "User Control Point"),
-    UUID(0x2A9A, "User Index"),
-    UUID(0x2A96, "VO2 Max"),
-    UUID(0x2906, "Valid Range"),
-    UUID(0x290A, "Value Trigger Setting"),
-    UUID(0x2A97, "Waist Circumference"),
-    UUID(0x2A9D, "Weight Measurement"),
-    UUID(0x2A9E, "Weight Scale Feature"),
-    UUID(0x2A98, "Weight"),
-    UUID(0x2A79, "Wind Chill"),
-    ])
 
+    for number,cname,name in all_uuids:
+        yield UUID(number, cname)
+        yield UUID(number, name)
+
+AssignedNumbers = _UUIDNameMap( list(get_json_uuid() ))
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:

@@ -11,3 +11,5 @@ bluepy/bluepy-helper
 bluez-5.4/src/bluetoothd
 bluez-5.4/attrib/gatttool
 *.swp
+/build
+/bluepy.egg-info
