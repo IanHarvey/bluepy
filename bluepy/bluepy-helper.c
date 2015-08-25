@@ -34,11 +34,18 @@
 
 
 #include "lib/uuid.h"
+#include "lib/mgmt.h"
+#include "src/shared/mgmt.h"
+
 #include <btio/btio.h>
 #include "att.h"
 #include "gattrib.h"
 #include "gatt.h"
 #include "gatttool.h"
+
+#define IO_CAPABILITY_NOINPUTNOOUTPUT   0x03
+
+#define DBG(fmt, ...) do {printf("# %s() :" fmt "\n", __FUNCTION__, ##__VA_ARGS__); fflush(stdout);} while(0)
 
 static GIOChannel *iochannel = NULL;
 static GAttrib *attrib = NULL;
@@ -52,6 +59,8 @@ static const int opt_psm = 0;
 static int opt_mtu = 0;
 static int start;
 static int end;
+
+static struct mgmt *mgmt_master = NULL;
 
 struct characteristic_data {
 	uint16_t orig_start;
@@ -92,7 +101,8 @@ static const char
   *rsp_DISCOVERY = "find",
   *rsp_DESCRIPTORS = "desc",
   *rsp_READ      = "rd",
-  *rsp_WRITE     = "wr";
+  *rsp_WRITE     = "wr",
+  *rsp_MGMT      = "mgmt";
 
 static const char
   *err_CONN_FAIL = "connfail",
@@ -101,7 +111,8 @@ static const char
   *err_NOT_FOUND = "notfound",
   *err_BAD_CMD   = "badcmd",
   *err_BAD_PARAM = "badparam",
-  *err_BAD_STATE = "badstate";
+  *err_BAD_STATE = "badstate",
+  *err_SUCCESS   = "success";
 
 static const char 
   *st_DISCONNECTED = "disc",
@@ -149,6 +160,13 @@ static void resp_error(const char *errcode)
   resp_end();
 }
 
+static void resp_mgmt(const char *errcode)
+{
+  resp_begin(rsp_MGMT);
+  send_sym(tag_ERRCODE, errcode);
+  resp_end();
+}
+
 static void cmd_status(int argcp, char **argvp)
 {
   resp_begin(rsp_STATUS);
@@ -177,7 +195,7 @@ static void cmd_status(int argcp, char **argvp)
 static void set_state(enum state st)
 {
 	conn_state = st;
-        cmd_status(0, NULL);
+	cmd_status(0, NULL);
 }
 
 static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
@@ -417,7 +435,9 @@ static void gatts_exec_write_req(const uint8_t *pdu, uint16_t len, gpointer user
 
 static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
 {
+	DBG("io = %p, err = %p", io, err);
 	if (err) {
+		DBG("err = %s", err->message);
 		set_state(STATE_DISCONNECTED);
 		resp_error(err_CONN_FAIL);
 		printf("# Connect error: %s\n", err->message);
@@ -486,10 +506,10 @@ static void primary_all_cb(GSList *services, guint8 status, gpointer user_data)
 	for (l = services; l; l = l->next) {
 		struct gatt_primary *prim = l->data;
 		send_uint(tag_RANGE_START, prim->range.start);
-                send_uint(tag_RANGE_END, prim->range.end);
-                send_str(tag_UUID, prim->uuid);
+		send_uint(tag_RANGE_END, prim->range.end);
+		send_str(tag_UUID, prim->uuid);
 	}
-        resp_end();
+	resp_end();
 
 }
 
@@ -507,9 +527,9 @@ static void primary_by_uuid_cb(GSList *ranges, guint8 status,
 	for (l = ranges; l; l = l->next) {
 		struct att_range *range = l->data;
 		send_uint(tag_RANGE_START, range->start);
-                send_uint(tag_RANGE_END, range->end);
+		send_uint(tag_RANGE_END, range->end);
 	}
-        resp_end();
+	resp_end();
 }
 
 static void included_cb(GSList *includes, guint8 status, gpointer user_data)
@@ -524,12 +544,12 @@ static void included_cb(GSList *includes, guint8 status, gpointer user_data)
 	resp_begin(rsp_DISCOVERY);
 	for (l = includes; l; l = l->next) {
 		struct gatt_included *incl = l->data;
-                send_uint(tag_HANDLE, incl->handle);
-                send_uint(tag_RANGE_START, incl->range.start);
-                send_uint(tag_RANGE_END,   incl->range.end);
-                send_str(tag_UUID, incl->uuid);
+		send_uint(tag_HANDLE, incl->handle);
+		send_uint(tag_RANGE_START, incl->range.start);
+		send_uint(tag_RANGE_END,   incl->range.end);
+		send_str(tag_UUID, incl->uuid);
 	}
-        resp_end();
+	resp_end();
 }
 
 static void char_cb(GSList *characteristics, guint8 status, gpointer user_data)
@@ -544,12 +564,12 @@ static void char_cb(GSList *characteristics, guint8 status, gpointer user_data)
 	resp_begin(rsp_DISCOVERY);
 	for (l = characteristics; l; l = l->next) {
 		struct gatt_char *chars = l->data;
-                send_uint(tag_HANDLE, chars->handle);
-                send_uint(tag_PROPERTIES, chars->properties);
-                send_uint(tag_VALUE_HANDLE, chars->value_handle);
-                send_str(tag_UUID, chars->uuid);
+		send_uint(tag_HANDLE, chars->handle);
+		send_uint(tag_PROPERTIES, chars->properties);
+		send_uint(tag_VALUE_HANDLE, chars->value_handle);
+		send_str(tag_UUID, chars->uuid);
 	}
-        resp_end();
+	resp_end();
 }
 
 static void char_desc_cb(guint8 status, const guint8 *pdu, guint16 plen,
@@ -587,9 +607,9 @@ static void char_desc_cb(guint8 status, const guint8 *pdu, guint16 plen,
 
 		bt_uuid_to_string(&uuid, uuidstr, MAX_LEN_UUID_STR);
 		send_uint(tag_HANDLE, handle);
-                send_str (tag_UUID, uuidstr);
+		send_str (tag_UUID, uuidstr);
 	}
-        resp_end();
+	resp_end();
 
 	att_data_list_free(list);
 
@@ -615,8 +635,8 @@ static void char_read_cb(guint8 status, const guint8 *pdu, guint16 plen,
 	}
 
 	resp_begin(rsp_READ);
-        send_data(value, vlen);
-        resp_end();
+	send_data(value, vlen);
+	resp_end();
 }
 
 static void char_read_by_uuid_cb(guint8 status, const guint8 *pdu,
@@ -628,10 +648,10 @@ static void char_read_by_uuid_cb(guint8 status, const guint8 *pdu,
 
 	if (status == ATT_ECODE_ATTR_NOT_FOUND &&
 				char_data->start != char_data->orig_start)
-        {
+	{
 		printf("# TODO case in char_read_by_uuid_cb\n");
 		goto done;
-        }
+	}
 
 	if (status != 0) {
 		resp_error(err_COMM_ERR); // Todo: status
@@ -641,7 +661,7 @@ static void char_read_by_uuid_cb(guint8 status, const guint8 *pdu,
 	list = dec_read_by_type_resp(pdu, plen);
 
 	resp_begin(rsp_READ);
-        if (list == NULL)
+	if (list == NULL)
 		goto nolist;
 
 	for (i = 0; i < list->num; i++) {
@@ -651,7 +671,7 @@ static void char_read_by_uuid_cb(guint8 status, const guint8 *pdu,
 		char_data->start = att_get_u16(value) + 1;
 
 		send_uint(tag_HANDLE, att_get_u16(value));
-                send_data(value+2, list->len-2); // All the same length??
+		send_data(value+2, list->len-2); // All the same length??
 	}
 
 	att_data_list_free(list);
@@ -670,7 +690,11 @@ static void cmd_exit(int argcp, char **argvp)
 static gboolean channel_watcher(GIOChannel *chan, GIOCondition cond,
 				gpointer user_data)
 {
-	disconnect_io();
+	DBG("chan = %p", chan);
+
+	// in case of quick disconnection/reconnection, do not mix them
+	if (chan == iochannel)
+		disconnect_io();
 
 	return FALSE;
 }
@@ -700,6 +724,7 @@ static void cmd_connect(int argcp, char **argvp)
 	iochannel = gatt_connect(opt_src, opt_dst, opt_dst_type, opt_sec_level,
 						opt_psm, opt_mtu, connect_cb);
 
+	DBG("gatt_connect returned %p", iochannel);
 	if (iochannel == NULL)
 		set_state(STATE_DISCONNECTED);
 	else
@@ -881,7 +906,7 @@ static void cmd_read_uuid(int argcp, char **argvp)
 	}
 
 	if (argcp < 2 ||
-            bt_string_to_uuid(&uuid, argvp[1]) < 0) {
+	    bt_string_to_uuid(&uuid, argvp[1]) < 0) {
 		resp_error(err_BAD_PARAM);
 		return;
 	}
@@ -961,11 +986,11 @@ static void cmd_char_write_common(int argcp, char **argvp, int with_response)
 		gatt_write_char(attrib, handle, value, plen,
 					char_write_req_cb, NULL);
 	else
-        {
+	{
 		gatt_write_char(attrib, handle, value, plen, NULL, NULL);
-                resp_begin(rsp_WRITE);
-                resp_end();
-        }
+		resp_begin(rsp_WRITE);
+		resp_end();
+	}
 
 	g_free(value);
 }
@@ -1014,14 +1039,14 @@ static void cmd_sec_level(int argcp, char **argvp)
 			BT_IO_OPT_INVALID);
 	if (gerr) {
 		printf("# Error: %s\n", gerr->message);
-                resp_error(err_COMM_ERR);
+		resp_error(err_COMM_ERR);
 		g_error_free(gerr);
 	}
 	else {
 		/* Tell bluepy the security level 
 		 * has been changed successfuly */
 		cmd_status(0, NULL);
-        }
+	}
 }
 
 static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
@@ -1042,15 +1067,15 @@ static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
 	mtu = MIN(mtu, opt_mtu);
 	/* Set new value for MTU in client */
 	if (g_attrib_set_mtu(attrib, mtu))
-        {
-                opt_mtu = mtu;
+	{
+		opt_mtu = mtu;
 		cmd_status(0, NULL);
-        }
+	}
 	else
-        {
+	{
 		printf("# Error exchanging MTU\n");
 		resp_error(err_COMM_ERR);
-        }
+	}
 }
 
 static void cmd_mtu(int argcp, char **argvp)
@@ -1069,7 +1094,7 @@ static void cmd_mtu(int argcp, char **argvp)
 
 	if (opt_mtu) {
 		resp_error(err_BAD_STATE);
-                /* Can only set once per connection */
+		/* Can only set once per connection */
 		return;
 	}
 
@@ -1081,6 +1106,201 @@ static void cmd_mtu(int argcp, char **argvp)
 	}
 
 	gatt_exchange_mtu(attrib, opt_mtu, exchange_mtu_cb, NULL);
+}
+
+static void set_mode_complete(uint8_t status, uint16_t length,
+                    const void *param, void *user_data)
+{
+	if (status != MGMT_STATUS_SUCCESS) {
+		DBG("status returned error : %s (0x%02x)",
+		    mgmt_errstr(status), status);
+		resp_mgmt(err_PROTO_ERR);
+		return;
+	}
+
+	resp_mgmt(err_SUCCESS);
+}
+
+static bool set_mode(uint16_t opcode, char *p_mode)
+{
+	struct mgmt_mode cp;
+	uint8_t val;
+
+	if (!memcmp(p_mode, "on", 2))
+		val = 1;
+	else if (!memcmp(p_mode, "off", 3))
+		val = 0;
+	else
+		return false;
+
+	memset(&cp, 0, sizeof(cp));
+	cp.val = val;
+
+	// at this time only index 0 is supported
+	if (mgmt_send(mgmt_master, opcode,
+	        0, sizeof(cp), &cp,
+	        set_mode_complete, NULL, NULL) == 0) {
+		resp_mgmt(err_SUCCESS);
+	}
+	return true;
+}
+
+
+static void cmd_le(int argcp, char **argvp)
+{
+	if (argcp < 2) {
+		resp_mgmt(err_BAD_PARAM);
+		return;
+	}
+
+	if (!set_mode(MGMT_OP_SET_LE, argvp[1])) {
+		resp_mgmt(err_BAD_PARAM);
+	}
+}
+
+static void cmd_pairable(int argcp, char **argvp)
+{
+	if (argcp < 2) {
+		resp_mgmt(err_BAD_PARAM);
+		return;
+	}
+
+	if (!set_mode(MGMT_OP_SET_PAIRABLE, argvp[1])) {
+		resp_mgmt(err_BAD_PARAM);
+	}
+}
+
+static void pair_device_complete(uint8_t status, uint16_t length,
+                    const void *param, void *user_data)
+{
+	if (status != MGMT_STATUS_SUCCESS) {
+		DBG("status returned error : %s (0x%02x)",
+		        mgmt_errstr(status), status);
+		resp_mgmt(err_PROTO_ERR);
+		return;
+	}
+
+	resp_mgmt(err_SUCCESS);
+
+#if 0
+    const struct mgmt_rp_pair_device *rp = param;
+    struct pair_device_data *data = user_data;
+    struct btd_adapter *adapter = data->adapter;
+
+    DBG("%s (0x%02x)", mgmt_errstr(status), status);
+
+    adapter->pair_device_id = 0;
+
+    if (adapter->pair_device_timeout > 0) {
+        g_source_remove(adapter->pair_device_timeout);
+        adapter->pair_device_timeout = 0;
+    }
+
+    /* Workaround for a kernel bug
+     *
+     * Broken kernels may reply to device pairing command with command
+     * status instead of command complete event e.g. if adapter was not
+     * powered.
+     */
+    if (status != MGMT_STATUS_SUCCESS && length < sizeof(*rp)) {
+        error("Pair device failed: %s (0x%02x)",
+                        mgmt_errstr(status), status);
+
+        bonding_complete(adapter, &data->bdaddr,
+                        data->addr_type, status);
+        return;
+    }
+
+    if (length < sizeof(*rp)) {
+        error("Too small pair device response");
+        return;
+    }
+
+    bonding_complete(adapter, &rp->addr.bdaddr, rp->addr.type, status);
+#endif
+}
+
+static void cmd_pair(int argcp, char **argvp)
+{
+	struct mgmt_cp_pair_device cp;
+	char addr[18];
+	bdaddr_t bdaddr;
+	uint8_t io_cap = IO_CAPABILITY_NOINPUTNOOUTPUT;
+	uint8_t addr_type = BDADDR_LE_RANDOM;
+
+	if (conn_state != STATE_CONNECTED) {
+		resp_mgmt(err_BAD_STATE);
+		return;
+	}
+
+	if (str2ba(opt_dst, &bdaddr)) {
+		resp_mgmt(err_NOT_FOUND);
+		return;
+	}
+
+	if (!memcmp(opt_dst_type, "public", 6)) {
+		addr_type = BDADDR_LE_PUBLIC;
+	}
+
+	memset(&cp, 0, sizeof(cp));
+	bacpy(&cp.addr.bdaddr, &bdaddr);
+	cp.addr.type = addr_type;
+	cp.io_cap = io_cap;
+
+	if (mgmt_send(mgmt_master, MGMT_OP_PAIR_DEVICE,
+            MGMT_INDEX_NONE, sizeof(cp), &cp,
+	            pair_device_complete, NULL,
+	            NULL) == 0) {
+		DBG("mgmt_send(MGMT_OP_PAIR_DEVICE) failed for %s for hci%u", addr, MGMT_INDEX_NONE);
+		resp_mgmt(err_SUCCESS);
+		return;
+	}
+}
+
+static void unpair_device_complete(uint8_t status, uint16_t length,
+                    const void *param, void *user_data)
+{
+	if (status != MGMT_STATUS_SUCCESS) {
+		DBG("status returned error : %s (0x%02x)",
+		        mgmt_errstr(status), status);
+		resp_mgmt(err_PROTO_ERR);
+		return;
+	}
+
+	resp_mgmt(err_SUCCESS);
+}
+
+static void cmd_unpair(int argcp, char **argvp)
+{
+	struct mgmt_cp_unpair_device cp;
+	char addr[18];
+	bdaddr_t bdaddr;
+	uint8_t io_cap = IO_CAPABILITY_NOINPUTNOOUTPUT;
+	uint8_t addr_type = BDADDR_LE_RANDOM;
+
+	if (str2ba(opt_dst, &bdaddr)) {
+		DBG("str2ba failed\n");
+		resp_mgmt(err_NOT_FOUND);
+		return;
+	}
+
+	if (!memcmp(opt_dst_type, "public", 6)) {
+		addr_type = BDADDR_LE_PUBLIC;
+	}
+
+	memset(&cp, 0, sizeof(cp));
+	bacpy(&cp.addr.bdaddr, &bdaddr);
+	cp.addr.type = addr_type;
+	cp.disconnect = 1;
+
+	if (mgmt_send(mgmt_master, MGMT_OP_UNPAIR_DEVICE,
+	        0, sizeof(cp), &cp,
+	        unpair_device_complete, NULL,
+	            NULL) == 0) {
+		DBG("mgmt_send(MGMT_OP_UNPAIR_DEVICE) failed for %s for hci%u", addr, MGMT_INDEX_NONE);
+		resp_mgmt(err_SUCCESS);
+		return;
+	}
 }
 
 static struct {
@@ -1119,6 +1339,14 @@ static struct {
 		"Set security level. Default: low" },
 	{ "mtu",		cmd_mtu,	"<value>",
 		"Exchange MTU for GATT/ATT" },
+	{ "le",		 cmd_le,  "[on | off]",
+		"Control LE feature on the controller" },
+	{ "pairable",   cmd_pairable,  "[on | off]",
+		"Control PAIRABLE feature on the controller" },
+	{ "pair",	   cmd_pair,  "",
+		"Start pairing with the device" },
+	{ "unpair",	 cmd_unpair,  "",
+		"Start unpairing with the device" },
 	{ NULL, NULL, NULL}
 };
 
@@ -1129,7 +1357,7 @@ static void cmd_help(int argcp, char **argvp)
 	for (i = 0; commands[i].cmd; i++)
 		printf("#%-15s %-30s %s\n", commands[i].cmd,
 				commands[i].params, commands[i].desc);
-        cmd_status(0, NULL);
+	cmd_status(0, NULL);
 }
 
 static void parse_line(char *line_read)
@@ -1164,27 +1392,58 @@ static gboolean prompt_read(GIOChannel *chan, GIOCondition cond,
 							gpointer user_data)
 {
 	gchar *myline;
-        GError *err;
+	GError *err;
 
 	if (cond & (G_IO_HUP | G_IO_ERR | G_IO_NVAL)) {
 		g_io_channel_unref(chan);
 		return FALSE;
 	}
 
-        if ( G_IO_STATUS_NORMAL != g_io_channel_read_line(chan, &myline, NULL, NULL, NULL)
-             || myline == NULL
-           )
-        {
-          printf("# Quitting on input read fail\n");
-          g_main_loop_quit(event_loop);
-          return FALSE;
-        }
+	if ( G_IO_STATUS_NORMAL != g_io_channel_read_line(chan, &myline, NULL, NULL, NULL)
+	        || myline == NULL
+	)
+	{
+		DBG("Quitting on input read fail");
+		g_main_loop_quit(event_loop);
+		return FALSE;
+	}
 
-        parse_line(myline);
+	parse_line(myline);
 	return TRUE;
 }
 
 
+static void read_version_complete(uint8_t status, uint16_t length,
+                    const void *param, void *user_data)
+{
+	const struct mgmt_rp_read_version *rp = param;
+
+	if (status != MGMT_STATUS_SUCCESS) {
+		DBG("Failed to read version information: %s (0x%02x)",
+		        mgmt_errstr(status), status);
+		return;
+	}
+
+	if (length < sizeof(*rp)) {
+		DBG("Wrong size of read version response");
+		return;
+	}
+
+	DBG("Bluetooth management interface %u.%u initialized",
+	        rp->version, btohs(rp->revision));
+}
+
+static void mgmt_device_connected(uint16_t index, uint16_t length,
+        const void *param, void *user_data)
+{
+	DBG("# New device connected\n");
+}
+static void mgmt_debug(const char *str, void *user_data)
+{
+	const char *prefix = user_data;
+
+	DBG("# %s%s\n", prefix, str);
+}
 
 int main(int argc, char *argv[])
 {
@@ -1197,8 +1456,23 @@ int main(int argc, char *argv[])
 	opt_dst = NULL;
 	opt_dst_type = g_strdup("public");
 
-        printf("# " __FILE__ " built at " __TIME__ " on " __DATE__ "\n");
-        fflush(stdout);
+	DBG(__FILE__ " built at " __TIME__ " on " __DATE__);
+
+	mgmt_master = mgmt_new_default();
+	if (!mgmt_master) {
+		DBG("Could not connect to the BT management interface, try with su rights");
+	}
+	mgmt_set_debug(mgmt_master, mgmt_debug, "mgmt: ", NULL);
+
+	if (mgmt_send(mgmt_master, MGMT_OP_READ_VERSION,
+	        MGMT_INDEX_NONE, 0, NULL,
+	        read_version_complete, NULL, NULL) == 0) {
+		DBG("mgmt_send(MGMT_OP_READ_VERSION) failed");
+	}
+
+	if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, 0, mgmt_device_connected, NULL, NULL)) {
+		DBG("mgmt_register(MGMT_EV_DEVICE_CONNECTED) failed");
+	}
 
 	event_loop = g_main_loop_new(NULL, FALSE);
 
@@ -1207,16 +1481,22 @@ int main(int argc, char *argv[])
 	events = G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL;
 	g_io_add_watch(pchan, events, prompt_read, NULL);
 
+	DBG("Starting loop");
 	g_main_loop_run(event_loop);
 
 	cmd_disconnect(0, NULL);
-        fflush(stdout);
+	fflush(stdout);
 	g_io_channel_unref(pchan);
 	g_main_loop_unref(event_loop);
 
 	g_free(opt_src);
 	g_free(opt_dst);
 	g_free(opt_sec_level);
+
+	mgmt_unregister_index(mgmt_master, MGMT_INDEX_NONE);
+	mgmt_cancel_index(mgmt_master, MGMT_INDEX_NONE);
+	mgmt_unref(mgmt_master);
+	mgmt_master = NULL;
 
 	return EXIT_SUCCESS;
 }

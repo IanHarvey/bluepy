@@ -2,7 +2,7 @@ BLUEZ_PATH=../bluez-5.4
 
 BLUEZ_SRCS  = lib/bluetooth.c lib/hci.c lib/sdp.c lib/uuid.c
 BLUEZ_SRCS += attrib/att.c attrib/gatt.c attrib/gattrib.c attrib/utils.c
-BLUEZ_SRCS += btio/btio.c src/log.c
+BLUEZ_SRCS += btio/btio.c src/log.c src/shared/mgmt.c src/shared/util.c
 
 IMPORT_SRCS = $(addprefix $(BLUEZ_PATH)/, $(BLUEZ_SRCS))
 LOCAL_SRCS  = bluepy-helper.c
