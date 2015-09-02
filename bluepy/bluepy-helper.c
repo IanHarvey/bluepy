@@ -110,6 +110,7 @@ static const char
   *err_CONN_FAIL = "connfail",
   *err_COMM_ERR  = "comerr",
   *err_PROTO_ERR = "protoerr",
+  *err_NOT_FOUND = "notfound",
   *err_BAD_CMD   = "badcmd",
   *err_BAD_PARAM = "badparam",
   *err_BAD_STATE = "badstate",
@@ -1151,7 +1152,7 @@ static void cmd_pairable(int argcp, char **argvp)
 		return;
 	}
 
-	if (!set_mode(MGMT_OP_SET_PAIRABLE, argvp[1])) {
+	if (!set_mode(MGMT_OP_SET_BONDABLE, argvp[1])) {
 		resp_mgmt(err_BAD_PARAM);
 	}
 }
@@ -1224,7 +1225,6 @@ static void cmd_unpair(int argcp, char **argvp)
 	struct mgmt_cp_unpair_device cp;
 	char addr[18];
 	bdaddr_t bdaddr;
-	uint8_t io_cap = IO_CAPABILITY_NOINPUTNOOUTPUT;
 	uint8_t addr_type = BDADDR_LE_RANDOM;
 
 	if (str2ba(opt_dst, &bdaddr)) {
