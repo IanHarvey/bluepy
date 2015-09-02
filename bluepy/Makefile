@@ -2,7 +2,7 @@ BLUEZ_PATH=../bluez-5.29
 
 BLUEZ_SRCS  = lib/bluetooth.c lib/hci.c lib/sdp.c lib/uuid.c
 BLUEZ_SRCS += attrib/att.c attrib/gatt.c attrib/gattrib.c attrib/utils.c
-BLUEZ_SRCS += btio/btio.c src/log.c 
+BLUEZ_SRCS += btio/btio.c src/log.c src/shared/mgmt.c  
 BLUEZ_SRCS += src/shared/crypto.c src/shared/att.c src/shared/queue.c src/shared/util.c
 BLUEZ_SRCS += src/shared/io-glib.c src/shared/timeout-glib.c
 
@@ -24,6 +24,15 @@ all: bluepy-helper
 bluepy-helper: $(LOCAL_SRCS) $(IMPORT_SRCS)
 	$(CC) -L. $(CFLAGS) $(CPPFLAGS) -o $@ $(LOCAL_SRCS) $(IMPORT_SRCS) $(LDLIBS)
 
+GET_SERVICES=get_services.py
+
+uuids.json: $(GET_SERVICES)
+	python $(GET_SERVICES) > uuids.json
+
+TAGS: *.c $(BLUEZ_PATH)/attrib/*.[ch] $(BLUEZ_PATH)/btio/*.[ch]
+	etags $^
+
 clean:
-	rm -f *.o bluepy-helper
+	rm -f *.o bluepy-helper TAGS
+
 
