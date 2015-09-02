@@ -251,6 +251,8 @@ class Peripheral:
         return resp
 
     def _getResp(self, wantType, timeout=None):
+        if isinstance(wantType, list) is not True:
+            wantType = [wantType]
         while True:
             if self._helper.poll() is not None:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Helper exited")
@@ -276,17 +278,17 @@ class Peripheral:
                 data = resp['d'][0]
                 if self.delegate is not None:
                     self.delegate.handleNotification(hnd, data)
-                if wantType != respType:
+                if respType not in wantType:
                     continue
                     
             if respType == 'ind':
                 hnd = resp['hnd'][0]
                 data = resp['d'][0]
                 self.delegate.handleNotification(hnd, data)
-                if wantType != respType:
+                if respType not in wantType:
                     continue
 
-            if respType == wantType:
+            if respType in wantType:
                 return resp
             elif respType == 'stat' and resp['state'][0] == 'disc':
                 self._stopHelper()
