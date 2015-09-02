@@ -44,6 +44,14 @@ The Python files are released into the public domain by their author, Ian Harvey
 Release Notes
 -------------
 
+Release 0.9.9
+
+- Now based on Bluez r5.29
+- UUIDs held in separate JSON file, script added to update from Web
+- Added setup.py and __init__.py for use with setuptools
+- Allows indications as well as notifications
+- Bug fixes (see pull requests #46, #48, #35)
+
 Release 0.9.0
 - Support for Notifications
 - SensorTag code now supports keypress service
