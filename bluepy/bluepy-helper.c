@@ -47,7 +47,11 @@
 
 #define IO_CAPABILITY_NOINPUTNOOUTPUT   0x03
 
+#ifdef BLUEPY_DEBUG
 #define DBG(fmt, ...) do {printf("# %s() :" fmt "\n", __FUNCTION__, ##__VA_ARGS__); fflush(stdout);} while(0)
+#else
+#define DBG(fmt, ...)
+#endif
 
 static GIOChannel *iochannel = NULL;
 static GAttrib *attrib = NULL;
@@ -1384,13 +1388,14 @@ static void read_version_complete(uint8_t status, uint16_t length,
 static void mgmt_device_connected(uint16_t index, uint16_t length,
         const void *param, void *user_data)
 {
-	DBG("# New device connected\n");
+	DBG("New device connected");
 }
+
 static void mgmt_debug(const char *str, void *user_data)
 {
 	const char *prefix = user_data;
 
-	DBG("# %s%s\n", prefix, str);
+	DBG("%s%s", prefix, str);
 }
 
 int main(int argc, char *argv[])
