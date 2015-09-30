@@ -1177,7 +1177,6 @@ static void pair_device_complete(uint8_t status, uint16_t length,
 static void cmd_pair(int argcp, char **argvp)
 {
 	struct mgmt_cp_pair_device cp;
-	char addr[18];
 	bdaddr_t bdaddr;
 	uint8_t io_cap = IO_CAPABILITY_NOINPUTNOOUTPUT;
 	uint8_t addr_type = BDADDR_LE_RANDOM;
@@ -1205,7 +1204,7 @@ static void cmd_pair(int argcp, char **argvp)
             MGMT_INDEX_NONE, sizeof(cp), &cp,
 	            pair_device_complete, NULL,
 	            NULL) == 0) {
-		DBG("mgmt_send(MGMT_OP_PAIR_DEVICE) failed for %s for hci%u", addr, MGMT_INDEX_NONE);
+		DBG("mgmt_send(MGMT_OP_PAIR_DEVICE) failed for %s for hci%u", opt_dst, MGMT_INDEX_NONE);
 		resp_mgmt(err_SUCCESS);
 		return;
 	}
@@ -1227,7 +1226,6 @@ static void unpair_device_complete(uint8_t status, uint16_t length,
 static void cmd_unpair(int argcp, char **argvp)
 {
 	struct mgmt_cp_unpair_device cp;
-	char addr[18];
 	bdaddr_t bdaddr;
 	uint8_t addr_type = BDADDR_LE_RANDOM;
 
@@ -1250,7 +1248,7 @@ static void cmd_unpair(int argcp, char **argvp)
 	        0, sizeof(cp), &cp,
 	        unpair_device_complete, NULL,
 	            NULL) == 0) {
-		DBG("mgmt_send(MGMT_OP_UNPAIR_DEVICE) failed for %s for hci%u", addr, MGMT_INDEX_NONE);
+		DBG("mgmt_send(MGMT_OP_UNPAIR_DEVICE) failed for %s for hci%u", opt_dst, MGMT_INDEX_NONE);
 		resp_mgmt(err_SUCCESS);
 		return;
 	}
@@ -1393,9 +1391,9 @@ static void mgmt_device_connected(uint16_t index, uint16_t length,
 
 static void mgmt_debug(const char *str, void *user_data)
 {
-	const char *prefix = user_data;
+	//const char *prefix = user_data;
 
-	DBG("%s%s", prefix, str);
+	DBG("%s%s", (const char *)user_data, str);
 }
 
 int main(int argc, char *argv[])
