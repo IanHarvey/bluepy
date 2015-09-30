@@ -1205,7 +1205,7 @@ static void cmd_pair(int argcp, char **argvp)
 	            pair_device_complete, NULL,
 	            NULL) == 0) {
 		DBG("mgmt_send(MGMT_OP_PAIR_DEVICE) failed for %s for hci%u", opt_dst, MGMT_INDEX_NONE);
-		resp_mgmt(err_SUCCESS);
+		resp_mgmt(err_PROTO_ERR);
 		return;
 	}
 }
@@ -1230,7 +1230,7 @@ static void cmd_unpair(int argcp, char **argvp)
 	uint8_t addr_type = BDADDR_LE_RANDOM;
 
 	if (str2ba(opt_dst, &bdaddr)) {
-		DBG("str2ba failed\n");
+		DBG("str2ba failed");
 		resp_mgmt(err_NOT_FOUND);
 		return;
 	}
@@ -1249,7 +1249,7 @@ static void cmd_unpair(int argcp, char **argvp)
 	        unpair_device_complete, NULL,
 	            NULL) == 0) {
 		DBG("mgmt_send(MGMT_OP_UNPAIR_DEVICE) failed for %s for hci%u", opt_dst, MGMT_INDEX_NONE);
-		resp_mgmt(err_SUCCESS);
+		resp_mgmt(err_PROTO_ERR);
 		return;
 	}
 }
@@ -1421,7 +1421,7 @@ int main(int argc, char *argv[])
 		DBG("mgmt_send(MGMT_OP_READ_VERSION) failed");
 	}
 
-	if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, 0, mgmt_device_connected, NULL, NULL)) {
+	if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, 0, mgmt_device_connected, NULL, NULL)==0) {
 		DBG("mgmt_register(MGMT_EV_DEVICE_CONNECTED) failed");
 	}
 
