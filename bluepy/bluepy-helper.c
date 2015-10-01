@@ -941,9 +941,10 @@ static void char_write_req_cb(guint8 status, const guint8 *pdu, guint16 plen,
 		return;
 	}
 
-        resp_begin(rsp_WRITE);
-        resp_end();
+	resp_begin(rsp_WRITE);
+	resp_end();
 }
+
 
 static void cmd_char_write_common(int argcp, char **argvp, int with_response)
 {
@@ -978,7 +979,7 @@ static void cmd_char_write_common(int argcp, char **argvp, int with_response)
 					char_write_req_cb, NULL);
 	else
 	{
-		gatt_write_char(attrib, handle, value, plen, NULL, NULL);
+		gatt_write_cmd(attrib, handle, value, plen, NULL, NULL);
 		resp_begin(rsp_WRITE);
 		resp_end();
 	}
