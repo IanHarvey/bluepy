@@ -48,9 +48,23 @@
 #define IO_CAPABILITY_NOINPUTNOOUTPUT   0x03
 
 #ifdef BLUEPY_DEBUG
-#define DBG(fmt, ...) do {printf("# %s() :" fmt "\n", __FUNCTION__, ##__VA_ARGS__); fflush(stdout);} while(0)
+#define DBG(fmt, ...) do {printf("# %s() :" fmt "\n", __FUNCTION__, ##__VA_ARGS__); fflush(stdout); \
+	} while(0)
+#else
+#ifdef BLUEPY_DEBUG_FILE_LOG
+static FILE * fp = NULL;
+
+static void try_open(void) {
+	if (!fp) {
+		fp = fopen ("bluepy-helper.log", "w");
+	}
+}
+#define DBG(fmt, ...) do {try_open();if (fp) {fprintf(fp, "%s() :" fmt "\n", __FUNCTION__, ##__VA_ARGS__); fflush(fp);} \
+	} while(0)
+
 #else
 #define DBG(fmt, ...)
+#endif
 #endif
 
 static GIOChannel *iochannel = NULL;
@@ -1346,7 +1360,8 @@ static gboolean prompt_read(GIOChannel *chan, GIOCondition cond,
 	gchar *myline;
 
 	if (cond & (G_IO_HUP | G_IO_ERR | G_IO_NVAL)) {
-		g_io_channel_unref(chan);
+		DBG("Quitting IO channel error");
+		g_main_loop_quit(event_loop);
 		return FALSE;
 	}
 
@@ -1436,6 +1451,7 @@ int main(int argc, char *argv[])
 	DBG("Starting loop");
 	g_main_loop_run(event_loop);
 
+	DBG("Exiting loop");
 	cmd_disconnect(0, NULL);
 	fflush(stdout);
 	g_io_channel_unref(pchan);
