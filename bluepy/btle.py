@@ -273,7 +273,7 @@ class Peripheral:
 
             rv = self._helper.stdout.readline()
             DBG("Got:", repr(rv))
-            if rv.startswith('#'):
+            if rv.startswith('#') or rv == '\n':
                 continue
 
             resp = Peripheral.parseResp(rv)
@@ -281,14 +281,14 @@ class Peripheral:
                 raise BTLEException(BTLEException.INTERNAL_ERROR,
                                 "No response type indicator")
             respType = resp['rsp'][0]
-            if respType == 'ntfy':
+            if respType == 'ntfy' or respType == 'ind':
                 hnd = resp['hnd'][0]
                 data = resp['d'][0]
                 if self.delegate is not None:
                     self.delegate.handleNotification(hnd, data)
                 if respType not in wantType:
                     continue
-                    
+
             if respType == 'ind':
                 hnd = resp['hnd'][0]
                 data = resp['d'][0]
@@ -418,6 +418,10 @@ class Peripheral:
     def setSecurityLevel(self, level):
         self._writeCmd("secu %s\n" % level)
         return self._getResp('stat')
+
+    def unpair(self, address):
+        self._writeCmd("unpair %s\n" % (address))
+        return self._getResp('mgmt')
 
     def setMTU(self, mtu):
         self._writeCmd("mtu %x\n" % mtu)
