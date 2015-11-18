@@ -313,7 +313,7 @@ class Peripheral(Bluepy):
             wantType = [wantType]
 
         while True:
-            resp = self._waitResp(wantType + ['ntfy' + 'ind'], timeout)
+            resp = self._waitResp(wantType + ['ntfy', 'ind'], timeout)
             if resp is None:
                 return None
 
