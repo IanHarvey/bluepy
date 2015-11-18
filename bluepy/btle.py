@@ -253,6 +253,10 @@ class Bluepy:
         return resp
 
     def _waitResp(self, wantType, timeout=None):
+        # make sure wantType is a list
+        if isinstance(wantType, list) is not True:
+            wantType = [wantType]
+
         while True:
             if self._helper.poll() is not None:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Helper exited")
@@ -286,7 +290,7 @@ class Bluepy:
 
     def status(self):
         self._writeCmd("stat\n")
-        return self._waitResp(['stat'])
+        return self._waitResp('stat')
 
 
 class Peripheral(Bluepy):
@@ -309,16 +313,17 @@ class Peripheral(Bluepy):
         self.disconnect()
 
     def _getResp(self, wantType, timeout=None):
+        # make sure wantType is a list
         if isinstance(wantType, list) is not True:
             wantType = [wantType]
 
         while True:
-            resp = self._waitResp(wantType + ['ntfy' + 'ind'], timeout)
+            resp = self._waitResp(wantType + ['ntfy', 'ind'], timeout)
             if resp is None:
                 return None
 
             respType = resp['rsp'][0]
-            if respType == 'ntfy' or respType == 'ind':
+            if respType in ['ntfy', 'ind']:
                 hnd = resp['hnd'][0]
                 data = resp['d'][0]
                 if self.delegate is not None:
