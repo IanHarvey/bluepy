@@ -189,11 +189,13 @@ class Bluepy:
         self._poller = None
         self._stderr = None
 
-    def _startHelper(self):
+    def _startHelper(self,scan=False):
         if self._helper is None:
             DBG("Running ", helperExe)
             self._stderr = open(os.devnull, "w")
-            self._helper = subprocess.Popen([helperExe],
+            args=[helperExe]
+            if scan: args.append("scan")
+            self._helper = subprocess.Popen(args,
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
                                             stderr=self._stderr,
@@ -460,7 +462,7 @@ class Scan(Bluepy):
         self.callback = None
 
     def start(self):
-        self._startHelper()
+        self._startHelper(scan=True)
         self._mgmtCmd("le on")
         self._writeCmd("scan\n")
         rsp = self._waitResp("mgmt")

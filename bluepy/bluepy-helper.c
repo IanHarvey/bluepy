@@ -1541,19 +1541,19 @@ int main(int argc, char *argv[])
 			read_version_complete, NULL, NULL) == 0) {
 		DBG("mgmt_send(MGMT_OP_READ_VERSION) failed");
 	}
-
-	if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, 0, mgmt_device_connected, NULL, NULL)==0) {
+        if (argc >= 2) {
+	    if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, 0, mgmt_device_connected, NULL, NULL)==0) {
 		DBG("mgmt_register(MGMT_EV_DEVICE_CONNECTED) failed");
-	}
+	    }
 
-	if (mgmt_register(mgmt_master, MGMT_EV_DISCOVERING, 0, mgmt_scanning, NULL, NULL)) {
+	    if (mgmt_register(mgmt_master, MGMT_EV_DISCOVERING, 0, mgmt_scanning, NULL, NULL)) {
 		DBG("mgmt_register(MGMT_EV_DISCOVERING) failed");
-	}
+	    }
 
-	if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_FOUND, 0, mgmt_device_found, NULL, NULL)) {
+	    if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_FOUND, 0, mgmt_device_found, NULL, NULL)) {
 		DBG("mgmt_register(MGMT_EV_DEVICE_FOUND) failed");
-	}
-
+	    }
+        }
 	event_loop = g_main_loop_new(NULL, FALSE);
 
 	pchan = g_io_channel_unix_new(fileno(stdin));
