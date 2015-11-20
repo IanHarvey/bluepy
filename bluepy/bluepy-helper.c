@@ -1175,7 +1175,7 @@ static bool set_mode(uint16_t opcode, char *p_mode)
 
 	// at this time only index 0 is supported
 	if (mgmt_send(mgmt_master, opcode,
-			0, sizeof(cp), &cp,
+			mgmt_ind, sizeof(cp), &cp,
 			set_mode_complete, NULL, NULL) == 0) {
 		resp_mgmt(err_SUCCESS);
 	}
@@ -1291,7 +1291,7 @@ static void cmd_unpair(int argcp, char **argvp)
 	cp.disconnect = 1;
 
 	if (mgmt_send(mgmt_master, MGMT_OP_UNPAIR_DEVICE,
-				0, sizeof(cp), &cp,
+				mgmt_ind, sizeof(cp), &cp,
 				unpair_device_complete, NULL,
 				NULL) == 0) {
 		DBG("mgmt_send(MGMT_OP_UNPAIR_DEVICE) failed for %s for hci%u", opt_dst, mgmt_ind);
@@ -1320,7 +1320,7 @@ static void scan(bool start)
 
 	DBG("Scan %s", start? "start" : "stop");
 
-	if (mgmt_send(mgmt_master, opcode, 0, sizeof(cp),
+	if (mgmt_send(mgmt_master, opcode, mgmt_ind, sizeof(cp),
 		&cp, scan_cb, NULL, NULL) == 0)
 	{
 		DBG("mgmt_send(MGMT_OP_%s_DISCOVERY) failed", start? "START" : "STOP");
@@ -1538,33 +1538,34 @@ int main(int argc, char *argv[])
 
 	DBG(__FILE__ " built at " __TIME__ " on " __DATE__);
 
-	mgmt_master = mgmt_new_default();
-	if (!mgmt_master) {
-		DBG("Could not connect to the BT management interface, try with su rights");
-	}
-	mgmt_set_debug(mgmt_master, mgmt_debug, "mgmt: ", NULL);
-
         if (argc > 1) {
+	    mgmt_master = mgmt_new_default();
+	    if (!mgmt_master) {
+		DBG("Could not connect to the BT management interface, try with su rights");
+	    }
+	    mgmt_set_debug(mgmt_master, mgmt_debug, "mgmt: ", NULL);
+
             if (sscanf (argv[1], "%i", &index)!=1) { 
 		DBG("error converting argument: %s  to device index integer",argv[1]);
                 mgmt_ind=MGMT_INDEX_NONE;
             } else {
                 mgmt_ind=index;
             }
+            fprintf(stderr,"MGMT_INDEX: %d\n",mgmt_ind);		
 	    if (mgmt_send(mgmt_master, MGMT_OP_READ_VERSION,
 			mgmt_ind, 0, NULL,
 			read_version_complete, NULL, NULL) == 0) {
 		DBG("mgmt_send(MGMT_OP_READ_VERSION) failed");
 	    }   
-	    if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, 0, mgmt_device_connected, NULL, NULL)==0) {
+	    if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, mgmt_ind, mgmt_device_connected, NULL, NULL)==0) {
 		DBG("mgmt_register(MGMT_EV_DEVICE_CONNECTED) failed");
 	    }
 
-	    if (mgmt_register(mgmt_master, MGMT_EV_DISCOVERING, 0, mgmt_scanning, NULL, NULL)) {
+	    if (mgmt_register(mgmt_master, MGMT_EV_DISCOVERING, mgmt_ind, mgmt_scanning, NULL, NULL)) {
 		DBG("mgmt_register(MGMT_EV_DISCOVERING) failed");
 	    }
 
-	    if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_FOUND, 0, mgmt_device_found, NULL, NULL)) {
+	    if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_FOUND, mgmt_ind, mgmt_device_found, NULL, NULL)) {
 		DBG("mgmt_register(MGMT_EV_DEVICE_FOUND) failed");
 	    }
         }

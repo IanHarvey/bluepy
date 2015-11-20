@@ -194,7 +194,7 @@ class Bluepy:
             DBG("Running ", helperExe)
             self._stderr = open(os.devnull, "w")
             args=[helperExe]
-            if index: args.append(str(index))
+            if index is not None: args.append(str(index))
             self._helper = subprocess.Popen(args,
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
@@ -465,7 +465,7 @@ class Scan(Bluepy):
         self.scanned = {}
         self.callback = None
         self.index=index
-
+    
     def start(self):
         self._startHelper(index=self.index)
         self._mgmtCmd("le on")
