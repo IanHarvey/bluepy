@@ -189,12 +189,12 @@ class Bluepy:
         self._poller = None
         self._stderr = None
 
-    def _startHelper(self,scan=False):
+    def _startHelper(self,index=None):
         if self._helper is None:
             DBG("Running ", helperExe)
             self._stderr = open(os.devnull, "w")
             args=[helperExe]
-            if scan: args.append("scan")
+            if index: args.append(str(index))
             self._helper = subprocess.Popen(args,
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
@@ -292,14 +292,15 @@ class Bluepy:
 
 
 class Peripheral(Bluepy):
-    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC):
+    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC,iface=None):
         Bluepy.__init__(self)
         self.services = {} # Indexed by UUID
         self.addrType = addrType
+        self.iface = iface 
         self.discoveredAllServices = False
         self.delegate = DefaultDelegate()
         if deviceAddr is not None:
-            self.connect(deviceAddr, addrType)
+            self.connect(deviceAddr, addrType,iface)
 
     def setDelegate(self, delegate_):
         self.delegate = delegate_
@@ -329,14 +330,17 @@ class Peripheral(Bluepy):
                     continue
             return resp
 
-    def connect(self, addr, addrType):
+    def connect(self, addr, addrType,iface=None):
         if len(addr.split(":")) != 6:
             raise ValueError("Expected MAC address, got %s" % repr(addr))
         if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
             raise ValueError("Expected address type public or random, got {}".format(addrType))
         self._startHelper()
         self.deviceAddr = addr
-        self._writeCmd("conn %s %s\n" % (addr, addrType))
+        if iface:
+            self._writeCmd("conn %s %s %s\n" % (addr, addrType, iface))
+        else:
+            self._writeCmd("conn %s %s\n" % (addr, addrType))
         rsp = self._getResp('stat')
         while rsp['state'][0] == 'tryconn':
             rsp = self._getResp('stat')
@@ -456,13 +460,14 @@ class Peripheral(Bluepy):
         self.disconnect()
 
 class Scan(Bluepy):
-    def __init__(self):
+    def __init__(self,index='max'):
         Bluepy.__init__(self)
         self.scanned = {}
         self.callback = None
+        self.index=index
 
     def start(self):
-        self._startHelper(scan=True)
+        self._startHelper(index=self.index)
         self._mgmtCmd("le on")
         self._writeCmd("scan\n")
         rsp = self._waitResp("mgmt")
