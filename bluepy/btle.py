@@ -184,16 +184,17 @@ class DefaultDelegate:
 
 
 class Bluepy:
-    def __init__(self):
+    def __init__(self, src='hci0'):
         self._helper = None
         self._poller = None
         self._stderr = None
+        self._src = src
 
     def _startHelper(self):
         if self._helper is None:
             DBG("Running ", helperExe)
             self._stderr = open(os.devnull, "w")
-            self._helper = subprocess.Popen([helperExe],
+            self._helper = subprocess.Popen([helperExe, self._src],
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
                                             stderr=self._stderr,
@@ -253,6 +254,10 @@ class Bluepy:
         return resp
 
     def _waitResp(self, wantType, timeout=None):
+        # make sure wantType is a list
+        if isinstance(wantType, list) is not True:
+            wantType = [wantType]
+
         while True:
             if self._helper.poll() is not None:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Helper exited")
@@ -286,12 +291,12 @@ class Bluepy:
 
     def status(self):
         self._writeCmd("stat\n")
-        return self._waitResp(['stat'])
+        return self._waitResp('stat')
 
 
 class Peripheral(Bluepy):
-    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC):
-        Bluepy.__init__(self)
+    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC, src='hci0'):
+        Bluepy.__init__(self, src=src)
         self.services = {} # Indexed by UUID
         self.addrType = addrType
         self.discoveredAllServices = False
@@ -309,6 +314,7 @@ class Peripheral(Bluepy):
         self.disconnect()
 
     def _getResp(self, wantType, timeout=None):
+        # make sure wantType is a list
         if isinstance(wantType, list) is not True:
             wantType = [wantType]
 
@@ -318,7 +324,7 @@ class Peripheral(Bluepy):
                 return None
 
             respType = resp['rsp'][0]
-            if respType == 'ntfy' or respType == 'ind':
+            if respType in ['ntfy', 'ind']:
                 hnd = resp['hnd'][0]
                 data = resp['d'][0]
                 if self.delegate is not None:
@@ -454,8 +460,8 @@ class Peripheral(Bluepy):
         self.disconnect()
 
 class Scan(Bluepy):
-    def __init__(self):
-        Bluepy.__init__(self)
+    def __init__(self, src='hci0'):
+        Bluepy.__init__(self, src=src)
         self.scanned = {}
         self.callback = None
 

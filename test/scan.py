@@ -109,6 +109,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     #parser.add_argument('host', action='store',
     #                    help='BD address of BT device')
+    parser.add_argument('-c', '--controller', action='store', default='hci0',
+                        help='controller')
     parser.add_argument('-t', '--timeout', action='store', type=int, default=4,
                         help='Scan delay, 0 for continuous')
     parser.add_argument('-s', '--sensitivity', action='store', type=int, default=-128,
@@ -125,7 +127,7 @@ if __name__ == "__main__":
 
     btle.Debugging = arg.verbose
 
-    scan = btle.Scan()
+    scan = btle.Scan(arg.controller)
 
     print ANSI_RED + "Scanning for devices..." + ANSI_OFF
     devices = scan.scan(arg.timeout, scan_cb)
@@ -136,12 +138,18 @@ if __name__ == "__main__":
         for addr,d in devices.iteritems():
             if not d['connectable']:
                 continue
+            rssi_val = sum(d['rssi']) / len(d['rssi'])
+            if rssi_val < arg.sensitivity:
+                continue
 
             print "    Connecting to", ANSI_WHITE + mac(addr) + ANSI_OFF + ":"
 
-            dev = btle.Peripheral(mac(addr), d['type'])
-            dump_services(dev)
-            dev.disconnect()
+            try:
+                dev = btle.Peripheral(mac(addr), d['type'])
+                dump_services(dev)
+                dev.disconnect()
+            except btle.BTLEException:
+                print "\tConnection failed"
             print
 
 

@@ -35,6 +35,8 @@
 
 #include "lib/bluetooth.h"
 #include "lib/bluetooth/sdp.h"
+#include "lib/hci.h"
+#include "lib/hci_lib.h"
 #include "lib/uuid.h"
 #include "lib/mgmt.h"
 #include "src/shared/mgmt.h"
@@ -72,6 +74,7 @@ static GAttrib *attrib = NULL;
 static GMainLoop *event_loop;
 
 static gchar *opt_src = NULL;
+static int opt_src_idx = MGMT_INDEX_NONE; // same as HCI_DEV_NONE
 static gchar *opt_dst = NULL;
 static gchar *opt_dst_type = NULL;
 static gchar *opt_sec_level = NULL;
@@ -1168,7 +1171,7 @@ static bool set_mode(uint16_t opcode, char *p_mode)
 
 	// at this time only index 0 is supported
 	if (mgmt_send(mgmt_master, opcode,
-			0, sizeof(cp), &cp,
+			opt_src_idx, sizeof(cp), &cp,
 			set_mode_complete, NULL, NULL) == 0) {
 		resp_mgmt(err_SUCCESS);
 	}
@@ -1240,7 +1243,7 @@ static void cmd_pair(int argcp, char **argvp)
 	cp.io_cap = io_cap;
 
 	if (mgmt_send(mgmt_master, MGMT_OP_PAIR_DEVICE,
-				MGMT_INDEX_NONE, sizeof(cp), &cp,
+				opt_src_idx, sizeof(cp), &cp,
 				pair_device_complete, NULL,
 				NULL) == 0) {
 		DBG("mgmt_send(MGMT_OP_PAIR_DEVICE) failed for %s for hci%u", opt_dst, MGMT_INDEX_NONE);
@@ -1284,7 +1287,7 @@ static void cmd_unpair(int argcp, char **argvp)
 	cp.disconnect = 1;
 
 	if (mgmt_send(mgmt_master, MGMT_OP_UNPAIR_DEVICE,
-				0, sizeof(cp), &cp,
+				opt_src_idx, sizeof(cp), &cp,
 				unpair_device_complete, NULL,
 				NULL) == 0) {
 		DBG("mgmt_send(MGMT_OP_UNPAIR_DEVICE) failed for %s for hci%u", opt_dst, MGMT_INDEX_NONE);
@@ -1313,7 +1316,7 @@ static void scan(bool start)
 
 	DBG("Scan %s", start? "start" : "stop");
 
-	if (mgmt_send(mgmt_master, opcode, 0, sizeof(cp),
+	if (mgmt_send(mgmt_master, opcode, opt_src_idx, sizeof(cp),
 		&cp, scan_cb, NULL, NULL) == 0)
 	{
 		DBG("mgmt_send(MGMT_OP_%s_DISCOVERY) failed", start? "START" : "STOP");
@@ -1477,6 +1480,7 @@ static void read_version_complete(uint8_t status, uint16_t length,
 static void mgmt_device_connected(uint16_t index, uint16_t length,
 								const void *param, void *user_data)
 {
+	assert(index == opt_src_idx);
 	DBG("New device connected");
 }
 
@@ -1485,6 +1489,7 @@ static void mgmt_scanning(uint16_t index, uint16_t length,
 {
 	const struct mgmt_ev_discovering *ev = param;
 	assert(length == sizeof(*ev));
+	assert(index == opt_src_idx);
 
 	DBG("Scanning (0x%x): %s", ev->type, ev->discovering? "started" : "ended");
 
@@ -1496,6 +1501,7 @@ static void mgmt_device_found(uint16_t index, uint16_t length,
 {
 	const struct mgmt_ev_device_found *ev = param;
 	assert(length == sizeof(*ev) + ev->eir_len);
+	assert(index == opt_src_idx);
 
 	// Result sometimes sent too early
 	if (conn_state != STATE_SCANNING)
@@ -1517,6 +1523,32 @@ static void mgmt_debug(const char *str, void *user_data)
 	DBG("%s%s", (const char *)user_data, str);
 }
 
+static int parse_dev_src(const char * arg, gchar **addr, int *index)
+{
+	char *end;
+	bdaddr_t bdaddr;
+
+	if (strncmp(arg, "hci", 3))
+		return -1;
+
+	*index = strtol(arg + 3, &end, 10);
+	if (*end != '\0')
+		return -1;
+
+	if (hci_devba(*index, &bdaddr))
+		return -1;
+
+	// batostr() look bugged in Bluez!
+	*addr = g_malloc(18);
+	if (*addr == NULL)
+		return -2;
+
+	if (ba2str(&bdaddr, *addr) != 17)
+		return -2;
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	GIOChannel *pchan;
@@ -1524,7 +1556,17 @@ int main(int argc, char *argv[])
 
 	opt_sec_level = g_strdup("low");
 
-	opt_src = NULL;
+	if (argc > 1) {
+		if (parse_dev_src(argv[1], &opt_src, &opt_src_idx)) {
+			fprintf(stderr,"%s: expected optional argument 'hciX' valid and up\n", argv[0]);
+			exit(-1);
+		}
+	} else {
+		parse_dev_src("hci0", &opt_src, &opt_src_idx);
+	}
+
+	DBG("Using controller hci%d  addr:%s\n", opt_src_idx, opt_src);
+
 	opt_dst = NULL;
 	opt_dst_type = g_strdup("public");
 
@@ -1537,20 +1579,20 @@ int main(int argc, char *argv[])
 	mgmt_set_debug(mgmt_master, mgmt_debug, "mgmt: ", NULL);
 
 	if (mgmt_send(mgmt_master, MGMT_OP_READ_VERSION,
-			MGMT_INDEX_NONE, 0, NULL,
+			opt_src_idx, 0, NULL,
 			read_version_complete, NULL, NULL) == 0) {
 		DBG("mgmt_send(MGMT_OP_READ_VERSION) failed");
 	}
 
-	if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, 0, mgmt_device_connected, NULL, NULL)==0) {
+	if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, opt_src_idx, mgmt_device_connected, NULL, NULL)==0) {
 		DBG("mgmt_register(MGMT_EV_DEVICE_CONNECTED) failed");
 	}
 
-	if (mgmt_register(mgmt_master, MGMT_EV_DISCOVERING, 0, mgmt_scanning, NULL, NULL)) {
+	if (mgmt_register(mgmt_master, MGMT_EV_DISCOVERING, opt_src_idx, mgmt_scanning, NULL, NULL)) {
 		DBG("mgmt_register(MGMT_EV_DISCOVERING) failed");
 	}
 
-	if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_FOUND, 0, mgmt_device_found, NULL, NULL)) {
+	if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_FOUND, opt_src_idx, mgmt_device_found, NULL, NULL)) {
 		DBG("mgmt_register(MGMT_EV_DEVICE_FOUND) failed");
 	}
 
@@ -1574,8 +1616,8 @@ int main(int argc, char *argv[])
 	g_free(opt_dst);
 	g_free(opt_sec_level);
 
-	mgmt_unregister_index(mgmt_master, MGMT_INDEX_NONE);
-	mgmt_cancel_index(mgmt_master, MGMT_INDEX_NONE);
+	mgmt_unregister_index(mgmt_master, opt_src_idx);
+	mgmt_cancel_index(mgmt_master, opt_src_idx);
 	mgmt_unref(mgmt_master);
 	mgmt_master = NULL;
 
