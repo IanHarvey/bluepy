@@ -66,13 +66,25 @@ def dump_services(dev):
             h = c.getHandle()
             print "\t%04x:    %-59s %-12s" % (h, c, props),
             if 'READ' in props:
-                val = c.read()
-                if c.uuid == btle.AssignedNumbers.device_name:
-                    string = ANSI_CYAN + '\'' + val + '\'' + ANSI_OFF
-                elif s.uuid == btle.AssignedNumbers.device_information:
-                    string = '\'' + val + '\''
-                else:
-                    string = '<' + binascii.hexlify(val) + '>'
+                try:
+                    val = c.read()
+                    if c.uuid == btle.AssignedNumbers.device_name:
+                        string = ANSI_CYAN + '\'' + val + '\'' + ANSI_OFF
+                    elif s.uuid == btle.AssignedNumbers.device_information:
+                        string = '\'' + val + '\''
+                    else:
+                        string = '<' + binascii.hexlify(val) + '>'
+                except btle.BTLEException as e:
+                    if e.code == btle.BTLEException.COMM_ERROR:
+                        if e.bt_err == 5:
+                            # Device sent "authentication failure"
+                            string = ANSI_RED + "DENIED" + ANSI_OFF
+                        else:
+                            # Device sent other error
+                            string = ANSI_RED + "BT error:", e.bt_err, ANSI_OFF
+                    else:
+                        # Probably internal error
+                        raise e
             else:
                 string=''
             print string
@@ -88,9 +100,22 @@ def dump_services(dev):
                     break
 
 def scan_cb(entry, addr, type, rssi, connectable, data, data_raw):
+    global matched
+
+    # Filter on RSSI
     rssi_val = sum(rssi) / len(rssi)
     if (entry == 'old' and not arg.all) or (entry == 'update' and arg.new) or (rssi_val < arg.sensitivity):
         return
+
+    # Filter on name or BDADDR
+    if arg.filter and arg.filter not in mac(addr):
+        for id,v in data.iteritems():
+            if id in [8,9] and arg.filter in v:
+                break
+        else:
+            return
+
+    # Print device data
     print '    Device (%s):' % entry, ANSI_WHITE + mac(addr) + ANSI_OFF, '(' + type + ')  ', \
         rssi_val, 'dBm', \
         ('' if connectable else '(not connectable)')
@@ -105,6 +130,9 @@ def scan_cb(entry, addr, type, rssi, connectable, data, data_raw):
         print '\t(no data)'
     print
 
+    # Add device to connect list
+    matched += [addr]
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     #parser.add_argument('host', action='store',
@@ -115,6 +143,8 @@ if __name__ == "__main__":
                         help='Scan delay, 0 for continuous')
     parser.add_argument('-s', '--sensitivity', action='store', type=int, default=-128,
                         help='dBm value for filtering far devices')
+    parser.add_argument('-f', '--filter', action='store', default=None,
+                        help='substring for filtering on name or address')
     parser.add_argument('-d', '--discover', action='store_true',
                         help='Connect and discover service to scanned devices')
     parser.add_argument('-a','--all', action='store_true',
@@ -127,6 +157,7 @@ if __name__ == "__main__":
 
     btle.Debugging = arg.verbose
 
+    matched = []
     scan = btle.Scan(arg.controller)
 
     print ANSI_RED + "Scanning for devices..." + ANSI_OFF
@@ -136,19 +167,17 @@ if __name__ == "__main__":
         print ANSI_RED + "Discovering services..." + ANSI_OFF
 
         for addr,d in devices.iteritems():
-            if not d['connectable']:
-                continue
-            rssi_val = sum(d['rssi']) / len(d['rssi'])
-            if rssi_val < arg.sensitivity:
+            if not d['connectable'] or addr not in matched:
                 continue
 
             print "    Connecting to", ANSI_WHITE + mac(addr) + ANSI_OFF + ":"
 
             try:
-                dev = btle.Peripheral(mac(addr), d['type'])
+                dev = btle.Peripheral(mac(addr), d['type'], arg.controller)
                 dump_services(dev)
                 dev.disconnect()
-            except btle.BTLEException:
+            except btle.BTLEException as e:
+                print "\t" + ANSI_RED + e.message + ANSI_OFF
                 print "\tConnection failed"
             print
 
