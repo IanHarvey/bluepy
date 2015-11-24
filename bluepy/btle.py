@@ -37,9 +37,10 @@ class BTLEException(Exception):
     INTERNAL_ERROR = 3
     GATT_ERROR = 4
 
-    def __init__(self, code, message):
+    def __init__(self, code, message, bt_err = 0):
         self.code = code
         self.message = message
+        self.bt_err = bt_err
 
     def __str__(self):
         return self.message
@@ -184,16 +185,17 @@ class DefaultDelegate:
 
 
 class Bluepy:
-    def __init__(self):
+    def __init__(self, src='hci0'):
         self._helper = None
         self._poller = None
         self._stderr = None
+        self._src = src
 
     def _startHelper(self):
         if self._helper is None:
             DBG("Running ", helperExe)
             self._stderr = open(os.devnull, "w")
-            self._helper = subprocess.Popen([helperExe],
+            self._helper = subprocess.Popen([helperExe, self._src],
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
                                             stderr=self._stderr,
@@ -217,6 +219,7 @@ class Bluepy:
         if self._helper is None:
             raise BTLEException(BTLEException.INTERNAL_ERROR,
                                 "Helper not started (did you call connect()?)")
+
         DBG("Sent: ", cmd)
         self._helper.stdin.write(cmd)
         self._helper.stdin.flush()
@@ -266,7 +269,6 @@ class Bluepy:
                 if len(fds) == 0:
                     DBG("Select timeout")
                     return None
-
             rv = self._helper.stdout.readline()
             DBG("Got:", repr(rv))
             if rv.startswith('#') or rv == '\n':
@@ -284,7 +286,8 @@ class Bluepy:
                 raise BTLEException(BTLEException.DISCONNECTED, "Device disconnected")
             elif respType == 'err':
                 errcode=resp['code'][0]
-                raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode)
+                bt_err=resp['bterr'][0]
+                raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s, %d)" % (errcode, bt_err), bt_err)
             else:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response (%s)" % respType)
 
@@ -294,8 +297,8 @@ class Bluepy:
 
 
 class Peripheral(Bluepy):
-    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC):
-        Bluepy.__init__(self)
+    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC, src='hci0'):
+        Bluepy.__init__(self, src=src)
         self.services = {} # Indexed by UUID
         self.addrType = addrType
         self.discoveredAllServices = False
@@ -459,8 +462,8 @@ class Peripheral(Bluepy):
         self.disconnect()
 
 class Scan(Bluepy):
-    def __init__(self):
-        Bluepy.__init__(self)
+    def __init__(self, src='hci0'):
+        Bluepy.__init__(self, src=src)
         self.scanned = {}
         self.callback = None
 
@@ -489,9 +492,6 @@ class Scan(Bluepy):
         self.callback = callback
 
     def process(self, timeout=10):
-        if self._helper is None:
-            raise BTLEException(BTLEException.INTERNAL_ERROR,
-                                "Helper not started (did you call start()?)")
         start = time.time()
         while True:
             remain = timeout and start + timeout - time.time()
