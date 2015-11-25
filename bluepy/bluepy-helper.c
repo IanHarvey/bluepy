@@ -80,6 +80,7 @@ static int opt_mtu = 0;
 static int start;
 static int end;
 
+static uint16_t mgmt_ind;
 static struct mgmt *mgmt_master = NULL;
 
 struct characteristic_data {
@@ -739,6 +740,12 @@ static void cmd_connect(int argcp, char **argvp)
 			opt_dst_type = g_strdup(argvp[2]);
 		else
 			opt_dst_type = g_strdup("public");
+		if (argcp > 3) {
+		        g_free(opt_src);
+			opt_src = g_strdup(argvp[3]);
+                } else {
+			opt_src = NULL;
+                }
 	}
 
 	if (opt_dst == NULL) {
@@ -1168,7 +1175,7 @@ static bool set_mode(uint16_t opcode, char *p_mode)
 
 	// at this time only index 0 is supported
 	if (mgmt_send(mgmt_master, opcode,
-			0, sizeof(cp), &cp,
+			mgmt_ind, sizeof(cp), &cp,
 			set_mode_complete, NULL, NULL) == 0) {
 		resp_mgmt(err_SUCCESS);
 	}
@@ -1240,10 +1247,10 @@ static void cmd_pair(int argcp, char **argvp)
 	cp.io_cap = io_cap;
 
 	if (mgmt_send(mgmt_master, MGMT_OP_PAIR_DEVICE,
-				MGMT_INDEX_NONE, sizeof(cp), &cp,
+				mgmt_ind, sizeof(cp), &cp,
 				pair_device_complete, NULL,
 				NULL) == 0) {
-		DBG("mgmt_send(MGMT_OP_PAIR_DEVICE) failed for %s for hci%u", opt_dst, MGMT_INDEX_NONE);
+		DBG("mgmt_send(MGMT_OP_PAIR_DEVICE) failed for %s for hci%u", opt_dst, mgmt_ind);
 		resp_mgmt(err_PROTO_ERR);
 		return;
 	}
@@ -1284,10 +1291,10 @@ static void cmd_unpair(int argcp, char **argvp)
 	cp.disconnect = 1;
 
 	if (mgmt_send(mgmt_master, MGMT_OP_UNPAIR_DEVICE,
-				0, sizeof(cp), &cp,
+				mgmt_ind, sizeof(cp), &cp,
 				unpair_device_complete, NULL,
 				NULL) == 0) {
-		DBG("mgmt_send(MGMT_OP_UNPAIR_DEVICE) failed for %s for hci%u", opt_dst, MGMT_INDEX_NONE);
+		DBG("mgmt_send(MGMT_OP_UNPAIR_DEVICE) failed for %s for hci%u", opt_dst, mgmt_ind);
 		resp_mgmt(err_PROTO_ERR);
 		return;
 	}
@@ -1313,7 +1320,7 @@ static void scan(bool start)
 
 	DBG("Scan %s", start? "start" : "stop");
 
-	if (mgmt_send(mgmt_master, opcode, 0, sizeof(cp),
+	if (mgmt_send(mgmt_master, opcode, mgmt_ind, sizeof(cp),
 		&cp, scan_cb, NULL, NULL) == 0)
 	{
 		DBG("mgmt_send(MGMT_OP_%s_DISCOVERY) failed", start? "START" : "STOP");
@@ -1352,7 +1359,7 @@ static struct {
 		"Show current status" },
 	{ "quit",		cmd_exit,	"",
 		"Exit interactive mode" },
-	{ "conn",		cmd_connect,	"[address [address type]]",
+	{ "conn",		cmd_connect,	"[address [address type] [interface]]",
 		"Connect to a remote device" },
 	{ "disc",		cmd_disconnect,	"",
 		"Disconnect from a remote device" },
@@ -1521,7 +1528,8 @@ int main(int argc, char *argv[])
 {
 	GIOChannel *pchan;
 	gint events;
-
+        int index;
+         
 	opt_sec_level = g_strdup("low");
 
 	opt_src = NULL;
@@ -1530,30 +1538,37 @@ int main(int argc, char *argv[])
 
 	DBG(__FILE__ " built at " __TIME__ " on " __DATE__);
 
-	mgmt_master = mgmt_new_default();
-	if (!mgmt_master) {
+        if (argc > 1) {
+	    mgmt_master = mgmt_new_default();
+	    if (!mgmt_master) {
 		DBG("Could not connect to the BT management interface, try with su rights");
-	}
-	mgmt_set_debug(mgmt_master, mgmt_debug, "mgmt: ", NULL);
+	    }
+	    mgmt_set_debug(mgmt_master, mgmt_debug, "mgmt: ", NULL);
 
-	if (mgmt_send(mgmt_master, MGMT_OP_READ_VERSION,
-			MGMT_INDEX_NONE, 0, NULL,
+            if (sscanf (argv[1], "%i", &index)!=1) { 
+		DBG("error converting argument: %s  to device index integer",argv[1]);
+                mgmt_ind=MGMT_INDEX_NONE;
+            } else {
+                mgmt_ind=index;
+            }
+            fprintf(stderr,"MGMT_INDEX: %d\n",mgmt_ind);		
+	    if (mgmt_send(mgmt_master, MGMT_OP_READ_VERSION,
+			mgmt_ind, 0, NULL,
 			read_version_complete, NULL, NULL) == 0) {
 		DBG("mgmt_send(MGMT_OP_READ_VERSION) failed");
-	}
-
-	if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, 0, mgmt_device_connected, NULL, NULL)==0) {
+	    }   
+	    if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, mgmt_ind, mgmt_device_connected, NULL, NULL)==0) {
 		DBG("mgmt_register(MGMT_EV_DEVICE_CONNECTED) failed");
-	}
+	    }
 
-	if (mgmt_register(mgmt_master, MGMT_EV_DISCOVERING, 0, mgmt_scanning, NULL, NULL)) {
+	    if (mgmt_register(mgmt_master, MGMT_EV_DISCOVERING, mgmt_ind, mgmt_scanning, NULL, NULL)) {
 		DBG("mgmt_register(MGMT_EV_DISCOVERING) failed");
-	}
+	    }
 
-	if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_FOUND, 0, mgmt_device_found, NULL, NULL)) {
+	    if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_FOUND, mgmt_ind, mgmt_device_found, NULL, NULL)) {
 		DBG("mgmt_register(MGMT_EV_DEVICE_FOUND) failed");
-	}
-
+	    }
+        }
 	event_loop = g_main_loop_new(NULL, FALSE);
 
 	pchan = g_io_channel_unix_new(fileno(stdin));
@@ -1574,8 +1589,8 @@ int main(int argc, char *argv[])
 	g_free(opt_dst);
 	g_free(opt_sec_level);
 
-	mgmt_unregister_index(mgmt_master, MGMT_INDEX_NONE);
-	mgmt_cancel_index(mgmt_master, MGMT_INDEX_NONE);
+	mgmt_unregister_index(mgmt_master, mgmt_ind);
+	mgmt_cancel_index(mgmt_master, mgmt_ind);
 	mgmt_unref(mgmt_master);
 	mgmt_master = NULL;
 
