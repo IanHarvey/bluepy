@@ -94,7 +94,8 @@ static void cmd_help(int argcp, char **argvp);
 static enum state {
     STATE_DISCONNECTED=0,
     STATE_CONNECTING=1,
-    STATE_CONNECTED=2
+    STATE_CONNECTED=2,
+    STATE_SCANNING=3,
 } conn_state;
 
 
@@ -111,7 +112,11 @@ static const char
   *tag_RANGE_START = "hstart",
   *tag_RANGE_END = "hend",
   *tag_PROPERTIES= "props",
-  *tag_VALUE_HANDLE = "vhnd";
+  *tag_VALUE_HANDLE = "vhnd",
+  *tag_ADDR       = "addr",
+  *tag_TYPE       = "type",
+  *tag_RSSI       = "rssi",
+  *tag_FLAG       = "flag";
 
 static const char
   *rsp_ERROR     = "err",
@@ -122,7 +127,8 @@ static const char
   *rsp_DESCRIPTORS = "desc",
   *rsp_READ      = "rd",
   *rsp_WRITE     = "wr",
-  *rsp_MGMT      = "mgmt";
+  *rsp_MGMT      = "mgmt",
+  *rsp_SCAN      = "scan";
 
 static const char
   *err_CONN_FAIL = "connfail",
@@ -132,12 +138,14 @@ static const char
   *err_BAD_CMD   = "badcmd",
   *err_BAD_PARAM = "badparam",
   *err_BAD_STATE = "badstate",
+  *err_BUSY      = "busy",
   *err_SUCCESS   = "success";
 
 static const char 
   *st_DISCONNECTED = "disc",
   *st_CONNECTING   = "tryconn",
-  *st_CONNECTED    = "conn";
+  *st_CONNECTED    = "conn",
+  *st_SCANNING    = "scan";
 
 static void resp_begin(const char *rsptype)
 {
@@ -165,6 +173,17 @@ static void send_data(const unsigned char *val, size_t len)
   printf(" %s=b", tag_DATA);
   while ( len-- > 0 )
     printf("%02X", *val++);
+}
+
+static void send_addr(const struct mgmt_addr_info *addr)
+{
+    const uint8_t *val = addr->bdaddr.b;
+    printf(" %s=b", tag_ADDR);
+    int len = 6;
+    while ( len-- > 0 )
+        printf("%02X", *val++);
+
+    send_uint(tag_TYPE, addr->type);
 }
 
 static void resp_end()
@@ -199,6 +218,11 @@ static void cmd_status(int argcp, char **argvp)
 
     case STATE_CONNECTED:
       send_sym(tag_CONNSTATE, st_CONNECTED);
+      send_str(tag_DEVICE, opt_dst);
+      break;
+
+    case STATE_SCANNING:
+      send_sym(tag_CONNSTATE, st_SCANNING);
       send_str(tag_DEVICE, opt_dst);
       break;
 
@@ -1269,6 +1293,53 @@ static void cmd_unpair(int argcp, char **argvp)
     }
 }
 
+static void scan_cb(uint8_t status, uint16_t length, const void *param, void *user_data)
+{
+    if (status != MGMT_STATUS_SUCCESS) {
+        DBG("Scan error: %s (0x%02x)", mgmt_errstr(status), status);
+        resp_mgmt(status == MGMT_STATUS_BUSY? err_BUSY : err_PROTO_ERR);
+        return;
+    }
+
+    resp_mgmt(err_SUCCESS);
+}
+
+// Unlike Bluez, we follow BT 4.0 spec which renammed Device Discovery by Scan
+static void scan(bool start)
+{
+    // mgmt_cp_start_discovery and mgmt_cp_stop_discovery are the same
+    struct mgmt_cp_start_discovery cp = { (1 << BDADDR_LE_PUBLIC) | (1 << BDADDR_LE_RANDOM) };
+    uint16_t opcode = start? MGMT_OP_START_DISCOVERY : MGMT_OP_STOP_DISCOVERY;
+
+    DBG("Scan %s", start? "start" : "stop");
+
+    if (mgmt_send(mgmt_master, opcode, 0, sizeof(cp),
+        &cp, scan_cb, NULL, NULL) == 0)
+    {
+        DBG("mgmt_send(MGMT_OP_%s_DISCOVERY) failed", start? "START" : "STOP");
+        resp_mgmt(err_PROTO_ERR);
+        return;
+    }
+}
+
+static void cmd_scanend(int argcp, char **argvp)
+{
+    if (1 < argcp) {
+        resp_mgmt(err_BAD_PARAM);
+    } else {
+        scan(FALSE);
+    }
+}
+
+static void cmd_scan(int argcp, char **argvp)
+{
+    if (1 < argcp) {
+        resp_mgmt(err_BAD_PARAM);
+    } else {
+        scan(TRUE);
+    }
+}
+
 static struct {
     const char *cmd;
     void (*func)(int argcp, char **argvp);
@@ -1313,6 +1384,10 @@ static struct {
         "Start pairing with the device" },
     { "unpair",  cmd_unpair,  "",
         "Start unpairing with the device" },
+    { "scan",       cmd_scan,   "",
+        "Start scan" },
+    { "scanend",    cmd_scanend,    "",
+        "Force scan end" },
     { NULL, NULL, NULL}
 };
 
@@ -1405,6 +1480,36 @@ static void mgmt_device_connected(uint16_t index, uint16_t length,
     DBG("New device connected");
 }
 
+static void mgmt_scanning(uint16_t index, uint16_t length,
+            const void *param, void *user_data)
+{
+    const struct mgmt_ev_discovering *ev = param;
+    assert(length == sizeof(*ev));
+
+    DBG("Scanning (0x%x): %s", ev->type, ev->discovering? "started" : "ended");
+
+    set_state(ev->discovering? STATE_SCANNING : STATE_DISCONNECTED);
+}
+
+static void mgmt_device_found(uint16_t index, uint16_t length,
+                            const void *param, void *user_data)
+{
+    const struct mgmt_ev_device_found *ev = param;
+    assert(length == sizeof(*ev) + ev->eir_len);
+
+    // Result sometimes sent too early
+    if (conn_state != STATE_SCANNING)
+        return;
+
+    resp_begin(rsp_SCAN);
+    send_addr(&ev->addr);
+    send_uint(tag_RSSI, -ev->rssi);
+    send_uint(tag_FLAG, -ev->flags);
+    if (ev->eir_len)
+        send_data(ev->eir, ev->eir_len);
+    resp_end();
+}
+
 static void mgmt_debug(const char *str, void *user_data)
 {
     //const char *prefix = user_data;
@@ -1439,6 +1544,14 @@ int main(int argc, char *argv[])
 
     if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, 0, mgmt_device_connected, NULL, NULL)==0) {
         DBG("mgmt_register(MGMT_EV_DEVICE_CONNECTED) failed");
+    }
+
+    if (mgmt_register(mgmt_master, MGMT_EV_DISCOVERING, 0, mgmt_scanning, NULL, NULL)) {
+        DBG("mgmt_register(MGMT_EV_DISCOVERING) failed");
+    }
+
+    if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_FOUND, 0, mgmt_device_found, NULL, NULL)) {
+        DBG("mgmt_register(MGMT_EV_DEVICE_FOUND) failed");
     }
 
     event_loop = g_main_loop_new(NULL, FALSE);
