@@ -460,7 +460,7 @@ class Peripheral(Bluepy):
         self.disconnect()
 
 class Scan(Bluepy):
-    def __init__(self,index='max'):
+    def __init__(self,index=None):
         Bluepy.__init__(self)
         self.scanned = {}
         self.callback = None
