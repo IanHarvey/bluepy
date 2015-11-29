@@ -13,6 +13,9 @@ CC = gcc
 CFLAGS = -Os -g -Wall -Werror
 
 CPPFLAGS = -DHAVE_CONFIG_H
+ifneq ($(DEBUGGING),)
+CFLAGS += -DBLUEPY_DEBUG=1
+endif
 
 CPPFLAGS += -I$(BLUEZ_PATH)/attrib -I$(BLUEZ_PATH) -I$(BLUEZ_PATH)/lib -I$(BLUEZ_PATH)/src -I$(BLUEZ_PATH)/gdbus -I$(BLUEZ_PATH)/btio
 

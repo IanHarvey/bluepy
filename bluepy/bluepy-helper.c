@@ -1558,15 +1558,15 @@ int main(int argc, char *argv[])
             DBG("mgmt_send(MGMT_OP_READ_VERSION) failed");
         }
 
-        if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, mgmt_ind, mgmt_device_connected, NULL, NULL)==0) {
+        if (!mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, mgmt_ind, mgmt_device_connected, NULL, NULL)) {
             DBG("mgmt_register(MGMT_EV_DEVICE_CONNECTED) failed");
         }
 
-        if (mgmt_register(mgmt_master, MGMT_EV_DISCOVERING, mgmt_ind, mgmt_scanning, NULL, NULL)) {
+        if (!mgmt_register(mgmt_master, MGMT_EV_DISCOVERING, mgmt_ind, mgmt_scanning, NULL, NULL)) {
             DBG("mgmt_register(MGMT_EV_DISCOVERING) failed");
         }
 
-        if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_FOUND, mgmt_ind, mgmt_device_found, NULL, NULL)) {
+        if (!mgmt_register(mgmt_master, MGMT_EV_DEVICE_FOUND, mgmt_ind, mgmt_device_found, NULL, NULL)) {
             DBG("mgmt_register(MGMT_EV_DEVICE_FOUND) failed");
         }
     }
