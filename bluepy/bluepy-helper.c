@@ -740,8 +740,8 @@ static void cmd_connect(int argcp, char **argvp)
             opt_dst_type = g_strdup(argvp[2]);
         else
             opt_dst_type = g_strdup("public");
+        g_free(opt_src);
         if (argcp > 3) {
-            g_free(opt_src);
             opt_src = g_strdup(argvp[3]);
         } else {
             opt_src = NULL;
@@ -1359,7 +1359,7 @@ static struct {
         "Show current status" },
     { "quit",       cmd_exit,   "",
         "Exit interactive mode" },
-    { "conn",       cmd_connect,    "[address [address type] [interface]]",
+    { "conn",       cmd_connect,    "[address [address type [interface]]]",
         "Connect to a remote device" },
     { "disc",       cmd_disconnect, "",
         "Disconnect from a remote device" },
