@@ -5,7 +5,7 @@ import time
 import os
 import sys
 # Add btle.py path for import
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bluepy')))
+sys.path.insert(0,os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bluepy')))
 import btle
 
 if os.getenv('C','1') == '0':
