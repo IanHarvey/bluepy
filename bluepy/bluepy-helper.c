@@ -80,7 +80,7 @@ static int opt_mtu = 0;
 static int start;
 static int end;
 
-static uint16_t mgmt_ind;
+static uint16_t mgmt_ind = MGMT_INDEX_NONE;
 static struct mgmt *mgmt_master = NULL;
 
 struct characteristic_data {
@@ -1524,11 +1524,40 @@ static void mgmt_debug(const char *str, void *user_data)
     DBG("%s%s", (const char *)user_data, str);
 }
 
+static void mgmt_setup(unsigned int idx)
+{
+    mgmt_master = mgmt_new_default();
+    if (!mgmt_master) {
+        DBG("Could not connect to the BT management interface, try with su rights");
+        return;
+    }
+    DBG("Setting up mgmt on hci%u", idx);
+    mgmt_ind = idx;
+    mgmt_set_debug(mgmt_master, mgmt_debug, "mgmt: ", NULL);
+
+    if (mgmt_send(mgmt_master, MGMT_OP_READ_VERSION,
+        mgmt_ind, 0, NULL,
+        read_version_complete, NULL, NULL) == 0) {
+        DBG("mgmt_send(MGMT_OP_READ_VERSION) failed");
+    }
+
+    if (!mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, mgmt_ind, mgmt_device_connected, NULL, NULL)) {
+        DBG("mgmt_register(MGMT_EV_DEVICE_CONNECTED) failed");
+    }
+
+    if (!mgmt_register(mgmt_master, MGMT_EV_DISCOVERING, mgmt_ind, mgmt_scanning, NULL, NULL)) {
+        DBG("mgmt_register(MGMT_EV_DISCOVERING) failed");
+    }
+
+    if (!mgmt_register(mgmt_master, MGMT_EV_DEVICE_FOUND, mgmt_ind, mgmt_device_found, NULL, NULL)) {
+        DBG("mgmt_register(MGMT_EV_DEVICE_FOUND) failed");
+    }
+}
+
 int main(int argc, char *argv[])
 {
     GIOChannel *pchan;
     gint events;
-    int index;
 
     opt_sec_level = g_strdup("low");
 
@@ -1539,35 +1568,12 @@ int main(int argc, char *argv[])
     DBG(__FILE__ " built at " __TIME__ " on " __DATE__);
 
     if (argc > 1) {
-        mgmt_master = mgmt_new_default();
-        if (!mgmt_master) {
-            DBG("Could not connect to the BT management interface, try with su rights");
-        }
-        mgmt_set_debug(mgmt_master, mgmt_debug, "mgmt: ", NULL);
+        int index;
 
         if (sscanf (argv[1], "%i", &index)!=1) { 
             DBG("error converting argument: %s  to device index integer",argv[1]);
-            mgmt_ind=MGMT_INDEX_NONE;
         } else {
-            mgmt_ind=index;
-        }
-        fprintf(stderr,"MGMT_INDEX: %d\n",mgmt_ind);		
-        if (mgmt_send(mgmt_master, MGMT_OP_READ_VERSION,
-            mgmt_ind, 0, NULL,
-            read_version_complete, NULL, NULL) == 0) {
-            DBG("mgmt_send(MGMT_OP_READ_VERSION) failed");
-        }
-
-        if (!mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, mgmt_ind, mgmt_device_connected, NULL, NULL)) {
-            DBG("mgmt_register(MGMT_EV_DEVICE_CONNECTED) failed");
-        }
-
-        if (!mgmt_register(mgmt_master, MGMT_EV_DISCOVERING, mgmt_ind, mgmt_scanning, NULL, NULL)) {
-            DBG("mgmt_register(MGMT_EV_DISCOVERING) failed");
-        }
-
-        if (!mgmt_register(mgmt_master, MGMT_EV_DEVICE_FOUND, mgmt_ind, mgmt_device_found, NULL, NULL)) {
-            DBG("mgmt_register(MGMT_EV_DEVICE_FOUND) failed");
+            mgmt_setup(index);
         }
     }
 
