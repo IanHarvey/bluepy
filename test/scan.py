@@ -87,23 +87,29 @@ def dump_services(dev):
                 except btle.BTLEException:
                     break
 
-def scan_cb(entry, addr, type, rssi, connectable, data, data_raw):
-    rssi_val = sum(rssi) / len(rssi)
-    if (entry == 'old' and not arg.all) or (entry == 'update' and arg.new) or (rssi_val < arg.sensitivity):
-        return
-    print '    Device (%s):' % entry, ANSI_WHITE + mac(addr) + ANSI_OFF, '(' + type + ')  ', \
-        rssi_val, 'dBm', \
-        ('' if connectable else '(not connectable)')
-    for id,v in data.iteritems():
-        if id in [8,9]:
-            print '\t' + DATA_TYPES[id] + ': \'' + ANSI_CYAN + v + ANSI_OFF + '\''
-        elif id in DATA_TYPES:
-            print '\t' + DATA_TYPES[id] + ': <' + binascii.b2a_hex(v) + '>'
-        else:
-            print '\tid 0x%x: <' + binascii.b2a_hex(v) + '>'
-    if not data:
-        print '\t(no data)'
-    print
+class ScanPrint(btle.DefaultDelegate):
+    def handleDiscovery(self, dev, isNewDev, isNewData):
+        if arg.new and (not isNewDev):
+            return
+        if (not arg.all) and (not isNewData):
+            return
+        if dev.rssi < arg.sensitivity:
+            return
+          
+        status = "new" if isNewDev else ( "update" if isNewData else "old" )
+        print '    Device (%s):' % status, ANSI_WHITE + mac(dev.addr) + ANSI_OFF, '(' + dev.atype + ')  ', \
+        dev.rssi, 'dBm', \
+        ('' if dev.connectable else '(not connectable)')
+        for id,v in dev.scanData.iteritems():
+            if id in [8,9]:
+                print '\t' + DATA_TYPES[id] + ': \'' + ANSI_CYAN + v + ANSI_OFF + '\''
+            elif id in DATA_TYPES:
+                print '\t' + DATA_TYPES[id] + ': <' + binascii.b2a_hex(v) + '>'
+            else:
+                print ('\tid 0x%x: <' % id) + binascii.b2a_hex(v) + '>'
+        if not dev.scanData:
+            print '\t(no data)'
+        print
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -125,21 +131,21 @@ if __name__ == "__main__":
 
     btle.Debugging = arg.verbose
 
-    scanner = btle.Scanner()
+    scanner = btle.Scanner().withDelegate(ScanPrint())
 
     print ANSI_RED + "Scanning for devices..." + ANSI_OFF
-    devices = scanner.scan(arg.timeout, scan_cb)
+    devices = scanner.scan(arg.timeout)
 
     if arg.discover:
         print ANSI_RED + "Discovering services..." + ANSI_OFF
 
         for addr,d in devices.iteritems():
-            if not d['connectable']:
+            if not d.connectable:
                 continue
 
             print "    Connecting to", ANSI_WHITE + mac(addr) + ANSI_OFF + ":"
 
-            dev = btle.Peripheral(mac(addr), d['type'])
+            dev = btle.Peripheral(mac(addr), d.atype)
             dump_services(dev)
             dev.disconnect()
             print

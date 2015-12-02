@@ -175,7 +175,7 @@ class Descriptor:
 
     def __str__(self):
         return "Descriptor <%s>" % self.uuid.getCommonName()
-
+        
 class DefaultDelegate:
     def __init__(self):
         pass
@@ -183,12 +183,19 @@ class DefaultDelegate:
     def handleNotification(self, cHandle, data):
         DBG("Notification:", cHandle, "sent data", binascii.b2a_hex(data))
 
+    def handleScan(self, scanEntry, isNewDev, isNewData):
+        DBG("Discovered device", scanEntry.addr)
 
 class BluepyHelper:
     def __init__(self):
         self._helper = None
         self._poller = None
         self._stderr = None
+        self.delegate = DefaultDelegate()
+
+    def withDelegate(self, delegate_):
+        self.delegate = delegate_
+        return self
 
     def _startHelper(self,index=None):
         if self._helper is None:
@@ -302,12 +309,11 @@ class Peripheral(BluepyHelper):
         self.addrType = addrType
         self.iface = iface 
         self.discoveredAllServices = False
-        self.delegate = DefaultDelegate()
         if deviceAddr is not None:
             self.connect(deviceAddr, addrType,iface)
 
-    def setDelegate(self, delegate_):
-        self.delegate = delegate_
+    def setDelegate(self, delegate_): # same as withDelegate(), deprecated
+        return self.withDelegate(delegate_)
 
     def __enter__(self):
         return self
@@ -463,11 +469,47 @@ class Peripheral(BluepyHelper):
     def __del__(self):
         self.disconnect()
 
+class ScanEntry:
+    def __init__(self, addr):
+        self.addr = addr
+        self.scanData = {}
+
+    def _update(self, resp):
+        self.atype = { 1 : 'public', 2 : 'random' }[resp['type'][0]]
+        self.rssi = -resp['rssi'][0]
+        self.connectable = ((resp['flag'][0] & 0x4) == 0)
+        data = resp.get('d', [''])[0]
+        self.rawData = data
+        
+        isNewData = False
+        while len(data) > 0:
+            sdlen, sdid = struct.unpack_from('<BB', data)
+            if sdid not in self.scanData:
+                isNewData = True
+            self.scanData[sdid] = data[2 : sdlen + 1]
+            data = data[sdlen + 1:]
+        return isNewData
+        
+#                entry = 'old'
+#                if addr in self.scanned:
+#                    dev = self.scanned[addr]
+#                    if dev['type'] != atype:
+#                        raise BTLEException(BTLEException.COMM_ERROR, "address type changed for %s" % binascii.b2a_hex(addr))
+#                    dev['rssi'] += [ rssi ]
+#                    dev['connectable'] = connectable
+                    # Note: bluez is notifying devices twice: once with advertisement data, then with scan response data
+                    # in top of that, the device may update the advertisement or scan data
+#                    if data_raw and data_raw not in dev['data_raw']:
+#                        dev['data_raw'] += [ data_raw ]
+#                        entry = 'update'
+#                else:
+#                    self.scanned[addr] = {'type':atype, 'rssi': [rssi], 'connectable': connectable, 'data_raw': [data_raw], 'data' : {}}
+#                    entry = 'new'
+
 class Scanner(BluepyHelper):
     def __init__(self,index=0):
         BluepyHelper.__init__(self)
         self.scanned = {}
-        self.callback = None
         self.index=index
     
     def start(self):
@@ -491,9 +533,6 @@ class Scanner(BluepyHelper):
     def clear(self):
         self.scanned = {}
 
-    def set_callback(self, callback):
-        self.callback = callback
-
     def process(self, timeout=10):
         if self._helper is None:
             raise BTLEException(BTLEException.INTERNAL_ERROR,
@@ -516,42 +555,22 @@ class Scanner(BluepyHelper):
             elif respType == 'scan':
                 # device found
                 addr = resp['addr'][0][::-1]
-                atype = { 1 : 'public', 2 : 'random' }[resp['type'][0]]
-                rssi = -resp['rssi'][0]
-                connectable = ((resp['flag'][0] & 0x4) == 0)
-                data_raw = resp.get('d', [''])[0]
-
-                entry = 'old'
                 if addr in self.scanned:
                     dev = self.scanned[addr]
-                    if dev['type'] != atype:
-                        raise BTLEException(BTLEException.COMM_ERROR, "address type changed for %s" % binascii.b2a_hex(addr))
-                    dev['rssi'] += [ rssi ]
-                    dev['connectable'] = connectable
-                    # Note: bluez is notifying devices twice: once with advertisement data, then with scan response data
-                    # in top of that, the device may update the advertisement or scan data
-                    if data_raw and data_raw not in dev['data_raw']:
-                        dev['data_raw'] += [ data_raw ]
-                        entry = 'update'
+                    isNewDev = False
                 else:
-                    self.scanned[addr] = {'type':atype, 'rssi': [rssi], 'connectable': connectable, 'data_raw': [data_raw], 'data' : {}}
-                    entry = 'new'
-
-                while data_raw:
-                    sdl, sdid = struct.unpack_from('<BB', data_raw)
-                    self.scanned[addr]['data'][sdid] = data_raw[2 : sdl + 1]
-                    data_raw = data_raw[sdl + 1:]
-
-                if self.callback:
-                    if self.callback(entry, addr, **self.scanned[addr]):
-                        break
+                    dev = ScanEntry(addr)
+                    self.scanned[addr] = dev
+                    isNewDev = True
+                isNewData = dev._update(resp)
+                if self.delegate or True:
+                    self.delegate.handleDiscovery(dev, isNewDev, isNewData)
+                 
             else:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response: " + respType)
 
-    def scan(self, timeout=10, callback=None):
+    def scan(self, timeout=10):
         self.clear()
-        if callback:
-            self.set_callback(callback)
         self.start()
         self.process(timeout)
         self.stop()
