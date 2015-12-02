@@ -140,6 +140,7 @@ static const char
   *err_BAD_PARAM = "badparam",
   *err_BAD_STATE = "badstate",
   *err_BUSY      = "busy",
+  *err_NO_MGMT   = "nomgmt",
   *err_SUCCESS   = "success";
 
 static const char 
@@ -1163,6 +1164,11 @@ static bool set_mode(uint16_t opcode, char *p_mode)
     struct mgmt_mode cp;
     uint8_t val;
 
+    if (!mgmt_master) {
+        resp_error(err_NO_MGMT);
+        return true;
+    }
+
     if (!memcmp(p_mode, "on", 2))
         val = 1;
     else if (!memcmp(p_mode, "off", 3))
@@ -1227,6 +1233,11 @@ static void cmd_pair(int argcp, char **argvp)
     uint8_t io_cap = IO_CAPABILITY_NOINPUTNOOUTPUT;
     uint8_t addr_type = BDADDR_LE_RANDOM;
 
+    if (!mgmt_master) {
+        resp_error(err_NO_MGMT);
+        return;
+    }
+
     if (conn_state != STATE_CONNECTED) {
         resp_mgmt(err_BAD_STATE);
         return;
@@ -1275,6 +1286,11 @@ static void cmd_unpair(int argcp, char **argvp)
     bdaddr_t bdaddr;
     uint8_t addr_type = BDADDR_LE_RANDOM;
 
+    if (!mgmt_master) {
+        resp_error(err_NO_MGMT);
+        return;
+    }
+
     if (str2ba(opt_dst, &bdaddr)) {
         DBG("str2ba failed");
         resp_mgmt(err_NOT_FOUND);
@@ -1317,6 +1333,11 @@ static void scan(bool start)
     // mgmt_cp_start_discovery and mgmt_cp_stop_discovery are the same
     struct mgmt_cp_start_discovery cp = { (1 << BDADDR_LE_PUBLIC) | (1 << BDADDR_LE_RANDOM) };
     uint16_t opcode = start? MGMT_OP_START_DISCOVERY : MGMT_OP_STOP_DISCOVERY;
+
+    if (!mgmt_master) {
+        resp_error(err_NO_MGMT);
+        return;
+    }
 
     DBG("Scan %s", start? "start" : "stop");
 

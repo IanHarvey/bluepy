@@ -36,6 +36,7 @@ class BTLEException(Exception):
     COMM_ERROR = 2
     INTERNAL_ERROR = 3
     GATT_ERROR = 4
+    MGMT_ERROR = 5
 
     def __init__(self, code, message):
         self.code = code
@@ -282,7 +283,10 @@ class Bluepy:
                 raise BTLEException(BTLEException.DISCONNECTED, "Device disconnected")
             elif respType == 'err':
                 errcode=resp['code'][0]
-                raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode)
+                if errcode=='nomgmt':
+                    raise BTLEException(BTLEException.MGMT_ERROR, "Management not available (permissions problem?)")
+                else:
+                    raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode)
             else:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response (%s)" % respType)
 
