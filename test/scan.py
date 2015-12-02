@@ -125,10 +125,10 @@ if __name__ == "__main__":
 
     btle.Debugging = arg.verbose
 
-    scan = btle.Scan()
+    scanner = btle.Scanner()
 
     print ANSI_RED + "Scanning for devices..." + ANSI_OFF
-    devices = scan.scan(arg.timeout, scan_cb)
+    devices = scanner.scan(arg.timeout, scan_cb)
 
     if arg.discover:
         print ANSI_RED + "Discovering services..." + ANSI_OFF

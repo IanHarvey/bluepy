@@ -184,7 +184,7 @@ class DefaultDelegate:
         DBG("Notification:", cHandle, "sent data", binascii.b2a_hex(data))
 
 
-class Bluepy:
+class BluepyHelper:
     def __init__(self):
         self._helper = None
         self._poller = None
@@ -271,7 +271,7 @@ class Bluepy:
             if rv.startswith('#') or rv == '\n':
                 continue
 
-            resp = Bluepy.parseResp(rv)
+            resp = BluepyHelper.parseResp(rv)
             if 'rsp' not in resp:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "No response type indicator")
 
@@ -295,9 +295,9 @@ class Bluepy:
         return self._waitResp(['stat'])
 
 
-class Peripheral(Bluepy):
+class Peripheral(BluepyHelper):
     def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC,iface=None):
-        Bluepy.__init__(self)
+        BluepyHelper.__init__(self)
         self.services = {} # Indexed by UUID
         self.addrType = addrType
         self.iface = iface 
@@ -463,9 +463,9 @@ class Peripheral(Bluepy):
     def __del__(self):
         self.disconnect()
 
-class Scan(Bluepy):
+class Scanner(BluepyHelper):
     def __init__(self,index=0):
-        Bluepy.__init__(self)
+        BluepyHelper.__init__(self)
         self.scanned = {}
         self.callback = None
         self.index=index
