@@ -306,11 +306,18 @@ class Peripheral(BluepyHelper):
     def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC,iface=None):
         BluepyHelper.__init__(self)
         self.services = {} # Indexed by UUID
-        self.addrType = addrType
-        self.iface = iface 
         self.discoveredAllServices = False
-        if deviceAddr is not None:
-            self.connect(deviceAddr, addrType,iface)
+        if isinstance(deviceAddr, ScanEntry):
+            addr = deviceAddr.addr
+            self.addrType = deviceAddr.atype
+            self.iface = deviceAddr.iface
+        else:
+            addr = deviceAddr
+            self.addrType = addrType
+            self.iface = iface
+ 
+        if addr is not None:
+            self.connect(addr, self.addrType, self.iface)
 
     def setDelegate(self, delegate_): # same as withDelegate(), deprecated
         return self.withDelegate(delegate_)
@@ -474,8 +481,9 @@ class ScanEntry:
                   2 : ADDR_TYPE_RANDOM
                 }
 
-    def __init__(self, addr):
+    def __init__(self, addr, iface):
         self.addr = addr
+        self.iface = iface
         self.atype = None
         self.scanData = {}
         self.updateCount = 0
@@ -496,27 +504,15 @@ class ScanEntry:
         isNewData = False
         while len(data) >= 2:
             sdlen, sdid = struct.unpack_from('<BB', data)
-            if sdid not in self.scanData:
+            val = data[2 : sdlen + 1]
+            if (sdid not in self.scanData) or (val != self.scanData[sdid]):
                 isNewData = True
-            self.scanData[sdid] = data[2 : sdlen + 1]
+            self.scanData[sdid] = val
             data = data[sdlen + 1:]
 
         self.updateCount += 1
         return isNewData
         
-#                entry = 'old'
-#                if addr in self.scanned:
-#                    dev = self.scanned[addr]
-#                    if dev['type'] != atype:
-#                        raise BTLEException(BTLEException.COMM_ERROR, "address type changed for %s" % binascii.b2a_hex(addr))
-#                    dev['rssi'] += [ rssi ]
-#                    dev['connectable'] = connectable
-#                    if data_raw and data_raw not in dev['data_raw']:
-#                        dev['data_raw'] += [ data_raw ]
-#                        entry = 'update'
-#                else:
-#                    self.scanned[addr] = {'type':atype, 'rssi': [rssi], 'connectable': connectable, 'data_raw': [data_raw], 'data' : {}}
-#                    entry = 'new'
 
 class Scanner(BluepyHelper):
     def __init__(self,index=0):
@@ -574,7 +570,7 @@ class Scanner(BluepyHelper):
                 if addr in self.scanned:
                     dev = self.scanned[addr]
                 else:
-                    dev = ScanEntry(addr)
+                    dev = ScanEntry(addr, self.index)
                     self.scanned[addr] = dev
                 isNewData = dev._update(resp)
                 if self.delegate or True:
@@ -588,7 +584,7 @@ class Scanner(BluepyHelper):
         self.start()
         self.process(timeout)
         self.stop()
-        return self.scanned
+        return self.scanned.values()
 
 
 def capitaliseName(descr):

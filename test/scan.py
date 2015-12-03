@@ -138,13 +138,14 @@ if __name__ == "__main__":
     if arg.discover:
         print ANSI_RED + "Discovering services..." + ANSI_OFF
 
-        for addr,d in devices.iteritems():
+        for d in devices:
             if not d.connectable:
+
                 continue
 
-            print "    Connecting to", ANSI_WHITE + addr + ANSI_OFF + ":"
+            print "    Connecting to", ANSI_WHITE + d.addr + ANSI_OFF + ":"
 
-            dev = btle.Peripheral(addr, d.atype)
+            dev = btle.Peripheral(d)
             dump_services(dev)
             dev.disconnect()
             print
