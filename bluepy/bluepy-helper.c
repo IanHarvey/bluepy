@@ -1183,6 +1183,18 @@ static bool set_mode(uint16_t opcode, char *p_mode)
 }
 
 
+static void cmd_powered(int argcp, char **argvp)
+{
+	if (argcp < 2) {
+		resp_mgmt(err_BAD_PARAM);
+		return;
+	}
+
+	if (!set_mode(MGMT_OP_SET_POWERED, argvp[1])) {
+		resp_mgmt(err_BAD_PARAM);
+	}
+}
+
 static void cmd_le(int argcp, char **argvp)
 {
 	if (argcp < 2) {
@@ -1191,6 +1203,18 @@ static void cmd_le(int argcp, char **argvp)
 	}
 
 	if (!set_mode(MGMT_OP_SET_LE, argvp[1])) {
+		resp_mgmt(err_BAD_PARAM);
+	}
+}
+
+static void cmd_bredr(int argcp, char **argvp)
+{
+	if (argcp < 2) {
+		resp_mgmt(err_BAD_PARAM);
+		return;
+	}
+
+	if (!set_mode(MGMT_OP_SET_BREDR, argvp[1])) {
 		resp_mgmt(err_BAD_PARAM);
 	}
 }
@@ -1329,6 +1353,71 @@ static void scan(bool start)
 	}
 }
 
+static void advertise_cb(uint8_t status, uint16_t length, const void *param, void *user_data)
+{
+	if (status != MGMT_STATUS_SUCCESS) {
+		DBG("Advertise error: %s (0x%02x)", mgmt_errstr(status), status);
+		resp_mgmt(status == MGMT_STATUS_BUSY? err_BUSY : err_PROTO_ERR);
+		return;
+	}
+
+	resp_mgmt(err_SUCCESS);
+}
+
+static void discoverable_cb(uint8_t status, uint16_t length, const void *param, void *user_data)
+{
+	struct mgmt_mode cp = {1};
+	uint16_t opcode = MGMT_OP_SET_ADVERTISING;
+
+	if (status != MGMT_STATUS_SUCCESS) {
+		DBG("Discoverable error: %s (0x%02x)", mgmt_errstr(status), status);
+		resp_mgmt(status == MGMT_STATUS_BUSY? err_BUSY : err_PROTO_ERR);
+		return;
+	}
+	if (mgmt_send(mgmt_master, opcode, opt_src_idx, sizeof(cp),
+		&cp, advertise_cb, NULL, NULL) == 0)
+	{
+		DBG("mgmt_send(MGMT_OP_SET_ADVERTISING) failed");
+		resp_mgmt(err_PROTO_ERR);
+		return;
+	}
+}
+
+static void connectable_cb(uint8_t status, uint16_t length, const void *param, void *user_data)
+{
+	struct mgmt_cp_set_discoverable cp = {1, 0};
+	uint16_t opcode = MGMT_OP_SET_DISCOVERABLE;
+
+	if (status != MGMT_STATUS_SUCCESS) {
+		DBG("Connectable error: %s (0x%02x)", mgmt_errstr(status), status);
+		resp_mgmt(status == MGMT_STATUS_BUSY? err_BUSY : err_PROTO_ERR);
+		return;
+	}
+	if (mgmt_send(mgmt_master, opcode, opt_src_idx, sizeof(cp),
+		&cp, discoverable_cb, NULL, NULL) == 0)
+	{
+		DBG("mgmt_send(MGMT_OP_SET_DISCOVERABLE) failed");
+		resp_mgmt(err_PROTO_ERR);
+		return;
+	}
+}
+
+static void advertise(bool start)
+{
+	struct mgmt_mode cp = {1};
+	uint16_t opcode = MGMT_OP_SET_CONNECTABLE;
+
+	DBG("Advertise %s", start? "start" : "stop");
+
+	if (mgmt_send(mgmt_master, opcode, opt_src_idx, sizeof(cp),
+		&cp, connectable_cb, NULL, NULL) == 0)
+	{
+		DBG("mgmt_send(MGMT_OP_SET_CONNECTABLE) failed");
+		resp_mgmt(err_PROTO_ERR);
+		return;
+	}
+}
+
 static void cmd_scanend(int argcp, char **argvp)
 {
 	if (1 < argcp) {
@@ -1344,6 +1433,15 @@ static void cmd_scan(int argcp, char **argvp)
 		resp_mgmt(err_BAD_PARAM);
 	} else {
 		scan(TRUE);
+	}
+}
+
+static void cmd_adv(int argcp, char **argvp)
+{
+	if (1 < argcp) {
+		resp_mgmt(err_BAD_PARAM);
+	} else {
+		advertise(TRUE);
 	}
 }
 
@@ -1383,8 +1481,12 @@ static struct {
 		"Set security level. Default: low" },
 	{ "mtu",		cmd_mtu,	"<value>",
 		"Exchange MTU for GATT/ATT" },
+	{ "powered",		cmd_powered,	"[on | off]",
+		"Control powered feature on the controller" },
 	{ "le",			cmd_le,		"[on | off]",
 		"Control LE feature on the controller" },
+	{ "bredr",		cmd_bredr,	"[on | off]",
+		"Control BR/EDR feature on the controller" },
 	{ "pairable",		cmd_pairable,	"[on | off]",
 		"Control PAIRABLE feature on the controller" },
 	{ "pair",		cmd_pair,	"",
@@ -1395,6 +1497,8 @@ static struct {
 		"Start scan" },
 	{ "scanend",	cmd_scanend, 	"",
 		"Force scan end" },
+	{ "adv",	cmd_adv, 	"",
+		"Start advertising" },
 	{ NULL, NULL, NULL}
 };
 

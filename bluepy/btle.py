@@ -552,6 +552,27 @@ class Scan(Bluepy):
         return self.scanned
 
 
+class Central(Bluepy):
+    def __init__(self, src='hci0'):
+        Bluepy.__init__(self, src=src)
+
+    def start(self):
+        self._startHelper()
+        self._mgmtCmd("powered off")
+        self._mgmtCmd("le on")
+        self._mgmtCmd("bredr off")
+        self._mgmtCmd("powered on")
+
+    def advertise(self):
+        self._mgmtCmd("adv")
+        resp = self._waitResp(['stat'], 0.2)
+        if resp is None:
+            print("No reponse received")
+
+    def wait_conn(self):
+        resp = self._waitResp(['conn'], 100)
+
+
 def capitaliseName(descr):
     words = descr.split(" ")
     capWords =  [ words[0].lower() ]
