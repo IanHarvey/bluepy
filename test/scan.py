@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import argparse
 import binascii
 import time
@@ -27,25 +28,24 @@ else:
 def dump_services(dev):
     services = sorted(dev.getServices(), key=lambda s: s.hndStart)
     for s in services:
-        print "\t%04x: %s" % (s.hndStart, s)
+        print ("\t%04x: %s" % (s.hndStart, s))
         if s.hndStart == s.hndEnd:
             continue
         chars = s.getCharacteristics()
         for i, c in enumerate(chars):
             props = c.propertiesToString()
             h = c.getHandle()
-            print "\t%04x:    %-59s %-12s" % (h, c, props),
             if 'READ' in props:
                 val = c.read()
                 if c.uuid == btle.AssignedNumbers.device_name:
-                    string = ANSI_CYAN + '\'' + val + '\'' + ANSI_OFF
-                elif s.uuid == btle.AssignedNumbers.device_information:
-                    string = '\'' + val + '\''
+                    string = ANSI_CYAN + '\'' + val.decode('utf-8') + '\'' + ANSI_OFF
+                elif c.uuid == btle.AssignedNumbers.device_information:
+                    string = repr(val)
                 else:
-                    string = '<' + binascii.hexlify(val) + '>'
+                    string = '<s' + binascii.b2a_hex(val).decode('utf-8') + '>'
             else:
                 string=''
-            print string
+            print ("\t%04x:    %-59s %-12s %s" % (h, c, props, string))
 
             while True:
                 h += 1
@@ -53,7 +53,7 @@ def dump_services(dev):
                     break
                 try:
                     val = dev.readCharacteristic(h)
-                    print "\t%04x:     <%s>" % (h, binascii.hexlify(val))
+                    print ("\t%04x:     <%s>" % (h, binascii.b2a_hex(val).decode('utf-8')))
                 except btle.BTLEException:
                     break
 
@@ -71,16 +71,20 @@ class ScanPrint(btle.DefaultDelegate):
         if dev.rssi < arg.sensitivity:
             return
           
-        print '    Device (%s):' % status, ANSI_WHITE + dev.addr + ANSI_OFF, '(' + dev.atype + ')  ', \
-        dev.rssi, 'dBm', \
-        ('' if dev.connectable else '(not connectable)')
+        print ('    Device (%s): %s (%s), %d dBm %s' % 
+                  (status,
+                   ANSI_WHITE + dev.addr + ANSI_OFF,
+                   dev.atype,
+                   dev.rssi,
+                   ('' if dev.connectable else '(not connectable)') )
+              )
         for (sdid, desc, val) in dev.getScanData():
             if sdid in [8,9]:
-                print '\t' + desc + ': \'' + ANSI_CYAN + val + ANSI_OFF + '\''
+                print ('\t' + desc + ': \'' + ANSI_CYAN + val + ANSI_OFF + '\'')
             else:
-                print '\t' + desc + ': <' + val + '>'
+                print ('\t' + desc + ': <' + val + '>')
         if not dev.scanData:
-            print '\t(no data)'
+            print ('\t(no data)')
         print
 
 if __name__ == "__main__":
@@ -105,18 +109,18 @@ if __name__ == "__main__":
 
     scanner = btle.Scanner().withDelegate(ScanPrint())
 
-    print ANSI_RED + "Scanning for devices..." + ANSI_OFF
+    print (ANSI_RED + "Scanning for devices..." + ANSI_OFF)
     devices = scanner.scan(arg.timeout)
 
     if arg.discover:
-        print ANSI_RED + "Discovering services..." + ANSI_OFF
+        print (ANSI_RED + "Discovering services..." + ANSI_OFF)
 
         for d in devices:
             if not d.connectable:
 
                 continue
 
-            print "    Connecting to", ANSI_WHITE + d.addr + ANSI_OFF + ":"
+            print ("    Connecting to", ANSI_WHITE + d.addr + ANSI_OFF + ":")
 
             dev = btle.Peripheral(d)
             dump_services(dev)

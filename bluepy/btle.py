@@ -294,6 +294,9 @@ class BluepyHelper:
                     raise BTLEException(BTLEException.MGMT_ERROR, "Management not available (permissions problem?)")
                 else:
                     raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode)
+            elif respType == 'scan':
+                # Scan response when we weren't interested. Ignore it
+                continue
             else:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response (%s)" % respType)
 
@@ -550,7 +553,7 @@ class ScanEntry:
         if (sdid==8) or (sdid==9):
             return val.decode('utf-8')
         else:
-            return binascii.b2a_hex(val)
+            return binascii.b2a_hex(val).decode('utf-8')
 
     def getScanData(self):
         '''Returns list of tuples [(tag, description, value)]'''
@@ -655,15 +658,12 @@ class _UUIDNameMap:
 
 def get_json_uuid():
     import json
-    uuid_data = json.load(file(os.path.join(script_path, 'uuids.json')))
-    all_uuids = reduce(lambda a,b: a+b, (uuid_data[x] for x in ['service_UUIDs',
-                                                        'characteristic_UUIDs',
-                                                        'descriptor_UUIDs']))
-
-
-    for number,cname,name in all_uuids:
-        yield UUID(number, cname)
-        yield UUID(number, name)
+    with open(os.path.join(script_path, 'uuids.json'),"rb") as fp:
+        uuid_data = json.loads(fp.read().decode("utf-8"))
+    for k in ['service_UUIDs', 'characteristic_UUIDs', 'descriptor_UUIDs' ]:
+        for number,cname,name in uuid_data[k]:
+            yield UUID(number, cname)
+            yield UUID(number, name)
 
 AssignedNumbers = _UUIDNameMap( list(get_json_uuid() ))
 
