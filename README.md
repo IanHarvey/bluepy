@@ -44,6 +44,10 @@ The Python files are released into the public domain by their author, Ian Harvey
 Release Notes
 -------------
 
+Release 0.9.10
+
+- Now with Scan functionality
+
 Release 0.9.9
 
 - Now based on Bluez r5.29
@@ -90,8 +94,6 @@ TO DO list
 
 The following are still missing from the current release:
 - Build into easily installable package
-- Implement 'hcitool lescan' functionality
-- Reading RSSI
 - Unit test 
 
 
