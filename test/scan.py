@@ -49,11 +49,6 @@ DATA_TYPES = {
     0xFF : 'Manufacturer',
 }
 
-
-def mac(addr):
-    addr = binascii.b2a_hex(addr)
-    return ':'.join([ addr[2*i:2*i+2] for i in xrange(6)])
-
 def dump_services(dev):
     services = sorted(dev.getServices(), key=lambda s: s.hndStart)
     for s in services:
@@ -97,7 +92,7 @@ class ScanPrint(btle.DefaultDelegate):
             return
           
         status = "new" if isNewDev else ( "update" if isNewData else "old" )
-        print '    Device (%s):' % status, ANSI_WHITE + mac(dev.addr) + ANSI_OFF, '(' + dev.atype + ')  ', \
+        print '    Device (%s):' % status, ANSI_WHITE + dev.addr + ANSI_OFF, '(' + dev.atype + ')  ', \
         dev.rssi, 'dBm', \
         ('' if dev.connectable else '(not connectable)')
         for id,v in dev.scanData.iteritems():
@@ -143,9 +138,9 @@ if __name__ == "__main__":
             if not d.connectable:
                 continue
 
-            print "    Connecting to", ANSI_WHITE + mac(addr) + ANSI_OFF + ":"
+            print "    Connecting to", ANSI_WHITE + addr + ANSI_OFF + ":"
 
-            dev = btle.Peripheral(mac(addr), d.atype)
+            dev = btle.Peripheral(addr, d.atype)
             dump_services(dev)
             dev.disconnect()
             print

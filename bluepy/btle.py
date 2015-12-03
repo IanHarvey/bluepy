@@ -554,7 +554,8 @@ class Scanner(BluepyHelper):
 
             elif respType == 'scan':
                 # device found
-                addr = resp['addr'][0][::-1]
+                addr = binascii.b2a_hex(resp['addr'][0]).decode('utf-8')
+                addr = ':'.join([addr[i:i+2] for i in range(0,12,2)])
                 if addr in self.scanned:
                     dev = self.scanned[addr]
                     isNewDev = False
