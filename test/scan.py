@@ -84,14 +84,18 @@ def dump_services(dev):
 
 class ScanPrint(btle.DefaultDelegate):
     def handleDiscovery(self, dev, isNewDev, isNewData):
-        if arg.new and (not isNewDev):
-            return
-        if (not arg.all) and (not isNewData):
-            return
+        if isNewDev:
+            status = "new"
+        elif isNewData:
+            if arg.new: return
+            status = "update"
+        else:
+            if not arg.all: return
+            status = "old"
+
         if dev.rssi < arg.sensitivity:
             return
           
-        status = "new" if isNewDev else ( "update" if isNewData else "old" )
         print '    Device (%s):' % status, ANSI_WHITE + dev.addr + ANSI_OFF, '(' + dev.atype + ')  ', \
         dev.rssi, 'dBm', \
         ('' if dev.connectable else '(not connectable)')

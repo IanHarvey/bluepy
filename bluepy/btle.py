@@ -470,24 +470,38 @@ class Peripheral(BluepyHelper):
         self.disconnect()
 
 class ScanEntry:
+    addrTypes = { 1 : ADDR_TYPE_PUBLIC,
+                  2 : ADDR_TYPE_RANDOM
+                }
+
     def __init__(self, addr):
         self.addr = addr
+        self.atype = None
         self.scanData = {}
+        self.updateCount = 0
 
     def _update(self, resp):
-        self.atype = { 1 : 'public', 2 : 'random' }[resp['type'][0]]
+        atype = self.addrTypes.get(resp['type'][0], None)
+        if (self.atype is not None) and (atype != self.atype):
+            raise BTLEException("Address type changed during scan, for address %s" % self.addr)
+        self.atype = atype
         self.rssi = -resp['rssi'][0]
         self.connectable = ((resp['flag'][0] & 0x4) == 0)
         data = resp.get('d', [''])[0]
         self.rawData = data
         
+        # Note: bluez is notifying devices twice: once with advertisement data,
+        # then with scan response data. Also, the device may update the
+        # advertisement or scan data
         isNewData = False
-        while len(data) > 0:
+        while len(data) >= 2:
             sdlen, sdid = struct.unpack_from('<BB', data)
             if sdid not in self.scanData:
                 isNewData = True
             self.scanData[sdid] = data[2 : sdlen + 1]
             data = data[sdlen + 1:]
+
+        self.updateCount += 1
         return isNewData
         
 #                entry = 'old'
@@ -497,8 +511,6 @@ class ScanEntry:
 #                        raise BTLEException(BTLEException.COMM_ERROR, "address type changed for %s" % binascii.b2a_hex(addr))
 #                    dev['rssi'] += [ rssi ]
 #                    dev['connectable'] = connectable
-                    # Note: bluez is notifying devices twice: once with advertisement data, then with scan response data
-                    # in top of that, the device may update the advertisement or scan data
 #                    if data_raw and data_raw not in dev['data_raw']:
 #                        dev['data_raw'] += [ data_raw ]
 #                        entry = 'update'
@@ -533,15 +545,18 @@ class Scanner(BluepyHelper):
     def clear(self):
         self.scanned = {}
 
-    def process(self, timeout=10):
+    def process(self, timeout=10.0):
         if self._helper is None:
             raise BTLEException(BTLEException.INTERNAL_ERROR,
                                 "Helper not started (did you call start()?)")
         start = time.time()
         while True:
-            remain = timeout and start + timeout - time.time()
-            if remain and remain <= 0:
-                break
+            if timeout:
+                remain = start + timeout - time.time()
+                if remain <= 0.0: 
+                    break
+            else:
+                remain = None
             resp = self._waitResp(['scan', 'stat'], remain)
             if resp is None:
                 break
@@ -558,14 +573,12 @@ class Scanner(BluepyHelper):
                 addr = ':'.join([addr[i:i+2] for i in range(0,12,2)])
                 if addr in self.scanned:
                     dev = self.scanned[addr]
-                    isNewDev = False
                 else:
                     dev = ScanEntry(addr)
                     self.scanned[addr] = dev
-                    isNewDev = True
                 isNewData = dev._update(resp)
                 if self.delegate or True:
-                    self.delegate.handleDiscovery(dev, isNewDev, isNewData)
+                    self.delegate.handleDiscovery(dev, (dev.updateCount <= 1), isNewData)
                  
             else:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response: " + respType)
