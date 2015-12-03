@@ -24,31 +24,6 @@ else:
     ANSI_WHITE = ANSI_CSI + '37m'
     ANSI_OFF = ANSI_CSI + '0m'
 
-
-DATA_TYPES = {
-    1 : 'Flags',
-    2 : 'Incomplete 16b Services',
-    3 : 'Complete 16b Services',
-    4 : 'Incomplete 32b Services',
-    5 : 'Complete 32b Services',
-    6 : 'Incomplete 128b Services',
-    7 : 'Complete 128b Services',
-    8 : 'Short Local Name',
-    9 : 'Complete Local Name',
-    0xA : 'Tx Power',
-    0x14 : '16b Service Solicitation',
-    0x1F : '32b Service Solicitation',
-    0x15 : '128b Service Solicitation',
-    0x16 : '16b Service Data',
-    0x20 : '32b Service Data',
-    0x21 : '128b Service Data',
-    0x17 : 'Public Target Address',
-    0x18 : 'Random Target Address',
-    0x19 : 'Appearance',
-    0x1A : 'Advertising Interval',
-    0xFF : 'Manufacturer',
-}
-
 def dump_services(dev):
     services = sorted(dev.getServices(), key=lambda s: s.hndStart)
     for s in services:
@@ -99,13 +74,11 @@ class ScanPrint(btle.DefaultDelegate):
         print '    Device (%s):' % status, ANSI_WHITE + dev.addr + ANSI_OFF, '(' + dev.atype + ')  ', \
         dev.rssi, 'dBm', \
         ('' if dev.connectable else '(not connectable)')
-        for id,v in dev.scanData.iteritems():
-            if id in [8,9]:
-                print '\t' + DATA_TYPES[id] + ': \'' + ANSI_CYAN + v + ANSI_OFF + '\''
-            elif id in DATA_TYPES:
-                print '\t' + DATA_TYPES[id] + ': <' + binascii.b2a_hex(v) + '>'
+        for (sdid, desc, val) in dev.getScanData():
+            if sdid in [8,9]:
+                print '\t' + desc + ': \'' + ANSI_CYAN + val + ANSI_OFF + '\''
             else:
-                print ('\tid 0x%x: <' % id) + binascii.b2a_hex(v) + '>'
+                print '\t' + desc + ': <' + val + '>'
         if not dev.scanData:
             print '\t(no data)'
         print

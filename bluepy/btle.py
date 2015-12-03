@@ -481,10 +481,37 @@ class ScanEntry:
                   2 : ADDR_TYPE_RANDOM
                 }
 
+    dataTags = {
+        1 : 'Flags',
+        2 : 'Incomplete 16b Services',
+        3 : 'Complete 16b Services',
+        4 : 'Incomplete 32b Services',
+        5 : 'Complete 32b Services',
+        6 : 'Incomplete 128b Services',
+        7 : 'Complete 128b Services',
+        8 : 'Short Local Name',
+        9 : 'Complete Local Name',
+        0xA : 'Tx Power',
+        0x14 : '16b Service Solicitation',
+        0x1F : '32b Service Solicitation',
+        0x15 : '128b Service Solicitation',
+        0x16 : '16b Service Data',
+        0x20 : '32b Service Data',
+        0x21 : '128b Service Data',
+        0x17 : 'Public Target Address',
+        0x18 : 'Random Target Address',
+        0x19 : 'Appearance',
+        0x1A : 'Advertising Interval',
+        0xFF : 'Manufacturer',
+    }
+
     def __init__(self, addr, iface):
         self.addr = addr
         self.iface = iface
         self.atype = None
+        self.rssi = None
+        self.connectable = False
+        self.rawData = None
         self.scanData = {}
         self.updateCount = 0
 
@@ -513,7 +540,24 @@ class ScanEntry:
         self.updateCount += 1
         return isNewData
         
+    def getDescription(self, sdid):
+        return self.dataTags.get(sdid, hex(sdid))
 
+    def getValueText(self, sdid):
+        val = self.scanData.get(sdid, None)
+        if val is None:
+            return None
+        if (sdid==8) or (sdid==9):
+            return val.decode('utf-8')
+        else:
+            return binascii.b2a_hex(val)
+
+    def getScanData(self):
+        '''Returns list of tuples [(tag, description, value)]'''
+        return [ (sdid, self.getDescription(sdid), self.getValueText(sdid))
+                    for sdid in self.scanData.keys() ]
+         
+ 
 class Scanner(BluepyHelper):
     def __init__(self,index=0):
         BluepyHelper.__init__(self)
