@@ -84,6 +84,7 @@ static int start;
 static int end;
 
 static struct mgmt *mgmt_master = NULL;
+static struct mgmt_rp_read_info dev_info;
 
 struct characteristic_data {
 	uint16_t orig_start;
@@ -210,6 +211,14 @@ static void resp_mgmt(const char *errcode)
 {
 	resp_begin(rsp_MGMT);
 	send_sym(tag_ERRCODE, errcode);
+	resp_end();
+}
+
+static void resp_mgmt_with_data(const char *errcode, unsigned int data)
+{
+	resp_begin(rsp_MGMT);
+	send_sym(tag_ERRCODE, errcode);
+	send_uint(tag_DATA, data);
 	resp_end();
 }
 
@@ -1158,20 +1167,25 @@ static void set_mode_complete(uint8_t status, uint16_t length,
 	resp_mgmt(err_SUCCESS);
 }
 
+static bool on_or_off(char *p_mode, uint8_t *p_val)
+{
+	if (!memcmp(p_mode, "on", 2))
+		*p_val = 1;
+	else if (!memcmp(p_mode, "off", 3))
+		*p_val = 0;
+	else
+		return false;
+	return true;
+}
+
 static bool set_mode(uint16_t opcode, char *p_mode)
 {
 	struct mgmt_mode cp;
-	uint8_t val;
-
-	if (!memcmp(p_mode, "on", 2))
-		val = 1;
-	else if (!memcmp(p_mode, "off", 3))
-		val = 0;
-	else
-		return false;
 
 	memset(&cp, 0, sizeof(cp));
-	cp.val = val;
+
+	if (!on_or_off(p_mode, &cp.val))
+		return false;
 
 	// at this time only index 0 is supported
 	if (mgmt_send(mgmt_master, opcode,
@@ -1182,7 +1196,6 @@ static bool set_mode(uint16_t opcode, char *p_mode)
 	return true;
 }
 
-
 static void cmd_powered(int argcp, char **argvp)
 {
 	if (argcp < 2) {
@@ -1191,6 +1204,102 @@ static void cmd_powered(int argcp, char **argvp)
 	}
 
 	if (!set_mode(MGMT_OP_SET_POWERED, argvp[1])) {
+		resp_mgmt(err_BAD_PARAM);
+	}
+}
+
+static void cmd_discoverable(int argcp, char **argvp)
+{
+	struct mgmt_cp_set_discoverable cp = {0, 0};
+	uint16_t opcode = MGMT_OP_SET_DISCOVERABLE;
+
+	if (argcp < 2) {
+		resp_mgmt(err_BAD_PARAM);
+		return;
+	}
+
+	if (!on_or_off(argvp[1], &cp.val)) {
+		resp_mgmt(err_BAD_PARAM);
+		return;
+	}
+
+	if (mgmt_send(mgmt_master, opcode, opt_src_idx, sizeof(cp),
+		&cp, set_mode_complete, NULL, NULL) == 0)
+	{
+		DBG("mgmt_send(MGMT_OP_SET_DISCOVERABLE) failed");
+		resp_mgmt(err_PROTO_ERR);
+		return;
+	}
+}
+
+static void cmd_connectable(int argcp, char **argvp)
+{
+	if (argcp < 2) {
+		resp_mgmt(err_BAD_PARAM);
+		return;
+	}
+
+	if (!set_mode(MGMT_OP_SET_CONNECTABLE, argvp[1])) {
+		resp_mgmt(err_BAD_PARAM);
+	}
+}
+
+static void cmd_fast_connectable(int argcp, char **argvp)
+{
+	if (argcp < 2) {
+		resp_mgmt(err_BAD_PARAM);
+		return;
+	}
+
+	if (!set_mode(MGMT_OP_SET_FAST_CONNECTABLE, argvp[1])) {
+		resp_mgmt(err_BAD_PARAM);
+	}
+}
+
+static void cmd_pairable(int argcp, char **argvp)
+{
+	if (argcp < 2) {
+		resp_mgmt(err_BAD_PARAM);
+		return;
+	}
+
+	if (!set_mode(MGMT_OP_SET_BONDABLE, argvp[1])) {
+		resp_mgmt(err_BAD_PARAM);
+	}
+}
+
+static void cmd_link_security(int argcp, char **argvp)
+{
+	if (argcp < 2) {
+		resp_mgmt(err_BAD_PARAM);
+		return;
+	}
+
+	if (!set_mode(MGMT_OP_SET_LINK_SECURITY, argvp[1])) {
+		resp_mgmt(err_BAD_PARAM);
+	}
+}
+
+static void cmd_ssp(int argcp, char **argvp)
+{
+	if (argcp < 2) {
+		resp_mgmt(err_BAD_PARAM);
+		return;
+	}
+
+	if (!set_mode(MGMT_OP_SET_SSP, argvp[1])) {
+		resp_mgmt(err_BAD_PARAM);
+	}
+}
+
+static void cmd_hs(int argcp, char **argvp)
+{
+	if (argcp < 2) {
+		resp_mgmt(err_BAD_PARAM);
+		return;
+	}
+
+	if (!set_mode(MGMT_OP_SET_HS, argvp[1])) {
 		resp_mgmt(err_BAD_PARAM);
 	}
 }
@@ -1207,6 +1316,18 @@ static void cmd_le(int argcp, char **argvp)
 	}
 }
 
+static void cmd_advertising(int argcp, char **argvp)
+{
+	if (argcp < 2) {
+		resp_mgmt(err_BAD_PARAM);
+		return;
+	}
+
+	if (!set_mode(MGMT_OP_SET_ADVERTISING, argvp[1])) {
+		resp_mgmt(err_BAD_PARAM);
+	}
+}
+
 static void cmd_bredr(int argcp, char **argvp)
 {
 	if (argcp < 2) {
@@ -1215,18 +1336,6 @@ static void cmd_bredr(int argcp, char **argvp)
 	}
 
 	if (!set_mode(MGMT_OP_SET_BREDR, argvp[1])) {
-		resp_mgmt(err_BAD_PARAM);
-	}
-}
-
-static void cmd_pairable(int argcp, char **argvp)
-{
-	if (argcp < 2) {
-		resp_mgmt(err_BAD_PARAM);
-		return;
-	}
-
-	if (!set_mode(MGMT_OP_SET_BONDABLE, argvp[1])) {
 		resp_mgmt(err_BAD_PARAM);
 	}
 }
@@ -1353,71 +1462,6 @@ static void scan(bool start)
 	}
 }
 
-static void advertise_cb(uint8_t status, uint16_t length, const void *param, void *user_data)
-{
-	if (status != MGMT_STATUS_SUCCESS) {
-		DBG("Advertise error: %s (0x%02x)", mgmt_errstr(status), status);
-		resp_mgmt(status == MGMT_STATUS_BUSY? err_BUSY : err_PROTO_ERR);
-		return;
-	}
-
-	resp_mgmt(err_SUCCESS);
-}
-
-static void discoverable_cb(uint8_t status, uint16_t length, const void *param, void *user_data)
-{
-	struct mgmt_mode cp = {1};
-	uint16_t opcode = MGMT_OP_SET_ADVERTISING;
-
-	if (status != MGMT_STATUS_SUCCESS) {
-		DBG("Discoverable error: %s (0x%02x)", mgmt_errstr(status), status);
-		resp_mgmt(status == MGMT_STATUS_BUSY? err_BUSY : err_PROTO_ERR);
-		return;
-	}
-	if (mgmt_send(mgmt_master, opcode, opt_src_idx, sizeof(cp),
-		&cp, advertise_cb, NULL, NULL) == 0)
-	{
-		DBG("mgmt_send(MGMT_OP_SET_ADVERTISING) failed");
-		resp_mgmt(err_PROTO_ERR);
-		return;
-	}
-}
-
-static void connectable_cb(uint8_t status, uint16_t length, const void *param, void *user_data)
-{
-	struct mgmt_cp_set_discoverable cp = {1, 0};
-	uint16_t opcode = MGMT_OP_SET_DISCOVERABLE;
-
-	if (status != MGMT_STATUS_SUCCESS) {
-		DBG("Connectable error: %s (0x%02x)", mgmt_errstr(status), status);
-		resp_mgmt(status == MGMT_STATUS_BUSY? err_BUSY : err_PROTO_ERR);
-		return;
-	}
-	if (mgmt_send(mgmt_master, opcode, opt_src_idx, sizeof(cp),
-		&cp, discoverable_cb, NULL, NULL) == 0)
-	{
-		DBG("mgmt_send(MGMT_OP_SET_DISCOVERABLE) failed");
-		resp_mgmt(err_PROTO_ERR);
-		return;
-	}
-}
-
-static void advertise(bool start)
-{
-	struct mgmt_mode cp = {1};
-	uint16_t opcode = MGMT_OP_SET_CONNECTABLE;
-
-	DBG("Advertise %s", start? "start" : "stop");
-
-	if (mgmt_send(mgmt_master, opcode, opt_src_idx, sizeof(cp),
-		&cp, connectable_cb, NULL, NULL) == 0)
-	{
-		DBG("mgmt_send(MGMT_OP_SET_CONNECTABLE) failed");
-		resp_mgmt(err_PROTO_ERR);
-		return;
-	}
-}
-
 static void cmd_scanend(int argcp, char **argvp)
 {
 	if (1 < argcp) {
@@ -1436,12 +1480,86 @@ static void cmd_scan(int argcp, char **argvp)
 	}
 }
 
-static void cmd_adv(int argcp, char **argvp)
+static void show_device_info(void)
+{
+#define TEST_SETTING(__f, __s) do {\
+	if (dev_info.__f & MGMT_SETTING_ ## __s) { \
+		DBG(# __s); \
+	} } while (0)
+
+	DBG("Supported settings:");
+	TEST_SETTING(supported_settings, POWERED);
+	TEST_SETTING(supported_settings, CONNECTABLE);
+	TEST_SETTING(supported_settings, FAST_CONNECTABLE);
+	TEST_SETTING(supported_settings, DISCOVERABLE);
+	TEST_SETTING(supported_settings, BONDABLE);
+	TEST_SETTING(supported_settings, LINK_SECURITY);
+	TEST_SETTING(supported_settings, SSP);
+	TEST_SETTING(supported_settings, BREDR);
+	TEST_SETTING(supported_settings, HS);
+	TEST_SETTING(supported_settings, LE);
+	TEST_SETTING(supported_settings, ADVERTISING);
+	TEST_SETTING(supported_settings, SECURE_CONN);
+	TEST_SETTING(supported_settings, DEBUG_KEYS);
+	TEST_SETTING(supported_settings, PRIVACY);
+	TEST_SETTING(supported_settings, CONFIGURATION);
+	TEST_SETTING(supported_settings, STATIC_ADDRESS);
+
+	DBG("Current settings:");
+	TEST_SETTING(current_settings, POWERED);
+	TEST_SETTING(current_settings, CONNECTABLE);
+	TEST_SETTING(current_settings, FAST_CONNECTABLE);
+	TEST_SETTING(current_settings, DISCOVERABLE);
+	TEST_SETTING(current_settings, BONDABLE);
+	TEST_SETTING(current_settings, LINK_SECURITY);
+	TEST_SETTING(current_settings, SSP);
+	TEST_SETTING(current_settings, BREDR);
+	TEST_SETTING(current_settings, HS);
+	TEST_SETTING(current_settings, LE);
+	TEST_SETTING(current_settings, ADVERTISING);
+	TEST_SETTING(current_settings, SECURE_CONN);
+	TEST_SETTING(current_settings, DEBUG_KEYS);
+	TEST_SETTING(current_settings, PRIVACY);
+	TEST_SETTING(current_settings, CONFIGURATION);
+	TEST_SETTING(current_settings, STATIC_ADDRESS);
+}
+
+static void read_info_complete(uint8_t status, uint16_t length,
+								const void *param, void *user_data)
+{
+	const struct mgmt_rp_read_info *rp = param;
+
+	if (status != MGMT_STATUS_SUCCESS) {
+		DBG("Failed to read device information: %s (0x%02x)",
+			mgmt_errstr(status), status);
+		resp_mgmt(err_PROTO_ERR);
+		return;
+	}
+
+	if (length < sizeof(*rp)) {
+		DBG("Wrong size of read info response");
+		resp_mgmt(err_PROTO_ERR);
+		return;
+	}
+
+	/* Save a copy of the device info response */
+	dev_info = *rp;
+
+	show_device_info();
+
+	resp_mgmt_with_data(err_SUCCESS, dev_info.current_settings);
+}
+
+static void cmd_settings(int argcp, char **argvp)
 {
 	if (1 < argcp) {
 		resp_mgmt(err_BAD_PARAM);
-	} else {
-		advertise(TRUE);
+	}
+
+	if (mgmt_send(mgmt_master, MGMT_OP_READ_INFO,
+			opt_src_idx, 0, NULL,
+			read_info_complete, NULL, NULL) == 0) {
+		DBG("mgmt_send(MGMT_OP_READ_INFO) failed");
 	}
 }
 
@@ -1483,22 +1601,36 @@ static struct {
 		"Exchange MTU for GATT/ATT" },
 	{ "powered",		cmd_powered,	"[on | off]",
 		"Control powered feature on the controller" },
+	{ "discoverable",		cmd_discoverable,	"[on | off]",
+		"Control discoverable feature on the controller" },
+	{ "connectable",		cmd_connectable,	"[on | off]",
+		"Control connectable feature on the controller" },
+	{ "fast_connectable",		cmd_fast_connectable,	"[on | off]",
+		"Control fast connectable feature on the controller" },
+	{ "pairable",		cmd_pairable,	"[on | off]",
+		"Control pairable feature on the controller" },
+	{ "link_security",		cmd_link_security,	"[on | off]",
+		"Control link_security feature on the controller" },
+	{ "ssp",		cmd_ssp,	"[on | off]",
+		"Control ssp feature on the controller" },
+	{ "hs",		cmd_hs,	"[on | off]",
+		"Control hs feature on the controller" },
 	{ "le",			cmd_le,		"[on | off]",
 		"Control LE feature on the controller" },
 	{ "bredr",		cmd_bredr,	"[on | off]",
 		"Control BR/EDR feature on the controller" },
-	{ "pairable",		cmd_pairable,	"[on | off]",
-		"Control PAIRABLE feature on the controller" },
 	{ "pair",		cmd_pair,	"",
 		"Start pairing with the device" },
 	{ "unpair",		cmd_unpair,	"",
 		"Start unpairing with the device" },
+	{ "settings",		cmd_settings,	"",
+		"Get the current settings" },
 	{ "scan",		cmd_scan, 	"",
 		"Start scan" },
 	{ "scanend",	cmd_scanend, 	"",
 		"Force scan end" },
-	{ "adv",	cmd_adv, 	"",
-		"Start advertising" },
+	{ "advertising",	cmd_advertising, 	"[on | off]",
+		"Start/stop advertising" },
 	{ NULL, NULL, NULL}
 };
 
@@ -1563,7 +1695,6 @@ static gboolean prompt_read(GIOChannel *chan, GIOCondition cond,
 	parse_line(myline);
 	return TRUE;
 }
-
 
 static void read_version_complete(uint8_t status, uint16_t length,
 								const void *param, void *user_data)
@@ -1636,8 +1767,6 @@ static void mgmt_device_found(uint16_t index, uint16_t length,
 
 static void mgmt_debug(const char *str, void *user_data)
 {
-	//const char *prefix = user_data;
-
 	DBG("%s%s", (const char *)user_data, str);
 }
 
@@ -1697,8 +1826,9 @@ int main(int argc, char *argv[])
 	}
 	mgmt_set_debug(mgmt_master, mgmt_debug, "mgmt: ", NULL);
 
+	/* For READ_VERSION, it is mandatory to use INDEX_NONE */
 	if (mgmt_send(mgmt_master, MGMT_OP_READ_VERSION,
-			opt_src_idx, 0, NULL,
+			MGMT_INDEX_NONE, 0, NULL,
 			read_version_complete, NULL, NULL) == 0) {
 		DBG("mgmt_send(MGMT_OP_READ_VERSION) failed");
 	}

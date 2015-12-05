@@ -22,6 +22,23 @@ SEC_LEVEL_HIGH = "high"
 ADDR_TYPE_PUBLIC = "public"
 ADDR_TYPE_RANDOM = "random"
 
+MGMT_SETTING_POWERED            = 0x00000001
+MGMT_SETTING_CONNECTABLE        = 0x00000002
+MGMT_SETTING_FAST_CONNECTABLE   = 0x00000004
+MGMT_SETTING_DISCOVERABLE       = 0x00000008
+MGMT_SETTING_BONDABLE           = 0x00000010
+MGMT_SETTING_LINK_SECURITY      = 0x00000020
+MGMT_SETTING_SSP                = 0x00000040
+MGMT_SETTING_BREDR              = 0x00000080
+MGMT_SETTING_HS                 = 0x00000100
+MGMT_SETTING_LE                 = 0x00000200
+MGMT_SETTING_ADVERTISING        = 0x00000400
+MGMT_SETTING_SECURE_CONN        = 0x00000800
+MGMT_SETTING_DEBUG_KEYS         = 0x00001000
+MGMT_SETTING_PRIVACY            = 0x00002000
+MGMT_SETTING_CONFIGURATION      = 0x00004000
+MGMT_SETTING_STATIC_ADDRESS     = 0x00008000
+
 def DBG(*args):
     if Debugging:
         msg = " ".join([str(a) for a in args])
@@ -231,6 +248,7 @@ class Bluepy:
             self._stopHelper()
             raise BTLEException(BTLEException.DISCONNECTED,
                                 "Failed to execute mgmt cmd '%s'" % (cmd))
+        return rsp
 
     @staticmethod
     def parseResp(line):
@@ -558,13 +576,19 @@ class Central(Bluepy):
 
     def start(self):
         self._startHelper()
+
+        rsp = self._mgmtCmd("settings")
+        print("settings = 0x%08X"%rsp['d'][0])
+
         self._mgmtCmd("powered off")
+        self._mgmtCmd("advertising off")
         self._mgmtCmd("le on")
         self._mgmtCmd("bredr off")
         self._mgmtCmd("powered on")
 
     def advertise(self):
-        self._mgmtCmd("adv")
+        self._mgmtCmd("discoverable on")
+        self._mgmtCmd("advertising on")
         resp = self._waitResp(['stat'], 0.2)
         if resp is None:
             print("No reponse received")
