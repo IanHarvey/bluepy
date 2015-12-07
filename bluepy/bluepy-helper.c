@@ -100,6 +100,7 @@ static enum state {
 	STATE_CONNECTING=1,
 	STATE_CONNECTED=2,
 	STATE_SCANNING=3,
+	STATE_ADVERTISING=4,
 } conn_state;
 
 
@@ -151,7 +152,8 @@ static const char
 	*st_DISCONNECTED = "disc",
 	*st_CONNECTING	= "tryconn",
 	*st_CONNECTED	= "conn",
-	*st_SCANNING    = "scan";
+	*st_SCANNING    = "scan",
+	*st_ADVERTISING = "advertise";
 
 static void resp_begin(const char *rsptype)
 {
@@ -239,6 +241,11 @@ static void cmd_status(int argcp, char **argvp)
 
 	case STATE_SCANNING:
 		send_sym(tag_CONNSTATE, st_SCANNING);
+		send_str(tag_DEVICE, opt_dst);
+		break;
+
+	case STATE_ADVERTISING:
+		send_sym(tag_CONNSTATE, st_ADVERTISING);
 		send_str(tag_DEVICE, opt_dst);
 		break;
 
@@ -1178,22 +1185,31 @@ static bool on_or_off(char *p_mode, uint8_t *p_val)
 	return true;
 }
 
-static bool set_mode(uint16_t opcode, char *p_mode)
+static bool set_mode_with_cb(uint16_t opcode, char *p_mode, mgmt_request_func_t callback)
 {
 	struct mgmt_mode cp;
+	uintptr_t user_data;
 
 	memset(&cp, 0, sizeof(cp));
 
 	if (!on_or_off(p_mode, &cp.val))
 		return false;
 
-	// at this time only index 0 is supported
+	/* Save the configured value in the user_data */
+	if (cp.val) user_data = 1;
+	else user_data = 0;
+
 	if (mgmt_send(mgmt_master, opcode,
 			opt_src_idx, sizeof(cp), &cp,
-			set_mode_complete, NULL, NULL) == 0) {
+			callback, (void *)user_data, NULL) == 0) {
 		resp_mgmt(err_SUCCESS);
 	}
 	return true;
+}
+
+static bool set_mode(uint16_t opcode, char *p_mode)
+{
+	return set_mode_with_cb(opcode, p_mode, set_mode_complete);
 }
 
 static void cmd_powered(int argcp, char **argvp)
@@ -1316,6 +1332,24 @@ static void cmd_le(int argcp, char **argvp)
 	}
 }
 
+static void set_advertising_complete(uint8_t status, uint16_t length,
+								const void *param, void *user_data)
+{
+	if (status != MGMT_STATUS_SUCCESS) {
+		DBG("status returned error : %s (0x%02x)",
+			mgmt_errstr(status), status);
+		resp_mgmt(err_PROTO_ERR);
+		return;
+	}
+
+	resp_mgmt(err_SUCCESS);
+
+	if (user_data)
+		set_state(STATE_ADVERTISING);
+	else
+		set_state(STATE_DISCONNECTED);
+}
+
 static void cmd_advertising(int argcp, char **argvp)
 {
 	if (argcp < 2) {
@@ -1323,7 +1357,7 @@ static void cmd_advertising(int argcp, char **argvp)
 		return;
 	}
 
-	if (!set_mode(MGMT_OP_SET_ADVERTISING, argvp[1])) {
+	if (!set_mode_with_cb(MGMT_OP_SET_ADVERTISING, argvp[1], set_advertising_complete)) {
 		resp_mgmt(err_BAD_PARAM);
 	}
 }
@@ -1525,7 +1559,7 @@ static void show_device_info(void)
 }
 
 static void read_info_complete(uint8_t status, uint16_t length,
-								const void *param, void *user_data)
+		const void *param, void *user_data)
 {
 	const struct mgmt_rp_read_info *rp = param;
 
@@ -1560,6 +1594,7 @@ static void cmd_settings(int argcp, char **argvp)
 			opt_src_idx, 0, NULL,
 			read_info_complete, NULL, NULL) == 0) {
 		DBG("mgmt_send(MGMT_OP_READ_INFO) failed");
+		resp_mgmt(err_PROTO_ERR);
 	}
 }
 
@@ -1719,8 +1754,30 @@ static void read_version_complete(uint8_t status, uint16_t length,
 static void mgmt_device_connected(uint16_t index, uint16_t length,
 								const void *param, void *user_data)
 {
+	gchar s[18] = {0};
+	char *params[3];
+	const struct mgmt_ev_device_connected *ev = param;
 	assert(index == opt_src_idx);
-	DBG("New device connected");
+
+	if (ba2str(&ev->addr.bdaddr, s) != 17)
+		memset(s, 0xFF, sizeof(s) - 1);
+
+	DBG("New device connected : type %d %s state = %d", ev->addr.type, s, conn_state);
+
+	if (conn_state != STATE_ADVERTISING)
+		return;
+
+	/* If the device is advertising, create a GATT link */
+	params[1] = s;
+
+	if (ev->addr.type)
+		params[2] = "random";
+	else
+		params[2] = "public";
+
+	/* Fake a connect request from the python */
+	set_state(STATE_DISCONNECTED);
+	cmd_connect(3, params);
 }
 
 static void mgmt_device_disconnected(uint16_t index, uint16_t length,

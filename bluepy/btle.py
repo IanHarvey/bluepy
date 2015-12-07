@@ -569,7 +569,6 @@ class Scan(Bluepy):
         self.stop()
         return self.scanned
 
-
 class Central(Bluepy):
     def __init__(self, src='hci0'):
         Bluepy.__init__(self, src=src)
@@ -578,24 +577,58 @@ class Central(Bluepy):
         self._startHelper()
 
         rsp = self._mgmtCmd("settings")
+        settings = rsp['d'][0]
         print("settings = 0x%08X"%rsp['d'][0])
 
-        self._mgmtCmd("powered off")
-        self._mgmtCmd("advertising off")
-        self._mgmtCmd("le on")
-        self._mgmtCmd("bredr off")
-        self._mgmtCmd("powered on")
+        # check if it is already powered off (mandatory to set bredr off)
+        if (settings & MGMT_SETTING_POWERED) == 0:
+            self._mgmtCmd("powered on")
+
+        # always end advertising if it is active
+        if settings & MGMT_SETTING_ADVERTISING:
+            self._mgmtCmd("advertising off")
+            rsp = self._waitResp('stat', 0.5)
+            if rsp['state'][0] != 'disc':
+                raise BTLEException(BTLEException.COMM_ERROR,
+                                    "Failed to stop advertising")
+
+        # set bredr off
+        if settings & MGMT_SETTING_BREDR:
+            # first enable LE is not yet enabled
+            if (settings & MGMT_SETTING_LE) == 0:
+                self._mgmtCmd("le on")
+            self._mgmtCmd("powered off")
+            self._mgmtCmd("bredr off")
+            self._mgmtCmd("powered on")
 
     def advertise(self):
         self._mgmtCmd("discoverable on")
+        self._mgmtCmd("connectable on")
         self._mgmtCmd("advertising on")
-        resp = self._waitResp(['stat'], 0.2)
+        rsp = self._waitResp('stat', 1)
+        if rsp['state'][0] != 'advertise':
+            raise BTLEException(BTLEException.COMM_ERROR,
+                                "Failed to start advertising")
+        resp = self._waitResp(['stat'], 1)
         if resp is None:
             print("No reponse received")
 
     def wait_conn(self):
-        resp = self._waitResp(['conn'], 100)
+        rsp = self._waitResp('stat', 100)
+        if rsp['state'][0] != 'disc':
+            raise BTLEException(BTLEException.COMM_ERROR,
+                                "Advertising stopped not for a disconnection")
+        # when advertising, it will initiate the connection immediately
+        rsp = self._waitResp('stat', 1)
+        while rsp['state'][0] == 'tryconn':
+            rsp = self._waitResp('stat')
+        if rsp['state'][0] != 'conn':
+            self._stopHelper()
+            raise BTLEException(BTLEException.DISCONNECTED,
+                                "Failed to connect to central")
 
+    def poll(self):
+        rsp = self._waitResp('stat', 100)
 
 def capitaliseName(descr):
     words = descr.split(" ")

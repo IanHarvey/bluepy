@@ -35,3 +35,4 @@ if __name__ == "__main__":
     central.advertise()
     central.wait_conn()
     
+    central.poll()
