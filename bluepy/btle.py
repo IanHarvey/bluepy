@@ -100,6 +100,7 @@ class Service:
         (self.peripheral, uuidVal, self.hndStart, self.hndEnd) = args
         self.uuid = UUID(uuidVal)
         self.chars = None
+        self.descs = None
 
     def getCharacteristics(self, forUUID=None):
         if not self.chars: # Unset, or empty
@@ -108,6 +109,19 @@ class Service:
             u = UUID(forUUID)
             return [ch for ch in self.chars if ch.uuid==u]
         return self.chars
+
+    def getDescriptors(self, forUUID=None):
+        if not self.descs:
+            # Grab all descriptors in our range, except for the service
+            # declaration descriptor
+            all_descs = self.peripheral.getDescriptors(self.hndStart+1, self.hndEnd)
+            # Filter out the descriptors for the characteristic properties
+            # Note that this does not filter out characteristic value descriptors
+            self.descs = [desc for desc in all_descs if desc.uuid != 0x2803]
+        if forUUID is not None:
+            u = UUID(for_UUID)
+            return [desc for desc in self.descs if desc.uuid == u]
+        return self.descs
 
     def __str__(self):
         return "Service <uuid=%s handleStart=%s handleEnd=%s>" % (self.uuid.getCommonName(),
@@ -140,6 +154,7 @@ class Characteristic:
     def __init__(self, *args):
         (self.peripheral, uuidVal, self.handle, self.properties, self.valHandle) = args
         self.uuid = UUID(uuidVal)
+        self.descs = None
 
     def read(self):
         return self.peripheral.readCharacteristic(self.valHandle)
@@ -147,7 +162,21 @@ class Characteristic:
     def write(self, val, withResponse=False):
         self.peripheral.writeCharacteristic(self.valHandle, val, withResponse)
 
-    # TODO: descriptors
+    def getDescriptors(self, forUUID=None, hndEnd=0xFFFF):
+        if not self.descs:
+            # Descriptors (not counting the value descriptor) begin after
+            # the handle for the value descriptor and stop when we reach
+            # the handle for the next characteristic or service
+            self.descs = []
+            for desc in self.peripheral.getDescriptors(self.valHandle+1, hndEnd):
+                if desc.uuid in (0x2800, 0x2801, 0x2803):
+                    # Stop if we reach another characteristic or service
+                    break
+                self.descs.append(desc)
+        if forUUID is not None:
+            u = UUID(for_UUID)
+            return [desc for desc in self.descs if desc.uuid == u]
+        return self.descs
 
     def __str__(self):
         return "Characteristic <%s>" % self.uuid.getCommonName()
@@ -176,6 +205,13 @@ class Descriptor:
     def __str__(self):
         return "Descriptor <%s>" % self.uuid.getCommonName()
         
+
+    def read(self):
+        return self.peripheral.readCharacteristic(self.handle)
+
+    def write(self, val, withResponse=False):
+        self.peripheral.writeCharacteristic(self.handle, val, withResponse)
+
 class DefaultDelegate:
     def __init__(self):
         pass
