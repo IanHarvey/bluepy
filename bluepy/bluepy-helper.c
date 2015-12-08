@@ -1786,7 +1786,6 @@ static void mgmt_device_connected(uint16_t index, uint16_t length,
 								const void *param, void *user_data)
 {
 	gchar s[18] = {0};
-	char *params[3];
 	const struct mgmt_ev_device_connected *ev = param;
 	assert(index == opt_src_idx);
 
@@ -1798,17 +1797,13 @@ static void mgmt_device_connected(uint16_t index, uint16_t length,
 	if (conn_state != STATE_ADVERTISING)
 		return;
 
-	/* If the device is advertising, create a GATT link */
-	params[1] = s;
-
-	if (ev->addr.type)
-		params[2] = "random";
-	else
-		params[2] = "public";
-
-	/* Fake a connect request from the python */
+	/* When advertising, indicate that advertising stopped */
 	set_state(STATE_DISCONNECTED);
-	cmd_connect(3, params);
+
+	/* Send the information about the connection request */
+	resp_begin(rsp_MGMT);
+	send_addr(&ev->addr);
+	resp_end();
 }
 
 static void mgmt_device_disconnected(uint16_t index, uint16_t length,

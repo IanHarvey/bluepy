@@ -615,19 +615,31 @@ class Central(Bluepy):
         if resp is None:
             print("No reponse received")
 
-    def wait_conn(self):
-        rsp = self._waitResp('stat', 100)
-        if rsp['state'][0] != 'disc':
-            raise BTLEException(BTLEException.COMM_ERROR,
-                                "Advertising stopped not for a disconnection")
-        # when advertising, it will initiate the connection immediately
-        rsp = self._waitResp('stat', 1)
+    def connect(self, addr, addrType):
+        if len(addr.split(":")) != 6:
+            raise ValueError("Expected MAC address, got %s" % repr(addr))
+        if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
+            raise ValueError("Expected address type public or random, got {}".format(addrType))
+        self.deviceAddr = addr
+        self._writeCmd("conn %s %s\n" % (addr, addrType))
+        rsp = self._waitResp('stat')
         while rsp['state'][0] == 'tryconn':
             rsp = self._waitResp('stat')
         if rsp['state'][0] != 'conn':
             self._stopHelper()
             raise BTLEException(BTLEException.DISCONNECTED,
-                                "Failed to connect to central")
+                                "Failed to connect to peripheral %s, addr type: %s" % (addr, addrType))
+
+    def wait_conn(self):
+        resp = self._waitResp('stat', 100)
+        if resp['state'][0] != 'disc':
+            raise BTLEException(BTLEException.COMM_ERROR,
+                                "Advertising stopped not for a disconnection")
+        resp = self._waitResp('mgmt', 1)
+        addr = binascii.b2a_hex(resp['addr'][0][::-1])
+        addr = ':'.join([ addr[2*i:2*i+2] for i in xrange(6)])
+        atype = { 1 : 'public', 2 : 'random' }[resp['type'][0]]
+        self.connect(addr, atype)
 
     def poll(self):
         rsp = self._waitResp('stat', 100)
