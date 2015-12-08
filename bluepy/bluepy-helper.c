@@ -146,6 +146,7 @@ static const char
 	*err_BAD_STATE	= "badstate",
 	*err_BAD_HCI	= "badhci",
 	*err_BUSY	= "busy",
+	*err_PERMISSION = "permission_denied",
 	*err_SUCCESS	= "success";
 
 static const char
@@ -1199,6 +1200,11 @@ static bool set_mode_with_cb(uint16_t opcode, char *p_mode, mgmt_request_func_t 
 	if (cp.val) user_data = 1;
 	else user_data = 0;
 
+	if (!mgmt_master) {
+		resp_mgmt(err_PERMISSION);
+		return true;
+	}
+
 	if (mgmt_send(mgmt_master, opcode,
 			opt_src_idx, sizeof(cp), &cp,
 			callback, (void *)user_data, NULL) == 0) {
@@ -1236,6 +1242,11 @@ static void cmd_discoverable(int argcp, char **argvp)
 
 	if (!on_or_off(argvp[1], &cp.val)) {
 		resp_mgmt(err_BAD_PARAM);
+		return;
+	}
+
+	if (!mgmt_master) {
+		resp_mgmt(err_PERMISSION);
 		return;
 	}
 
@@ -1413,6 +1424,11 @@ static void cmd_pair(int argcp, char **argvp)
 	cp.addr.type = addr_type;
 	cp.io_cap = io_cap;
 
+	if (!mgmt_master) {
+		resp_mgmt(err_PERMISSION);
+		return;
+	}
+
 	if (mgmt_send(mgmt_master, MGMT_OP_PAIR_DEVICE,
 				opt_src_idx, sizeof(cp), &cp,
 				pair_device_complete, NULL,
@@ -1457,6 +1473,11 @@ static void cmd_unpair(int argcp, char **argvp)
 	cp.addr.type = addr_type;
 	cp.disconnect = 1;
 
+	if (!mgmt_master) {
+		resp_mgmt(err_PERMISSION);
+		return;
+	}
+
 	if (mgmt_send(mgmt_master, MGMT_OP_UNPAIR_DEVICE,
 				opt_src_idx, sizeof(cp), &cp,
 				unpair_device_complete, NULL,
@@ -1486,6 +1507,11 @@ static void scan(bool start)
 	uint16_t opcode = start? MGMT_OP_START_DISCOVERY : MGMT_OP_STOP_DISCOVERY;
 
 	DBG("Scan %s", start? "start" : "stop");
+
+	if (!mgmt_master) {
+		resp_mgmt(err_PERMISSION);
+		return;
+	}
 
 	if (mgmt_send(mgmt_master, opcode, opt_src_idx, sizeof(cp),
 		&cp, scan_cb, NULL, NULL) == 0)
@@ -1588,6 +1614,11 @@ static void cmd_settings(int argcp, char **argvp)
 {
 	if (1 < argcp) {
 		resp_mgmt(err_BAD_PARAM);
+	}
+
+	if (!mgmt_master) {
+		resp_mgmt(err_PERMISSION);
+		return;
 	}
 
 	if (mgmt_send(mgmt_master, MGMT_OP_READ_INFO,
@@ -1827,6 +1858,20 @@ static void mgmt_debug(const char *str, void *user_data)
 	DBG("%s%s", (const char *)user_data, str);
 }
 
+static int my_hci_devba(int dev_id, bdaddr_t *bdaddr)
+{
+	struct hci_dev_info di;
+
+	memset(&di, 0, sizeof(di));
+
+	if (hci_devinfo(dev_id, &di))
+		return -1;
+
+	bacpy(bdaddr, &di.bdaddr);
+
+	return 0;
+}
+
 static int parse_dev_src(const char * arg, gchar **addr, int *index)
 {
 	char *end;
@@ -1839,7 +1884,7 @@ static int parse_dev_src(const char * arg, gchar **addr, int *index)
 	if (*end != '\0')
 		return -1;
 
-	if (hci_devba(*index, &bdaddr))
+	if (my_hci_devba(*index, &bdaddr))
 		return -1;
 
 	// batostr() look bugged in Bluez!
@@ -1881,29 +1926,34 @@ int main(int argc, char *argv[])
 	if (!mgmt_master) {
 		DBG("Could not connect to the BT management interface, try with su rights");
 	}
-	mgmt_set_debug(mgmt_master, mgmt_debug, "mgmt: ", NULL);
+	else {
+		mgmt_set_debug(mgmt_master, mgmt_debug, "mgmt: ", NULL);
 
-	/* For READ_VERSION, it is mandatory to use INDEX_NONE */
-	if (mgmt_send(mgmt_master, MGMT_OP_READ_VERSION,
-			MGMT_INDEX_NONE, 0, NULL,
-			read_version_complete, NULL, NULL) == 0) {
-		DBG("mgmt_send(MGMT_OP_READ_VERSION) failed");
-	}
+		/* For READ_VERSION, it is mandatory to use INDEX_NONE */
+		if (!mgmt_send(mgmt_master, MGMT_OP_READ_VERSION, MGMT_INDEX_NONE,
+				0, NULL, read_version_complete, NULL, NULL)) {
+			DBG("mgmt_send(MGMT_OP_READ_VERSION) failed");
+		}
 
-	if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, opt_src_idx, mgmt_device_connected, NULL, NULL)==0) {
-		DBG("mgmt_register(MGMT_EV_DEVICE_CONNECTED) failed");
-	}
+		if (!mgmt_register(mgmt_master, MGMT_EV_DEVICE_CONNECTED, opt_src_idx,
+				mgmt_device_connected, NULL, NULL)) {
+			DBG("mgmt_register(MGMT_EV_DEVICE_CONNECTED) failed");
+		}
 
-	if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_DISCONNECTED, opt_src_idx, mgmt_device_disconnected, NULL, NULL)==0) {
-		DBG("mgmt_register(MGMT_EV_DEVICE_DISCONNECTED) failed");
-	}
+		if (!mgmt_register(mgmt_master, MGMT_EV_DEVICE_DISCONNECTED, opt_src_idx,
+				mgmt_device_disconnected, NULL, NULL)) {
+			DBG("mgmt_register(MGMT_EV_DEVICE_DISCONNECTED) failed");
+		}
 
-	if (mgmt_register(mgmt_master, MGMT_EV_DISCOVERING, opt_src_idx, mgmt_scanning, NULL, NULL)==0) {
-		DBG("mgmt_register(MGMT_EV_DISCOVERING) failed");
-	}
+		if (!mgmt_register(mgmt_master, MGMT_EV_DISCOVERING, opt_src_idx,
+				mgmt_scanning, NULL, NULL)) {
+			DBG("mgmt_register(MGMT_EV_DISCOVERING) failed");
+		}
 
-	if (mgmt_register(mgmt_master, MGMT_EV_DEVICE_FOUND, opt_src_idx, mgmt_device_found, NULL, NULL)==0) {
-		DBG("mgmt_register(MGMT_EV_DEVICE_FOUND) failed");
+		if (!mgmt_register(mgmt_master, MGMT_EV_DEVICE_FOUND, opt_src_idx,
+				mgmt_device_found, NULL, NULL)) {
+			DBG("mgmt_register(MGMT_EV_DEVICE_FOUND) failed");
+		}
 	}
 
 	event_loop = g_main_loop_new(NULL, FALSE);

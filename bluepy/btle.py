@@ -247,8 +247,34 @@ class Bluepy:
         if rsp['code'][0] != 'success':
             self._stopHelper()
             raise BTLEException(BTLEException.DISCONNECTED,
-                                "Failed to execute mgmt cmd '%s'" % (cmd))
+                                "Failed to execute mgmt cmd '%s' : %s" % (cmd, rsp['code'][0]))
         return rsp
+
+    def reset_controller(self):
+        rsp = self._mgmtCmd("settings")
+        settings = rsp['d'][0]
+
+        # power on the HCI
+        if (settings & MGMT_SETTING_POWERED) == 0:
+            self._mgmtCmd("powered on")
+
+        # always end advertising if it is active
+        if settings & MGMT_SETTING_ADVERTISING:
+            self._mgmtCmd("advertising off")
+            rsp = self._waitResp('stat', 0.5)
+            if rsp['state'][0] != 'disc':
+                raise BTLEException(BTLEException.COMM_ERROR,
+                                    "Failed to stop advertising")
+
+        # set bredr off
+        if settings & MGMT_SETTING_BREDR:
+            # first enable LE is not yet enabled
+            if (settings & MGMT_SETTING_LE) == 0:
+                self._mgmtCmd("le on")
+            # powered off (mandatory to set bredr off)
+            self._mgmtCmd("powered off")
+            self._mgmtCmd("bredr off")
+            self._mgmtCmd("powered on")
 
     @staticmethod
     def parseResp(line):
@@ -487,7 +513,7 @@ class Scan(Bluepy):
 
     def start(self):
         self._startHelper()
-        self._mgmtCmd("le on")
+        self.reset_controller()
         self._writeCmd("scan\n")
         rsp = self._waitResp("mgmt")
         if rsp["code"][0] == "success":
@@ -575,31 +601,7 @@ class Central(Bluepy):
 
     def start(self):
         self._startHelper()
-
-        rsp = self._mgmtCmd("settings")
-        settings = rsp['d'][0]
-        print("settings = 0x%08X"%rsp['d'][0])
-
-        # check if it is already powered off (mandatory to set bredr off)
-        if (settings & MGMT_SETTING_POWERED) == 0:
-            self._mgmtCmd("powered on")
-
-        # always end advertising if it is active
-        if settings & MGMT_SETTING_ADVERTISING:
-            self._mgmtCmd("advertising off")
-            rsp = self._waitResp('stat', 0.5)
-            if rsp['state'][0] != 'disc':
-                raise BTLEException(BTLEException.COMM_ERROR,
-                                    "Failed to stop advertising")
-
-        # set bredr off
-        if settings & MGMT_SETTING_BREDR:
-            # first enable LE is not yet enabled
-            if (settings & MGMT_SETTING_LE) == 0:
-                self._mgmtCmd("le on")
-            self._mgmtCmd("powered off")
-            self._mgmtCmd("bredr off")
-            self._mgmtCmd("powered on")
+        self.reset_controller()
 
     def advertise(self):
         self._mgmtCmd("discoverable on")
