@@ -3,82 +3,82 @@ import binascii
 import btle
 
 ATT_OP_ERROR                = '\x01'
-ATT_OP_MTU_REQ			    = '\x02'
-ATT_OP_MTU_RESP			    = '\x03'
-ATT_OP_FIND_INFO_REQ	    = '\x04'
-ATT_OP_FIND_INFO_RESP	    = '\x05'
-ATT_OP_FIND_BY_TYPE_REQ	    = '\x06'
+ATT_OP_MTU_REQ              = '\x02'
+ATT_OP_MTU_RESP             = '\x03'
+ATT_OP_FIND_INFO_REQ        = '\x04'
+ATT_OP_FIND_INFO_RESP       = '\x05'
+ATT_OP_FIND_BY_TYPE_REQ     = '\x06'
 ATT_OP_FIND_BY_TYPE_RESP    = '\x07'
-ATT_OP_READ_BY_TYPE_REQ	    = '\x08'
+ATT_OP_READ_BY_TYPE_REQ     = '\x08'
 ATT_OP_READ_BY_TYPE_RESP    = '\x09'
-ATT_OP_READ_REQ			    = '\x0A'
-ATT_OP_READ_RESP		    = '\x0B'
-ATT_OP_READ_BLOB_REQ	    = '\x0C'
-ATT_OP_READ_BLOB_RESP	    = '\x0D'
-ATT_OP_READ_MULTI_REQ	    = '\x0E'
-ATT_OP_READ_MULTI_RESP	    = '\x0F'
+ATT_OP_READ_REQ             = '\x0A'
+ATT_OP_READ_RESP            = '\x0B'
+ATT_OP_READ_BLOB_REQ        = '\x0C'
+ATT_OP_READ_BLOB_RESP       = '\x0D'
+ATT_OP_READ_MULTI_REQ       = '\x0E'
+ATT_OP_READ_MULTI_RESP      = '\x0F'
 ATT_OP_READ_BY_GROUP_REQ    = '\x10'
 ATT_OP_READ_BY_GROUP_RESP   = '\x11'
-ATT_OP_WRITE_REQ		    = '\x12'
-ATT_OP_WRITE_RESP		    = '\x13'
-ATT_OP_WRITE_CMD		    = '\x52'
-ATT_OP_PREP_WRITE_REQ	    = '\x16'
-ATT_OP_PREP_WRITE_RESP	    = '\x17'
-ATT_OP_EXEC_WRITE_REQ	    = '\x18'
-ATT_OP_EXEC_WRITE_RESP	    = '\x19'
-ATT_OP_HANDLE_NOTIFY	    = '\x1B'
-ATT_OP_HANDLE_IND		    = '\x1D'
-ATT_OP_HANDLE_CNF		    = '\x1E'
-ATT_OP_SIGNED_WRITE_CMD	    = '\xD2'
+ATT_OP_WRITE_REQ            = '\x12'
+ATT_OP_WRITE_RESP           = '\x13'
+ATT_OP_WRITE_CMD            = '\x52'
+ATT_OP_PREP_WRITE_REQ       = '\x16'
+ATT_OP_PREP_WRITE_RESP      = '\x17'
+ATT_OP_EXEC_WRITE_REQ       = '\x18'
+ATT_OP_EXEC_WRITE_RESP      = '\x19'
+ATT_OP_HANDLE_NOTIFY        = '\x1B'
+ATT_OP_HANDLE_IND           = '\x1D'
+ATT_OP_HANDLE_CNF           = '\x1E'
+ATT_OP_SIGNED_WRITE_CMD     = '\xD2'
 
-ATT_ECODE_SUCCESS	            = '\x00'
-ATT_ECODE_INVALID_HANDLE	    = '\x01'
-ATT_ECODE_READ_NOT_PERM		    = '\x02'
-ATT_ECODE_WRITE_NOT_PERM	    = '\x03'
-ATT_ECODE_INVALID_PDU		    = '\x04'
-ATT_ECODE_AUTHENTICATION	    = '\x05'
-ATT_ECODE_REQ_NOT_SUPP		    = '\x06'
-ATT_ECODE_INVALID_OFFSET	    = '\x07'
-ATT_ECODE_AUTHORIZATION		    = '\x08'
-ATT_ECODE_PREP_QUEUE_FULL	    = '\x09'
-ATT_ECODE_ATTR_NOT_FOUND	    = '\x0A'
-ATT_ECODE_ATTR_NOT_LONG		    = '\x0B'
+ATT_ECODE_SUCCESS               = '\x00'
+ATT_ECODE_INVALID_HANDLE        = '\x01'
+ATT_ECODE_READ_NOT_PERM         = '\x02'
+ATT_ECODE_WRITE_NOT_PERM        = '\x03'
+ATT_ECODE_INVALID_PDU           = '\x04'
+ATT_ECODE_AUTHENTICATION        = '\x05'
+ATT_ECODE_REQ_NOT_SUPP          = '\x06'
+ATT_ECODE_INVALID_OFFSET        = '\x07'
+ATT_ECODE_AUTHORIZATION         = '\x08'
+ATT_ECODE_PREP_QUEUE_FULL       = '\x09'
+ATT_ECODE_ATTR_NOT_FOUND        = '\x0A'
+ATT_ECODE_ATTR_NOT_LONG         = '\x0B'
 ATT_ECODE_INSUFF_ENCR_KEY_SIZE  = '\x0C'
 ATT_ECODE_INVAL_ATTR_VALUE_LEN  = '\x0D'
-ATT_ECODE_UNLIKELY			    = '\x0E'
-ATT_ECODE_INSUFF_ENC		    = '\x0F'
-ATT_ECODE_UNSUPP_GRP_TYPE	    = '\x10'
-ATT_ECODE_INSUFF_RESOURCES	    = '\x11'
+ATT_ECODE_UNLIKELY              = '\x0E'
+ATT_ECODE_INSUFF_ENC            = '\x0F'
+ATT_ECODE_UNSUPP_GRP_TYPE       = '\x10'
+ATT_ECODE_INSUFF_RESOURCES      = '\x11'
 
-GATT_PRIM_SVC_UUID				        = '\x00\x28'
-GATT_SND_SVC_UUID				        = '\x01\x28'
-GATT_INCLUDE_UUID				        = '\x02\x28'
-GATT_CHARAC_UUID				        = '\x03\x28'
+GATT_PRIM_SVC_UUID                      = '\x00\x28'
+GATT_SND_SVC_UUID                       = '\x01\x28'
+GATT_INCLUDE_UUID                       = '\x02\x28'
+GATT_CHARAC_UUID                        = '\x03\x28'
 
-GATT_CHARAC_EXT_PROPER_UUID			    = '\x00\x29'
-GATT_CHARAC_USER_DESC_UUID			    = '\x01\x29'
-GATT_CLIENT_CHARAC_CFG_UUID			    = '\x02\x29'
-GATT_SERVER_CHARAC_CFG_UUID			    = '\x03\x29'
-GATT_CHARAC_FMT_UUID				    = '\x04\x29'
-GATT_CHARAC_AGREG_FMT_UUID			    = '\x05\x29'
-GATT_CHARAC_VALID_RANGE_UUID			= '\x06\x29'
-GATT_EXTERNAL_REPORT_REFERENCE			= '\x07\x29'
-GATT_REPORT_REFERENCE				    = '\x08\x29'
+GATT_CHARAC_EXT_PROPER_UUID             = '\x00\x29'
+GATT_CHARAC_USER_DESC_UUID              = '\x01\x29'
+GATT_CLIENT_CHARAC_CFG_UUID             = '\x02\x29'
+GATT_SERVER_CHARAC_CFG_UUID             = '\x03\x29'
+GATT_CHARAC_FMT_UUID                    = '\x04\x29'
+GATT_CHARAC_AGREG_FMT_UUID              = '\x05\x29'
+GATT_CHARAC_VALID_RANGE_UUID            = '\x06\x29'
+GATT_EXTERNAL_REPORT_REFERENCE          = '\x07\x29'
+GATT_REPORT_REFERENCE                   = '\x08\x29'
 
-GATT_CHARAC_DEVICE_NAME				    = '\x00\x2A'
-GATT_CHARAC_APPEARANCE				    = '\x01\x2A'
-GATT_CHARAC_PERIPHERAL_PRIV_FLAG	    = '\x02\x2A'
-GATT_CHARAC_RECONNECTION_ADDRESS	    = '\x03\x2A'
-GATT_CHARAC_PERIPHERAL_PREF_CONN	    = '\x04\x2A'
-GATT_CHARAC_SERVICE_CHANGED			    = '\x05\x2A'
-GATT_CHARAC_SYSTEM_ID				    = '\x23\x2A'
-GATT_CHARAC_MODEL_NUMBER_STRING		    = '\x24\x2A'
-GATT_CHARAC_SERIAL_NUMBER_STRING	    = '\x25\x2A'
-GATT_CHARAC_FIRMWARE_REVISION_STRING	= '\x26\x2A'
-GATT_CHARAC_HARDWARE_REVISION_STRING	= '\x27\x2A'
-GATT_CHARAC_SOFTWARE_REVISION_STRING	= '\x28\x2A'
-GATT_CHARAC_MANUFACTURER_NAME_STRING	= '\x29\x2A'
-GATT_CHARAC_PNP_ID				        = '\x50\x2A'
+GATT_CHARAC_DEVICE_NAME                 = '\x00\x2A'
+GATT_CHARAC_APPEARANCE                  = '\x01\x2A'
+GATT_CHARAC_PERIPHERAL_PRIV_FLAG        = '\x02\x2A'
+GATT_CHARAC_RECONNECTION_ADDRESS        = '\x03\x2A'
+GATT_CHARAC_PERIPHERAL_PREF_CONN        = '\x04\x2A'
+GATT_CHARAC_SERVICE_CHANGED             = '\x05\x2A'
+GATT_CHARAC_SYSTEM_ID                   = '\x23\x2A'
+GATT_CHARAC_MODEL_NUMBER_STRING         = '\x24\x2A'
+GATT_CHARAC_SERIAL_NUMBER_STRING        = '\x25\x2A'
+GATT_CHARAC_FIRMWARE_REVISION_STRING    = '\x26\x2A'
+GATT_CHARAC_HARDWARE_REVISION_STRING    = '\x27\x2A'
+GATT_CHARAC_SOFTWARE_REVISION_STRING    = '\x28\x2A'
+GATT_CHARAC_MANUFACTURER_NAME_STRING    = '\x29\x2A'
+GATT_CHARAC_PNP_ID                      = '\x50\x2A'
 
 
 def binUuid(uuid):
@@ -127,8 +127,10 @@ class Gatts:
             if name[0:7] == 'ATT_OP_' and name[-4:] in ['_REQ', '_CMD']:
                 self.op_func[value] = getattr(self, name.lower())
 
+
     def hmax(self, h = 0xFFFF):
         return min(len(self.att) - 1, h)
+
 
     def hend(self, att):
         if att.type not in [GATT_PRIM_SVC_UUID, GATT_SND_SVC_UUID, GATT_CHARAC_UUID]:
@@ -139,6 +141,7 @@ class Gatts:
             if a.type in type_end:
                 return a.handle - 1
         return len(self.att) - 1
+
 
     def hcheck(self, h1, h2 = None):
         # Different behavior depending on 1 or 2 args
@@ -253,6 +256,7 @@ class Gatts:
         else:
             raise AttError(ATT_ECODE_ATTR_NOT_FOUND, hstart)
 
+
     def att_op_read_by_group_req(self,data):
         op, hstart, hend, uuid = struct.unpack("<BHH" + str(len(data) - 5) + "s", data)
         print "Read Group Type Req:", op, hstart, hend, binascii.b2a_hex(uuid)
@@ -280,10 +284,12 @@ class Gatts:
                     break
                 att_data_list += [ att_data ]
 
+
         if att_data_list:
             return ATT_OP_READ_BY_GROUP_RESP + chr(len(att_data)) + ''.join(att_data_list)
         else:
             raise AttError(ATT_ECODE_ATTR_NOT_FOUND, hstart)
+
 
     def att_op_write_req(self,data):
         print "Req WRITE not supported: " + binascii.b2a_hex(data)
@@ -323,8 +329,6 @@ class Gatts:
             return ATT_OP_ERROR + data[0] + chr2(e.handle) + e.error
 
 
-
-
     def addService(self, uuid):
         self.att += [ Attribute(len(self.att), GATT_PRIM_SVC_UUID, binUuid(uuid)) ]
         return self.hmax()
@@ -349,16 +353,3 @@ class Gatts:
         self.att += [ Attribute(len(self.att), GATT_CHARAC_UUID, binprop + binhandle + binuuid) ]
         self.att += [ Attribute(len(self.att), binUuid(uuid), value) ]
         return self.hmax()
-
-
-
-
-
-
-
-
-
-
-
-
-
