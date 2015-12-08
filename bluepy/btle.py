@@ -119,7 +119,7 @@ class Service:
             # Note that this does not filter out characteristic value descriptors
             self.descs = [desc for desc in all_descs if desc.uuid != 0x2803]
         if forUUID is not None:
-            u = UUID(for_UUID)
+            u = UUID(forUUID)
             return [desc for desc in self.descs if desc.uuid == u]
         return self.descs
 
@@ -174,7 +174,7 @@ class Characteristic:
                     break
                 self.descs.append(desc)
         if forUUID is not None:
-            u = UUID(for_UUID)
+            u = UUID(forUUID)
             return [desc for desc in self.descs if desc.uuid == u]
         return self.descs
 
