@@ -134,7 +134,8 @@ static const char
 	*rsp_READ		= "rd",
 	*rsp_WRITE		= "wr",
 	*rsp_MGMT		= "mgmt",
-	*rsp_SCAN		= "scan";
+	*rsp_SCAN		= "scan",
+	*rsp_GATTS		= "gatts";
 
 static const char
 	*err_CONN_FAIL	= "connfail",
@@ -299,201 +300,13 @@ static void events_handler(const uint8_t *pdu, uint16_t len, gpointer user_data)
 		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
 }
 
-static void gatts_find_info_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
+static void req_gatts(const uint8_t *val, uint16_t len, gpointer user_data)
 {
-	uint8_t *opdu;
-	uint8_t opcode;
-	uint16_t starting_handle, olen;
-	size_t plen;
-
-	assert( len == 5 );
-	opcode = pdu[0];
-	starting_handle = bt_get_le16(&pdu[1]);
-	/* ending_handle = bt_get_le16(&pdu[3]); */
-
-	opdu = g_attrib_get_buffer(attrib, &plen);
-	olen = enc_error_resp(opcode, starting_handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
-	if (olen > 0)
-		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
+	resp_begin(rsp_GATTS);
+	send_data(val, len);
+	resp_end();
 }
 
-static void gatts_find_by_type_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
-{
-	uint8_t *opdu;
-	uint8_t opcode;
-	uint16_t starting_handle, olen;
-	size_t plen;
-
-	assert( len >= 7 );
-	opcode = pdu[0];
-	starting_handle = bt_get_le16(&pdu[1]);
-	/* ending_handle = bt_get_le16(&pdu[3]); */
-	/* att_type = bt_get_le16(&pdu[5]); */
-
-	opdu = g_attrib_get_buffer(attrib, &plen);
-	olen = enc_error_resp(opcode, starting_handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
-	if (olen > 0)
-		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
-}
-
-static void gatts_read_by_type_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
-{
-	uint8_t *opdu;
-	uint8_t opcode;
-	uint16_t starting_handle, olen;
-	size_t plen;
-
-	assert( len == 7 || len == 21 );
-	opcode = pdu[0];
-	starting_handle = bt_get_le16(&pdu[1]);
-	/* ending_handle = bt_get_le16(&pdu[3]); */
-	if (len == 7) {
-		/* att_type = bt_get_le16(&pdu[5]); */
-	}
-
-	opdu = g_attrib_get_buffer(attrib, &plen);
-	olen = enc_error_resp(opcode, starting_handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
-	if (olen > 0)
-		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
-}
-
-static void gatts_read_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
-{
-	uint8_t *opdu;
-	uint8_t opcode;
-	uint16_t handle, olen;
-	size_t plen;
-
-	assert( len == 3 );
-	opcode = pdu[0];
-	handle = bt_get_le16(&pdu[1]);
-
-	opdu = g_attrib_get_buffer(attrib, &plen);
-	olen = enc_error_resp(opcode, handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
-	if (olen > 0)
-		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
-}
-
-static void gatts_read_blob_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
-{
-	uint8_t *opdu;
-	uint8_t opcode;
-	uint16_t handle, olen;
-	size_t plen;
-
-	assert( len == 5 );
-	opcode = pdu[0];
-	handle = bt_get_le16(&pdu[1]);
-	/* offset = bt_get_le16(&pdu[3]); */
-
-	opdu = g_attrib_get_buffer(attrib, &plen);
-	olen = enc_error_resp(opcode, handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
-	if (olen > 0)
-		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
-}
-
-static void gatts_read_multi_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
-{
-	uint8_t *opdu;
-	uint8_t opcode;
-	uint16_t handle1, olen;
-	size_t plen;
-
-	assert( len >= 5 );
-	opcode = pdu[0];
-	handle1 = bt_get_le16(&pdu[1]);
-	/* handle2 = bt_get_le16(&pdu[3]); */
-
-	opdu = g_attrib_get_buffer(attrib, &plen);
-	olen = enc_error_resp(opcode, handle1, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
-	if (olen > 0)
-		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
-}
-
-static void gatts_read_by_group_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
-{
-	uint8_t *opdu;
-	uint8_t opcode;
-	uint16_t starting_handle, olen;
-	size_t plen;
-
-	assert( len >= 7 );
-	opcode = pdu[0];
-	starting_handle = bt_get_le16(&pdu[1]);
-	/* ending_handle = bt_get_le16(&pdu[3]); */
-	/* att_group_type = bt_get_le16(&pdu[5]); */
-
-	opdu = g_attrib_get_buffer(attrib, &plen);
-	olen = enc_error_resp(opcode, starting_handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
-	if (olen > 0)
-		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
-}
-
-static void gatts_write_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
-{
-	uint8_t *opdu;
-	uint8_t opcode;
-	uint16_t handle, olen;
-	size_t plen;
-
-	assert( len >= 3 );
-	opcode = pdu[0];
-	handle = bt_get_le16(&pdu[1]);
-
-	opdu = g_attrib_get_buffer(attrib, &plen);
-	olen = enc_error_resp(opcode, handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
-	if (olen > 0)
-		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
-}
-
-static void gatts_write_cmd(const uint8_t *pdu, uint16_t len, gpointer user_data)
-{
-	assert( len >= 3 );
-	/* opcode = pdu[0]; */
-	/* handle = bt_get_le16(&pdu[1]); */
-}
-
-static void gatts_signed_write_cmd(const uint8_t *pdu, uint16_t len, gpointer user_data)
-{
-	assert( len >= 15 );
-	/* opcode = pdu[0]; */
-	/* handle = bt_get_le16(&pdu[1]); */
-}
-
-static void gatts_prep_write_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
-{
-	uint8_t *opdu;
-	uint8_t opcode, handle;
-	uint16_t olen;
-	size_t plen;
-
-	assert( len >= 5 );
-	opcode = pdu[0];
-	handle = bt_get_le16(&pdu[1]);
-	/* offset = bt_get_le16(&pdu[3]); */
-
-	opdu = g_attrib_get_buffer(attrib, &plen);
-	olen = enc_error_resp(opcode, handle, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
-	if (olen > 0)
-		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
-}
-
-static void gatts_exec_write_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
-{
-	uint8_t *opdu;
-	uint8_t opcode;
-	uint16_t olen;
-	size_t plen;
-
-	assert( len == 5 );
-	opcode = pdu[0];
-	/* flags = pdu[1]; */
-
-	opdu = g_attrib_get_buffer(attrib, &plen);
-	olen = enc_error_resp(opcode, 0, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
-	if (olen > 0)
-		g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
-}
 
 static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
 {
@@ -528,29 +341,29 @@ static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
 	g_attrib_register(attrib, ATT_OP_HANDLE_IND, GATTRIB_ALL_HANDLES,
 						events_handler, attrib, NULL);
 	g_attrib_register(attrib, ATT_OP_FIND_INFO_REQ, GATTRIB_ALL_HANDLES,
-						gatts_find_info_req, attrib, NULL);
+						req_gatts, NULL, NULL);
 	g_attrib_register(attrib, ATT_OP_FIND_BY_TYPE_REQ, GATTRIB_ALL_HANDLES,
-						gatts_find_by_type_req, attrib, NULL);
+						req_gatts, NULL, NULL);
 	g_attrib_register(attrib, ATT_OP_READ_BY_TYPE_REQ, GATTRIB_ALL_HANDLES,
-						gatts_read_by_type_req, attrib, NULL);
+						req_gatts, NULL, NULL);
 	g_attrib_register(attrib, ATT_OP_READ_REQ, GATTRIB_ALL_HANDLES,
-						gatts_read_req, attrib, NULL);
+						req_gatts, NULL, NULL);
 	g_attrib_register(attrib, ATT_OP_READ_BLOB_REQ, GATTRIB_ALL_HANDLES,
-						gatts_read_blob_req, attrib, NULL);
+						req_gatts, NULL, NULL);
 	g_attrib_register(attrib, ATT_OP_READ_MULTI_REQ, GATTRIB_ALL_HANDLES,
-						gatts_read_multi_req, attrib, NULL);
+						req_gatts, NULL, NULL);
 	g_attrib_register(attrib, ATT_OP_READ_BY_GROUP_REQ, GATTRIB_ALL_HANDLES,
-						gatts_read_by_group_req, attrib, NULL);
+						req_gatts, NULL, NULL);
 	g_attrib_register(attrib, ATT_OP_WRITE_REQ, GATTRIB_ALL_HANDLES,
-						gatts_write_req, attrib, NULL);
+						req_gatts, NULL, NULL);
 	g_attrib_register(attrib, ATT_OP_WRITE_CMD, GATTRIB_ALL_HANDLES,
-						gatts_write_cmd, attrib, NULL);
+						req_gatts, NULL, NULL);
 	g_attrib_register(attrib, ATT_OP_SIGNED_WRITE_CMD, GATTRIB_ALL_HANDLES,
-						gatts_signed_write_cmd, attrib, NULL);
+						req_gatts, NULL, NULL);
 	g_attrib_register(attrib, ATT_OP_PREP_WRITE_REQ, GATTRIB_ALL_HANDLES,
-						gatts_prep_write_req, attrib, NULL);
+						req_gatts, NULL, NULL);
 	g_attrib_register(attrib, ATT_OP_EXEC_WRITE_REQ, GATTRIB_ALL_HANDLES,
-						gatts_exec_write_req, attrib, NULL);
+						req_gatts, NULL, NULL);
 
 	set_state(STATE_CONNECTED);
 }
@@ -1629,6 +1442,25 @@ static void cmd_settings(int argcp, char **argvp)
 	}
 }
 
+static void cmd_gatts(int argcp, char **argvp)
+{
+	if (argcp == 2) {
+		uint8_t *opdu = NULL;
+		size_t olen = gatt_attr_data_from_string(argvp[1], &opdu);
+
+		DBG("GATTS %p %d %zd", opdu, opt_mtu, olen);
+
+		if (opdu && (opt_mtu == 0 || olen <= opt_mtu)) {
+			g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
+		} else {
+			resp_error(err_BAD_PARAM, 0);
+		}
+		g_free(opdu);
+	} else {
+		resp_error(err_BAD_PARAM, 0);
+	}
+}
+
 static struct {
 	const char *cmd;
 	void (*func)(int argcp, char **argvp);
@@ -1697,6 +1529,8 @@ static struct {
 		"Force scan end" },
 	{ "advertising",	cmd_advertising, 	"[on | off]",
 		"Start/stop advertising" },
+	{ "gatts",	cmd_gatts, 	"<data>",
+		"GATT server response" },
 	{ NULL, NULL, NULL}
 };
 
@@ -1910,7 +1744,7 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
-	DBG("Using controller hci%d  addr:%s\n", opt_src_idx, opt_src);
+	DBG("Using controller hci%d  addr:%s", opt_src_idx, opt_src);
 
 	opt_dst = NULL;
 	opt_dst_type = g_strdup("public");

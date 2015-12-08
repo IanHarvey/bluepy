@@ -79,7 +79,13 @@ class UUID:
 
         val = val.replace("-", "")
         if len(val) <= 8:  # Short form
+            if len(val) <= 4:
+                self.binValShort = struct.pack('<H', int(val, 16))
+            else:
+                self.binValShort = struct.pack('<L', int(val, 16))
             val = ("0" * (8 - len(val))) + val + "00001000800000805F9B34FB"
+        else:
+            self.binValShort = None
 
         self.binVal = binascii.a2b_hex(val.encode('utf-8'))
         if len(self.binVal) != 16:
@@ -111,6 +117,12 @@ class UUID:
             if s.startswith("0000"):
                 s = s[4:]
         return s
+
+    def bin(self):
+        if self.binValShort is None:
+            return self.binVal
+        else:
+            return self.binValShort
 
 class Service:
     def __init__(self, *args):
@@ -347,6 +359,7 @@ class Peripheral(Bluepy):
         self.addrType = addrType
         self.discoveredAllServices = False
         self.delegate = DefaultDelegate()
+        self.gatts = None
         if deviceAddr is not None:
             self.connect(deviceAddr, addrType)
 
@@ -365,7 +378,7 @@ class Peripheral(Bluepy):
             wantType = [wantType]
 
         while True:
-            resp = self._waitResp(wantType + ['ntfy', 'ind'], timeout)
+            resp = self._waitResp(wantType + ['ntfy', 'ind', 'gatts'], timeout)
             if resp is None:
                 return None
 
@@ -377,6 +390,18 @@ class Peripheral(Bluepy):
                     self.delegate.handleNotification(hnd, data)
                 if respType not in wantType:
                     continue
+            if respType == 'gatts':
+                if self.gatts:
+                    data = self.gatts(resp['d'][0])
+                    if 23 < len(data):
+                        raise Exception
+                else:
+                    # Send back error not supported
+                    data = '\x01' + resp['d'][0][0] + '\x00\x00\x06'
+
+                self._writeCmd("gatts %s\n" % binascii.b2a_hex(data))
+                continue
+
             return resp
 
     def connect(self, addr, addrType):
@@ -642,7 +667,22 @@ class Central(Bluepy):
         self.connect(addr, atype)
 
     def poll(self):
-        rsp = self._waitResp('stat', 100)
+        while True:
+            resp = self._waitResp(['stat', 'gatts'], 100)
+            respType = resp['rsp'][0]
+            print (resp)
+            if respType == 'stat' and resp['state'][0] == 'disc':
+                break
+            elif respType == 'gatts':
+                if self.gatts:
+                    data = self.gatts(resp['d'][0])
+                    if 23 < len(data):
+                        raise Exception
+                else:
+                    # Send back error not supported
+                    data = '\x01' + resp['d'][0][0] + '\x00\x00\x06'
+
+                self._writeCmd("gatts %s\n" % binascii.b2a_hex(data))
 
 def capitaliseName(descr):
     words = descr.split(" ")
@@ -672,7 +712,6 @@ def get_json_uuid():
     all_uuids = reduce(lambda a,b: a+b, (uuid_data[x] for x in ['service_UUIDs',
                                                         'characteristic_UUIDs',
                                                         'descriptor_UUIDs']))
-
 
     for number,cname,name in all_uuids:
         yield UUID(number, cname)

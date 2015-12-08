@@ -7,6 +7,7 @@ import sys
 # Add btle.py path for import
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bluepy')))
 import btle
+import btle_gatts
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -31,8 +32,23 @@ if __name__ == "__main__":
     btle.Debugging = arg.verbose
 
     central = btle.Central(arg.controller)
-    central.start()
-    central.advertise()
-    central.wait_conn()
-    
-    central.poll()
+
+    central.gatts = btle_gatts.Gatts()
+
+    central.gatts.addService("Device Information")
+    central.gatts.addChar("Model Number String", "My Central")
+    central.gatts.addChar("Serial Number String", "3.14159")
+    central.gatts.addChar("Firmware Revision String", "2.71828")
+    central.gatts.addChar("Hardware Revision String", "1.618")
+    central.gatts.addChar("Software Revision String", "1.41421")
+    central.gatts.addChar("Manufacturer Name String", "Bluepy")
+
+    central.gatts.addService("Battery Service")
+    central.gatts.addChar("Battery Level", chr(66))
+
+
+    while True:
+        central.start()
+        central.advertise()
+        central.wait_conn()
+        central.poll()
