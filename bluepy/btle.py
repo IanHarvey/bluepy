@@ -604,8 +604,8 @@ class Central(Bluepy):
         self.reset_controller()
 
     def advertise(self):
-        self._mgmtCmd("discoverable on")
         self._mgmtCmd("connectable on")
+        self._mgmtCmd("discoverable on")
         self._mgmtCmd("advertising on")
         rsp = self._waitResp('stat', 1)
         if rsp['state'][0] != 'advertise':
