@@ -22,6 +22,23 @@ SEC_LEVEL_HIGH = "high"
 ADDR_TYPE_PUBLIC = "public"
 ADDR_TYPE_RANDOM = "random"
 
+MGMT_SETTING_POWERED            = 0x00000001
+MGMT_SETTING_CONNECTABLE        = 0x00000002
+MGMT_SETTING_FAST_CONNECTABLE   = 0x00000004
+MGMT_SETTING_DISCOVERABLE       = 0x00000008
+MGMT_SETTING_BONDABLE           = 0x00000010
+MGMT_SETTING_LINK_SECURITY      = 0x00000020
+MGMT_SETTING_SSP                = 0x00000040
+MGMT_SETTING_BREDR              = 0x00000080
+MGMT_SETTING_HS                 = 0x00000100
+MGMT_SETTING_LE                 = 0x00000200
+MGMT_SETTING_ADVERTISING        = 0x00000400
+MGMT_SETTING_SECURE_CONN        = 0x00000800
+MGMT_SETTING_DEBUG_KEYS         = 0x00001000
+MGMT_SETTING_PRIVACY            = 0x00002000
+MGMT_SETTING_CONFIGURATION      = 0x00004000
+MGMT_SETTING_STATIC_ADDRESS     = 0x00008000
+
 def DBG(*args):
     if Debugging:
         msg = " ".join([str(a) for a in args])
@@ -62,7 +79,13 @@ class UUID:
 
         val = val.replace("-", "")
         if len(val) <= 8:  # Short form
+            if len(val) <= 4:
+                self.binValShort = struct.pack('<H', int(val, 16))
+            else:
+                self.binValShort = struct.pack('<L', int(val, 16))
             val = ("0" * (8 - len(val))) + val + "00001000800000805F9B34FB"
+        else:
+            self.binValShort = None
 
         self.binVal = binascii.a2b_hex(val.encode('utf-8'))
         if len(self.binVal) != 16:
@@ -94,6 +117,12 @@ class UUID:
             if s.startswith("0000"):
                 s = s[4:]
         return s
+
+    def bin(self):
+        if self.binValShort is None:
+            return self.binVal
+        else:
+            return self.binValShort
 
 class Service:
     def __init__(self, *args):
@@ -230,7 +259,34 @@ class Bluepy:
         if rsp['code'][0] != 'success':
             self._stopHelper()
             raise BTLEException(BTLEException.DISCONNECTED,
-                                "Failed to execute mgmt cmd '%s'" % (cmd))
+                                "Failed to execute mgmt cmd '%s' : %s" % (cmd, rsp['code'][0]))
+        return rsp
+
+    def reset_controller(self):
+        rsp = self._mgmtCmd("settings")
+        settings = rsp['d'][0]
+
+        # power on the HCI
+        if (settings & MGMT_SETTING_POWERED) == 0:
+            self._mgmtCmd("powered on")
+
+        # always end advertising if it is active
+        if settings & MGMT_SETTING_ADVERTISING:
+            self._mgmtCmd("advertising off")
+            rsp = self._waitResp('stat', 0.5)
+            if rsp['state'][0] != 'disc':
+                raise BTLEException(BTLEException.COMM_ERROR,
+                                    "Failed to stop advertising")
+
+        # set bredr off
+        if settings & MGMT_SETTING_BREDR:
+            # first enable LE is not yet enabled
+            if (settings & MGMT_SETTING_LE) == 0:
+                self._mgmtCmd("le on")
+            # powered off (mandatory to set bredr off)
+            self._mgmtCmd("powered off")
+            self._mgmtCmd("bredr off")
+            self._mgmtCmd("powered on")
 
     @staticmethod
     def parseResp(line):
@@ -303,6 +359,7 @@ class Peripheral(Bluepy):
         self.addrType = addrType
         self.discoveredAllServices = False
         self.delegate = DefaultDelegate()
+        self.gatts = None
         if deviceAddr is not None:
             self.connect(deviceAddr, addrType)
 
@@ -321,7 +378,7 @@ class Peripheral(Bluepy):
             wantType = [wantType]
 
         while True:
-            resp = self._waitResp(wantType + ['ntfy', 'ind'], timeout)
+            resp = self._waitResp(wantType + ['ntfy', 'ind', 'gatts'], timeout)
             if resp is None:
                 return None
 
@@ -333,6 +390,18 @@ class Peripheral(Bluepy):
                     self.delegate.handleNotification(hnd, data)
                 if respType not in wantType:
                     continue
+            if respType == 'gatts':
+                if self.gatts:
+                    data = self.gatts(resp['d'][0])
+                    if 23 < len(data):
+                        raise Exception
+                else:
+                    # Send back error not supported
+                    data = '\x01' + resp['d'][0][0] + '\x00\x00\x06'
+
+                self._writeCmd("gatts %s\n" % binascii.b2a_hex(data))
+                continue
+
             return resp
 
     def connect(self, addr, addrType):
@@ -469,7 +538,7 @@ class Scan(Bluepy):
 
     def start(self):
         self._startHelper()
-        self._mgmtCmd("le on")
+        self.reset_controller()
         self._writeCmd("scan\n")
         rsp = self._waitResp("mgmt")
         if rsp["code"][0] == "success":
@@ -551,6 +620,69 @@ class Scan(Bluepy):
         self.stop()
         return self.scanned
 
+class Central(Bluepy):
+    def __init__(self, src='hci0'):
+        Bluepy.__init__(self, src=src)
+
+    def start(self):
+        self._startHelper()
+        self.reset_controller()
+
+    def advertise(self):
+        self._mgmtCmd("connectable on")
+        self._mgmtCmd("discoverable on")
+        self._mgmtCmd("advertising on")
+        rsp = self._waitResp('stat', 1)
+        if rsp['state'][0] != 'advertise':
+            raise BTLEException(BTLEException.COMM_ERROR,
+                                "Failed to start advertising")
+        resp = self._waitResp(['stat'], 1)
+        if resp is None:
+            print("No reponse received")
+
+    def connect(self, addr, addrType):
+        if len(addr.split(":")) != 6:
+            raise ValueError("Expected MAC address, got %s" % repr(addr))
+        if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
+            raise ValueError("Expected address type public or random, got {}".format(addrType))
+        self.deviceAddr = addr
+        self._writeCmd("conn %s %s\n" % (addr, addrType))
+        rsp = self._waitResp('stat')
+        while rsp['state'][0] == 'tryconn':
+            rsp = self._waitResp('stat')
+        if rsp['state'][0] != 'conn':
+            self._stopHelper()
+            raise BTLEException(BTLEException.DISCONNECTED,
+                                "Failed to connect to peripheral %s, addr type: %s" % (addr, addrType))
+
+    def wait_conn(self):
+        resp = self._waitResp('stat', 100)
+        if resp['state'][0] != 'disc':
+            raise BTLEException(BTLEException.COMM_ERROR,
+                                "Advertising stopped not for a disconnection")
+        resp = self._waitResp('mgmt', 1)
+        addr = binascii.b2a_hex(resp['addr'][0][::-1])
+        addr = ':'.join([ addr[2*i:2*i+2] for i in xrange(6)])
+        atype = { 1 : 'public', 2 : 'random' }[resp['type'][0]]
+        self.connect(addr, atype)
+
+    def poll(self):
+        while True:
+            resp = self._waitResp(['stat', 'gatts'], 100)
+            respType = resp['rsp'][0]
+            print (resp)
+            if respType == 'stat' and resp['state'][0] == 'disc':
+                break
+            elif respType == 'gatts':
+                if self.gatts:
+                    data = self.gatts(resp['d'][0])
+                    if 23 < len(data):
+                        raise Exception
+                else:
+                    # Send back error not supported
+                    data = '\x01' + resp['d'][0][0] + '\x00\x00\x06'
+
+                self._writeCmd("gatts %s\n" % binascii.b2a_hex(data))
 
 def capitaliseName(descr):
     words = descr.split(" ")
@@ -580,7 +712,6 @@ def get_json_uuid():
     all_uuids = reduce(lambda a,b: a+b, (uuid_data[x] for x in ['service_UUIDs',
                                                         'characteristic_UUIDs',
                                                         'descriptor_UUIDs']))
-
 
     for number,cname,name in all_uuids:
         yield UUID(number, cname)
