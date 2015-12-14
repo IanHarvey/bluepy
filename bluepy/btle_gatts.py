@@ -169,7 +169,7 @@ class Gatts:
             info_data = chr2(att.handle) + att.type
             if info_data_list and len(info_data_list[0]) != len(info_data):
                 break
-            rlen -= len(att_data)
+            rlen -= len(info_data)
             if rlen < 0:
                 break
             info_data_list += [info_data]
