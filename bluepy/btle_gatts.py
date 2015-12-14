@@ -160,7 +160,7 @@ class Gatts:
 
     def att_op_find_info_req(self,data):
         op, hstart, hend = struct.unpack("<BHH", data)
-        print "Find info Req:", op, hstart, hend, binascii.b2a_hex(uuid)
+        print "Find info Req:", op, hstart, hend
         self.hcheck(hstart, hend)
 
         rlen = self.mtu - 2
@@ -169,18 +169,18 @@ class Gatts:
             info_data = chr2(att.handle) + att.type
             if info_data_list and len(info_data_list[0]) != len(info_data):
                 break
-            rlen -= len(att_data)
+            rlen -= len(info_data)
             if rlen < 0:
                 break
             info_data_list += [info_data]
 
         if not info_data_list:
             raise AttError(ATT_ECODE_ATTR_NOT_FOUND, hstart)
-        return ATT_OP_FIND_INFO_RSP + chr(1 if len(info_data) == 4 else 2) + ''.join(info_data_list)
+        return ATT_OP_FIND_INFO_RESP + chr(1 if len(info_data) == 4 else 2) + ''.join(info_data_list)
 
 
     def att_op_find_by_type_req(self,data):
-        op, hstart, hend, uuid, value = struct.unpack("<BHHH" + str(len(data) - 7) + "s", data)
+        op, hstart, hend, uuid, value = struct.unpack("<BHH2s" + str(len(data) - 7) + "s", data)
         print "Find Type Value Req:", op, hstart, hend, binascii.b2a_hex(uuid), binascii.b2a_hex(value)
         self.hcheck(hstart, hend)
 
@@ -196,7 +196,7 @@ class Gatts:
 
         if not handle_info_list:
             raise AttError(ATT_ECODE_ATTR_NOT_FOUND, hstart)
-        return ATT_OP_FIND_BY_TYPE_RSP + ''.join(handle_info_list)
+        return ATT_OP_FIND_BY_TYPE_RESP + ''.join(handle_info_list)
 
 
         print "Req FIND TYPE not supported: " + binascii.b2a_hex(data)
@@ -219,7 +219,7 @@ class Gatts:
         if len(value) < off:
             raise AttError(ATT_ECODE_INVALID_OFFSET, h)
 
-        return ATT_OP_READ_RSP + value[off:off + self.mtu - 1]
+        return ATT_OP_READ_RESP + value[off:off + self.mtu - 1]
 
 
     def att_op_read_multi_req(self,data):
@@ -237,7 +237,6 @@ class Gatts:
         length = 0
 
         for att in self.att[hstart : hend]:
-            #print h, repr(uuid), '=?', repr(self.att[h].type())
             if uuid == att.type:
                 if length == 0:
                     val = att.read()
@@ -270,7 +269,6 @@ class Gatts:
         length = 0
 
         for att in self.att[hstart : hend]:
-            #print h, repr(uuid), '=?', repr(self.att[h].type())
             if uuid == att.type:
                 if length == 0:
                     val = att.read()
