@@ -195,10 +195,10 @@ class KeypressSensor(SensorBase):
         SensorBase.__init__(self, periph)
  
     def enable(self):
-        self.periph.writeCharacteristic(0x60, struct.pack('<bb', 0x01, 0x00))
+        self.periph.writeCharacteristic(0x4A, struct.pack('<bb', 0x01, 0x00))
 
     def disable(self):
-        self.periph.writeCharacteristic(0x60, struct.pack('<bb', 0x00, 0x00))
+        self.periph.writeCharacteristic(0x4A, struct.pack('<bb', 0x00, 0x00))
 
 
 class SensorTag(Peripheral):
