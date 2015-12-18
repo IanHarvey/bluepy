@@ -219,7 +219,7 @@ class Gatts:
         if len(value) < off:
             raise AttError(ATT_ECODE_INVALID_OFFSET, h)
 
-        return ATT_OP_READ_RESP + value[off:off + self.mtu - 1]
+        return ATT_OP_READ_BLOB_RESP + value[off:off + self.mtu - 1]
 
 
     def att_op_read_multi_req(self,data):
@@ -290,13 +290,15 @@ class Gatts:
 
 
     def att_op_write_req(self,data):
-        print "Req WRITE not supported: " + binascii.b2a_hex(data)
-        raise AttError(ATT_ECODE_REQ_NOT_SUPP, 0)
+        op, h = struct.unpack("<BH", data)
+        print "TODO Write Req:", op, h, binascii.b2a_hex(data[3:])
+        self.hcheck(h)
+        return ATT_OP_WRITE_RESP
 
 
     def att_op_write_cmd(self,data):
-        print "Cmd WRITE not supported: " + binascii.b2a_hex(data)
-        raise AttError(ATT_ECODE_REQ_NOT_SUPP, 0)
+        op, h = struct.unpack("<BH", data)
+        print "TODO Write Cmd:", op, h, binascii.b2a_hex(data[3:])
 
 
     def att_op_prep_write_req(self,data):
