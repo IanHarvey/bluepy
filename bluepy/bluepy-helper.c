@@ -190,8 +190,9 @@ static void send_addr(const struct mgmt_addr_info *addr)
     const uint8_t *val = addr->bdaddr.b;
     printf(" %s=b", tag_ADDR);
     int len = 6;
+    /* Human-readable byte order is reverse of bdaddr.b */
     while ( len-- > 0 )
-        printf("%02X", *val++);
+        printf("%02X", val[len]);
 
     send_uint(tag_TYPE, addr->type);
 }
