@@ -18,6 +18,9 @@ Contents:
    :maxdepth: 2
 
    peripheral
+   scanner
+   scanentry
+   delegate
    uuid
    service
    characteristic
