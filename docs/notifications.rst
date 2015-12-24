@@ -7,7 +7,7 @@ In ``bluepy``, notifications are processed by creating a "delegate" object and
 registering it with the ``Peripheral``. A method in the delegate is called whenever
 a notification is received from the peripheral, as shown below:
 
-.. function:: handleNotification(cHandle, data):
+.. function:: handleNotification(cHandle, data)
 
     Called when a notification has been received from a ``Peripheral``. Normally
     you will call the peripheral's ``waitForNotifications()`` method to allow this,

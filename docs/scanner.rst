@@ -38,7 +38,7 @@ Instance Methods
     discovered during that time.
     
     *scan()* is equivalent to calling the *clear()*, *start()*, 
-    *process()* and *stop()* methods.
+    *process()* and *stop()* methods in order.
      
 .. function:: clear()
 
@@ -46,8 +46,46 @@ Instance Methods
     
 .. function:: start()
 
+    Enables reception of advertising broadcasts from peripherals.
+    Should be called before calling *process()*.
+
 .. function:: process ( [timeout = 10] )
 
+    Waits for advertising broadcasts and calls the *delegate* object
+    when they are received. Returns after the given *timeout* period
+    in seconds. This may be called multiple times (between calls to
+    *start()* and *stop()* ).
+    
 .. function:: stop()
 
+    Disables reception of advertising broadcasts. Should be called after
+    *process()* has returned.
+
+
+Sample code
+-----------
+
+Basic code to run a LE device scan follows this example::
+
+    from btle import Scanner, DefaultDelegate
+
+    class ScanDelegate(DefaultDelegate):
+        def __init__(self):
+            DefaultDelegate.__init__(self)
+
+        def handleDiscovery(self, dev, isNewDev, isNewData):
+            if isNewDev:
+                print "Discovered device", dev.addr
+            elif isNewData:
+                print "Received new data from", dev.addr
+    
+    devices = scanner.scan(10.0)
+
+    for dev in devices:
+        print "Device %s (%s), RSSI=%d dB" % (dev.addr, dev.atype, dev.rssi)
+        for (adtype, desc, value) in dev.getScanData():
+            print "  %s = %s" % (desc, value)
+
+See the documentation for ``ScanEntry`` for the information available via the *dev*
+parameter passed to the delegate.
 

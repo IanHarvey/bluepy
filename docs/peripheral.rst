@@ -11,8 +11,8 @@ Constructor
 .. function:: Peripheral([deviceAddress=None, [addrType=ADDR_TYPE_PUBLIC [, iface=None]]])
 
    If *deviceAddress* is not ``None``, creates a ``Peripheral`` object and makes a connection
-   to the device indicated by *deviceAddress* (which should be a string comprising six hex
-   bytes separated by colons, e.g. ``"11:22:33:ab:cd:ed"``).
+   to the device indicated by *deviceAddress*. *deviceAddress* should be a string comprising six hex
+   bytes separated by colons, e.g. ``"11:22:33:ab:cd:ed"``.
    
    If *deviceAddress* is ``None``, creates an un-connected ``Peripheral`` object. You must call the ``connect()`` method on this object (passing it a device address) before it will be usable.
    
@@ -22,7 +22,7 @@ Constructor
    details.
    
    The *iface* parameter allows the Bluetooth interface on which to make the connection to be set.
-   On Linux, ``0`` means */dev/hci0*, ``1`` means */dev/hci1* and so on.
+   On Linux, 0 means */dev/hci0*, 1 means */dev/hci1* and so on.
 
    *deviceAddress* may also be a ``ScanEntry`` object. In this case the device address,
    address type, and interface number are all taken from the ``ScanEntry`` values, and 
@@ -119,7 +119,7 @@ Instance Methods
     If *withResponse* is true, will await confirmation that the write was successful
     from the device.
     
-.. function:: readCharacteristic(handle):
+.. function:: readCharacteristic(handle)
 
     Reads the current value of the characteristic identified by *handle*. This is
     useful if you know the handle for the characteristic but do not have a suitable
