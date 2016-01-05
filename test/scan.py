@@ -35,7 +35,6 @@ def dump_services(dev):
         for i, c in enumerate(chars):
             props = c.propertiesToString()
             h = c.getHandle()
-            print "\t%04x:    %-59s %-12s" % (h, c, props),
             if 'READ' in props:
                 try:
                     val = c.read()
@@ -71,7 +70,7 @@ def dump_services(dev):
                     break
 
 class ScanPrint(btle.DefaultDelegate):
-    def handleDiscovery(self, dev, isNewDev, isNewData):
+    def handleScan(self, dev, isNewDev, isNewData):
         global matched
 
         if isNewDev:
@@ -89,15 +88,14 @@ class ScanPrint(btle.DefaultDelegate):
             return
 
         # Filter on name or BDADDR
-        if arg.filter and arg.filter not in mac(addr):
-            for id,v in data.iteritems():
+        if arg.filter and arg.filter not in mac(dev.addr):
+            for id,v in dev.data.iteritems():
                 if id in [8,9] and arg.filter in v:
                     break
             else:
                 return
 
-          
-        print ('    Device (%s): %s (%s), %d dBm %s' % 
+        print ('    Device (%s): %s (%s), %d dBm %s' %
                   (status,
                    ANSI_WHITE + dev.addr + ANSI_OFF,
                    dev.atype,
@@ -114,15 +112,15 @@ class ScanPrint(btle.DefaultDelegate):
         print
 
         # Add device to connect list
-        matched += [addr]
+        matched += [dev.addr]
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     #parser.add_argument('host', action='store',
     #                    help='BD address of BT device')
-    parser.add_argument('-c', '--controller', action='store', default='hci0',
-                        help='controller')
+    parser.add_argument('-i', '--interface', action='store', default='hci0',
+                        help='interface')
     parser.add_argument('-t', '--timeout', action='store', type=int, default=4,
                         help='Scan delay, 0 for continuous')
     parser.add_argument('-s', '--sensitivity', action='store', type=int, default=-128,
@@ -142,7 +140,7 @@ if __name__ == "__main__":
     btle.Debugging = arg.verbose
 
     matched = []
-    scanner = btle.Scanner().withDelegate(ScanPrint())
+    scanner = btle.Scanner(arg.interface).withDelegate(ScanPrint())
 
     print (ANSI_RED + "Scanning for devices..." + ANSI_OFF)
     devices = scanner.scan(arg.timeout)
@@ -151,18 +149,18 @@ if __name__ == "__main__":
         print (ANSI_RED + "Discovering services..." + ANSI_OFF)
 
         for d in devices:
-            if not d.connectable or addr not in matched:
+            if not d.connectable or d.addr not in matched:
                 continue
 
             print ("    Connecting to", ANSI_WHITE + d.addr + ANSI_OFF + ":")
 
             try:
-                dev = btle.Peripheral(d)
+                dev = btle.Peripheral(d, iface=arg.interface)
                 dump_services(dev)
                 dev.disconnect()
             except btle.BTLEException as e:
-                print "\t" + ANSI_RED + e.message + ANSI_OFF
-                print "\tConnection failed"
+                print("\t" + ANSI_RED + e.message + ANSI_OFF)
+                print("\tConnection failed")
             print
 
 

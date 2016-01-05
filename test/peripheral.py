@@ -11,8 +11,8 @@ import btle_gatts
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--controller', action='store', default='hci0',
-                        help='controller')
+    parser.add_argument('-i', '--interface', action='store', default='hci0',
+                        help='interface')
     parser.add_argument('-t', '--timeout', action='store', type=int, default=4,
                         help='Scan delay, 0 for continuous')
     parser.add_argument('-s', '--sensitivity', action='store', type=int, default=-128,
@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     btle.Debugging = arg.verbose
 
-    central = btle.Central(arg.controller)
+    central = btle.Central(arg.interface)
 
     central.gatts = btle_gatts.Gatts()
 

@@ -364,7 +364,7 @@ class BluepyHelper:
 
 class Peripheral(BluepyHelper):
     def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC, iface='hci0'):
-        BluepyHelper.__init__(self, iface=iface)
+        BluepyHelper.__init__(self, iface)
         self.services = {} # Indexed by UUID
         self.discoveredAllServices = False
         if isinstance(deviceAddr, ScanEntry):
@@ -375,7 +375,7 @@ class Peripheral(BluepyHelper):
             addr = deviceAddr
             self.addrType = addrType
             self.iface = iface
- 
+
         if addr is not None:
             self.connect(addr, self.addrType)
 
@@ -579,7 +579,7 @@ class ScanEntry:
         self.addr = addr
         self.iface = iface
         self.atype = None
-        self.rssi = None
+        self.rssi = []
         self.connectable = False
         self.rawData = None
         self.scanData = {}
@@ -590,11 +590,11 @@ class ScanEntry:
         if (self.atype is not None) and (atype != self.atype):
             raise BTLEException("Address type changed during scan, for address %s" % self.addr)
         self.atype = atype
-        self.rssi = -resp['rssi'][0]
+        self.rssi += [ -resp['rssi'][0] ]
         self.connectable = ((resp['flag'][0] & 0x4) == 0)
         data = resp.get('d', [''])[0]
         self.rawData = data
-        
+
         # Note: bluez is notifying devices twice: once with advertisement data,
         # then with scan response data. Also, the device may update the
         # advertisement or scan data
@@ -609,7 +609,7 @@ class ScanEntry:
 
         self.updateCount += 1
         return isNewData
-        
+
     def getDescription(self, sdid):
         return self.dataTags.get(sdid, hex(sdid))
 
@@ -626,8 +626,8 @@ class ScanEntry:
         '''Returns list of tuples [(tag, description, value)]'''
         return [ (sdid, self.getDescription(sdid), self.getValueText(sdid))
                     for sdid in self.scanData.keys() ]
-         
- 
+
+
 class Scanner(BluepyHelper):
     def __init__(self, iface='hci0'):
         BluepyHelper.__init__(self, iface)
@@ -662,7 +662,7 @@ class Scanner(BluepyHelper):
         while True:
             if timeout:
                 remain = start + timeout - time.time()
-                if remain <= 0.0: 
+                if remain <= 0.0:
                     break
             else:
                 remain = None
@@ -683,12 +683,13 @@ class Scanner(BluepyHelper):
                 if addr in self.scanned:
                     dev = self.scanned[addr]
                 else:
-                    dev = ScanEntry(addr, self.index)
+                    dev = ScanEntry(addr, self._iface)
                     self.scanned[addr] = dev
                 isNewData = dev._update(resp)
-                if self.delegate or True:
-                    self.delegate.handleDiscovery(dev, (dev.updateCount <= 1), isNewData)
-                 
+                if self.delegate :
+                    if self.delegate.handleScan(dev, (dev.updateCount <= 1), isNewData):
+                        break
+
             else:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response: " + respType)
 
@@ -699,9 +700,9 @@ class Scanner(BluepyHelper):
         self.stop()
         return self.scanned.values()
 
-class Central(Bluepy):
-    def __init__(self, src='hci0'):
-        Bluepy.__init__(self, src=src)
+class Central(BluepyHelper):
+    def __init__(self, iface='hci0'):
+        BluepyHelper.__init__(self, iface)
 
     def start(self):
         self._startHelper()
@@ -740,7 +741,7 @@ class Central(Bluepy):
             raise BTLEException(BTLEException.COMM_ERROR,
                                 "Advertising stopped not for a disconnection")
         resp = self._waitResp('mgmt', 1)
-        addr = binascii.b2a_hex(resp['addr'][0][::-1])
+        addr = binascii.b2a_hex(resp['addr'][0])
         addr = ':'.join([ addr[2*i:2*i+2] for i in xrange(6)])
         atype = { 1 : 'public', 2 : 'random' }[resp['type'][0]]
         self.connect(addr, atype)
