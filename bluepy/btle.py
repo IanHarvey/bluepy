@@ -53,6 +53,7 @@ class BTLEException(Exception):
     COMM_ERROR = 2
     INTERNAL_ERROR = 3
     GATT_ERROR = 4
+    PERM_ERROR = 5
 
     def __init__(self, code, message, bt_err = 0):
         self.code = code
@@ -263,14 +264,23 @@ class BluepyHelper:
         self._writeCmd(cmd + '\n')
         rsp = self._waitResp('mgmt')
         if rsp['code'][0] != 'success':
-            self._stopHelper()
-            raise BTLEException(BTLEException.DISCONNECTED,
+            if rsp['code'][0] == 'badperm':
+                raise BTLEException(BTLEException.PERM_ERROR, "Permission denied (need sudo?)")
+            else:
+                self._stopHelper()
+                raise BTLEException(BTLEException.DISCONNECTED,
                                 "Failed to execute mgmt cmd '%s' : %s" % (cmd, rsp['code'][0]))
         return rsp
 
-    def reset_controller(self):
-        rsp = self._mgmtCmd("settings")
-        settings = rsp['d'][0]
+    # Reset the interface device. Can be optional as super user permissions are needed
+    def reset_controller(self, required = True):
+        try:
+            rsp = self._mgmtCmd("settings")
+            settings = rsp['d'][0]
+        except BTLEException as e:
+            if e.code == BTLEException.PERM_ERROR and not required:
+                return
+            raise e
 
         # power on the HCI
         if (settings & MGMT_SETTING_POWERED) == 0:
@@ -426,6 +436,8 @@ class Peripheral(BluepyHelper):
         if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
             raise ValueError("Expected address type public or random, got {}".format(addrType))
         self._startHelper()
+        # Simple connect can work out of the box, but needs reset (and super user perm) in some cases
+        self.reset_controller(False)
         self.deviceAddr = addr
         self._writeCmd("conn %s %s\n" % (addr, addrType))
         rsp = self._getResp('stat')
@@ -635,7 +647,7 @@ class Scanner(BluepyHelper):
 
     def start(self):
         self._startHelper()
-        self.reset_controller()
+        self.reset_controller(True)
         self._writeCmd("scan\n")
         rsp = self._waitResp("mgmt")
         if rsp["code"][0] == "success":
@@ -706,19 +718,23 @@ class Central(BluepyHelper):
 
     def start(self):
         self._startHelper()
-        self.reset_controller()
-
-    def advertise(self):
+        self.reset_controller(True)
         self._mgmtCmd("connectable on")
         self._mgmtCmd("discoverable on")
+
+    def stop(self):
+        self._mgmtCmd("discoverable off")
+        self._mgmtCmd("advertising off")
+        self._stopHelper()
+
+    def advertise(self):
         self._mgmtCmd("advertising on")
         rsp = self._waitResp('stat', 1)
         if rsp['state'][0] != 'advertise':
             raise BTLEException(BTLEException.COMM_ERROR,
                                 "Failed to start advertising")
-        resp = self._waitResp(['stat'], 1)
-        if resp is None:
-            print("No reponse received")
+        # Spurious stat sometimes???:
+        #self._waitResp(['stat'], 1)
 
     def connect(self, addr, addrType):
         if len(addr.split(":")) != 6:
@@ -734,9 +750,12 @@ class Central(BluepyHelper):
             self._stopHelper()
             raise BTLEException(BTLEException.DISCONNECTED,
                                 "Failed to connect to peripheral %s, addr type: %s" % (addr, addrType))
+        return (addr, addrType)
 
-    def wait_conn(self):
-        resp = self._waitResp('stat', 100)
+    def wait_conn(self, timeout = None):
+        resp = self._waitResp('stat', timeout)
+        if resp is None:
+            return
         if resp['state'][0] != 'disc':
             raise BTLEException(BTLEException.COMM_ERROR,
                                 "Advertising stopped not for a disconnection")
@@ -744,13 +763,14 @@ class Central(BluepyHelper):
         addr = binascii.b2a_hex(resp['addr'][0])
         addr = ':'.join([ addr[2*i:2*i+2] for i in xrange(6)])
         atype = { 1 : 'public', 2 : 'random' }[resp['type'][0]]
-        self.connect(addr, atype)
+        return self.connect(addr, atype)
 
-    def poll(self):
+    def poll(self, timeout = None):
         while True:
-            resp = self._waitResp(['stat', 'gatts'], 100)
+            resp = self._waitResp(['stat', 'gatts'], timeout)
+            if resp is None:
+                break
             respType = resp['rsp'][0]
-            print (resp)
             if respType == 'stat' and resp['state'][0] == 'disc':
                 break
             elif respType == 'gatts':

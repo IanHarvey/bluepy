@@ -14,17 +14,7 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--interface', action='store', default='hci0',
                         help='interface')
     parser.add_argument('-t', '--timeout', action='store', type=int, default=4,
-                        help='Scan delay, 0 for continuous')
-    parser.add_argument('-s', '--sensitivity', action='store', type=int, default=-128,
-                        help='dBm value for filtering far devices')
-    parser.add_argument('-f', '--filter', action='store', default=None,
-                        help='substring for filtering on name or address')
-    parser.add_argument('-d', '--discover', action='store_true',
-                        help='Connect and discover service to scanned devices')
-    parser.add_argument('-a','--all', action='store_true',
-                        help='Display duplicate adv responses, by default show new + updated')
-    parser.add_argument('-n','--new', action='store_true',
-                        help='Display only new adv responses, by default show new + updated')
+                        help='Cnx wait delay, 0 for none')
     parser.add_argument('-v','--verbose', action='store_true',
                         help='Increase output verbosity')
     arg = parser.parse_args(sys.argv[1:])
@@ -46,9 +36,13 @@ if __name__ == "__main__":
     central.gatts.addService("Battery Service")
     central.gatts.addChar("Battery Level", chr(66))
 
+    central.start()
 
     while True:
-        central.start()
         central.advertise()
-        central.wait_conn()
+        dev = central.wait_conn(arg.timeout)
+        if dev is None:
+            break
         central.poll()
+
+    central.stop()
