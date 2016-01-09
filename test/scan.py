@@ -74,7 +74,7 @@ class ScanPrint(btle.DefaultDelegate):
         print ('    Device (%s): %s (%s), %d dBm %s' % 
                   (status,
                    ANSI_WHITE + dev.addr + ANSI_OFF,
-                   dev.atype,
+                   dev.addrType,
                    dev.rssi,
                    ('' if dev.connectable else '(not connectable)') )
               )

@@ -312,7 +312,7 @@ class Peripheral(BluepyHelper):
         self.discoveredAllServices = False
         if isinstance(deviceAddr, ScanEntry):
             addr = deviceAddr.addr
-            self.addrType = deviceAddr.atype
+            self.addrType = deviceAddr.addrType
             self.iface = deviceAddr.iface
         else:
             addr = deviceAddr
@@ -511,7 +511,7 @@ class ScanEntry:
     def __init__(self, addr, iface):
         self.addr = addr
         self.iface = iface
-        self.atype = None
+        self.addrType = None
         self.rssi = None
         self.connectable = False
         self.rawData = None
@@ -519,10 +519,10 @@ class ScanEntry:
         self.updateCount = 0
 
     def _update(self, resp):
-        atype = self.addrTypes.get(resp['type'][0], None)
-        if (self.atype is not None) and (atype != self.atype):
+        addrType = self.addrTypes.get(resp['type'][0], None)
+        if (self.addrType is not None) and (addrType != self.addrType):
             raise BTLEException("Address type changed during scan, for address %s" % self.addr)
-        self.atype = atype
+        self.addrType = addrType
         self.rssi = -resp['rssi'][0]
         self.connectable = ((resp['flag'][0] & 0x4) == 0)
         data = resp.get('d', [''])[0]
