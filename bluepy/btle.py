@@ -617,7 +617,7 @@ class Scanner(BluepyHelper):
                     dev = ScanEntry(addr, self.iface)
                     self.scanned[addr] = dev
                 isNewData = dev._update(resp)
-                if self.delegate or True:
+                if self.delegate is not None:
                     self.delegate.handleDiscovery(dev, (dev.updateCount <= 1), isNewData)
                  
             else:
