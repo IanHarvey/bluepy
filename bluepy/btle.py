@@ -623,12 +623,15 @@ class Scanner(BluepyHelper):
             else:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response: " + respType)
 
+    def getDevices(self):
+        return self.scanned.values()
+
     def scan(self, timeout=10):
         self.clear()
         self.start()
         self.process(timeout)
         self.stop()
-        return self.scanned.values()
+        return self.getDevices()
 
 
 def capitaliseName(descr):
