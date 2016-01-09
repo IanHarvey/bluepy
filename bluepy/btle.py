@@ -197,12 +197,12 @@ class BluepyHelper:
         self.delegate = delegate_
         return self
 
-    def _startHelper(self,index=None):
+    def _startHelper(self,iface=None):
         if self._helper is None:
             DBG("Running ", helperExe)
             self._stderr = open(os.devnull, "w")
             args=[helperExe]
-            if index is not None: args.append(str(index))
+            if iface is not None: args.append(str(iface))
             self._helper = subprocess.Popen(args,
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
@@ -562,13 +562,13 @@ class ScanEntry:
          
  
 class Scanner(BluepyHelper):
-    def __init__(self,index=0):
+    def __init__(self,iface=0):
         BluepyHelper.__init__(self)
         self.scanned = {}
-        self.index=index
+        self.iface=iface
     
     def start(self):
-        self._startHelper(index=self.index)
+        self._startHelper(iface=self.iface)
         self._mgmtCmd("le on")
         self._writeCmd("scan\n")
         rsp = self._waitResp("mgmt")
@@ -617,7 +617,7 @@ class Scanner(BluepyHelper):
                 if addr in self.scanned:
                     dev = self.scanned[addr]
                 else:
-                    dev = ScanEntry(addr, self.index)
+                    dev = ScanEntry(addr, self.iface)
                     self.scanned[addr] = dev
                 isNewData = dev._update(resp)
                 if self.delegate or True:
