@@ -61,6 +61,10 @@ Instance Methods
     Disables reception of advertising broadcasts. Should be called after
     *process()* has returned.
 
+.. function:: getDevices()
+
+    Returns a list (a *view* on Python 3.x) of ``ScanEntry`` objects for
+    all devices which have been discovered (since the last *clear()* call).
 
 Sample code
 -----------

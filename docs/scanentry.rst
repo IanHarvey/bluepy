@@ -53,6 +53,10 @@ All the properties listed below are read-only.
 
     Device address type - one of *ADDR_TYPE_PUBLIC* or *ADDR_TYPE_RANDOM*.
 
+.. py:attribute:: iface
+
+    Bluetooth interface number (0 = ``/dev/hci0``) on which advertising information was seen.
+
 .. py:attribute:: rssi
 
     Received Signal Strength Indication for the last received broadcast from the

@@ -125,6 +125,21 @@ Instance Methods
     useful if you know the handle for the characteristic but do not have a suitable
     ``Characteristic`` object.
 
+Properties
+----------
 
+All the properties listed below are read-only.
+
+.. py:attribute:: addr
+
+    Device MAC address (as a hex string separated by colons).
     
+.. py:attribute:: addrType
+
+    Device address type - one of *ADDR_TYPE_PUBLIC* or *ADDR_TYPE_RANDOM*; this will be a 
+    printable string.
+
+.. py:attribute:: iface
+
+    Bluetooth interface number (0 = ``/dev/hci0``) used for the connection.
 
