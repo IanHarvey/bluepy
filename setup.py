@@ -44,7 +44,7 @@ class BluepyDevelop(develop):
 
 setup (
     name='bluepy',
-    version='0.9.10',
+    version='0.9.11',
     description='Python module for interfacing with BLE devices through Bluez',
     author='Ian Harvey',
     url='https://github.com/IanHarvey/bluepy',

@@ -44,6 +44,12 @@ The Python files are released into the public domain by their author, Ian Harvey
 Release Notes
 -------------
 
+Release 0.9.11
+
+- Minor consistency improvements & bug fixes
+- Scanner now has getDevices() call
+- Docs updated
+
 Release 0.9.10
 
 - Now with Scan functionality
