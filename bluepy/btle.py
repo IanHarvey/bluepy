@@ -306,21 +306,16 @@ class BluepyHelper:
 
 
 class Peripheral(BluepyHelper):
-    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC,iface=None):
+    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC, iface=None):
         BluepyHelper.__init__(self)
         self.services = {} # Indexed by UUID
         self.discoveredAllServices = False
+        (self.addr, self.addrType, self.iface) = (None, None, None)
+
         if isinstance(deviceAddr, ScanEntry):
-            addr = deviceAddr.addr
-            self.addrType = deviceAddr.addrType
-            self.iface = deviceAddr.iface
-        else:
-            addr = deviceAddr
-            self.addrType = addrType
-            self.iface = iface
- 
-        if addr is not None:
-            self.connect(addr, self.addrType, self.iface)
+            self.connect(deviceAddr.addr, deviceAddr.addrType, deviceAddr.iface)
+        elif deviceAddr is not None:
+            self.connect(deviceAddr, addrType, iface)
 
     def setDelegate(self, delegate_): # same as withDelegate(), deprecated
         return self.withDelegate(delegate_)
@@ -350,14 +345,16 @@ class Peripheral(BluepyHelper):
                     continue
             return resp
 
-    def connect(self, addr, addrType,iface=None):
+    def connect(self, addr, addrType=ADDR_TYPE_PUBLIC, iface=None):
         if len(addr.split(":")) != 6:
             raise ValueError("Expected MAC address, got %s" % repr(addr))
         if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
             raise ValueError("Expected address type public or random, got {}".format(addrType))
         self._startHelper()
         self.deviceAddr = addr
-        if iface:
+        self.addrType = addrType
+        self.iface = iface
+        if iface is not None:
             self._writeCmd("conn %s %s %s\n" % (addr, addrType, iface))
         else:
             self._writeCmd("conn %s %s\n" % (addr, addrType))
