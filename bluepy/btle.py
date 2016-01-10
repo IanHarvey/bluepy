@@ -183,7 +183,7 @@ class DefaultDelegate:
     def handleNotification(self, cHandle, data):
         DBG("Notification:", cHandle, "sent data", binascii.b2a_hex(data))
 
-    def handleScan(self, scanEntry, isNewDev, isNewData):
+    def handleDiscovery(self, scanEntry, isNewDev, isNewData):
         DBG("Discovered device", scanEntry.addr)
 
 class BluepyHelper:
