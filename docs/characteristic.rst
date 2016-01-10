@@ -47,4 +47,21 @@ Instance Methods
     underlying GATT protocol. This may be useful to distinguish between notifications
     from different characteristics (see :ref:`notifications` for further information).
 
+Properties
+----------
+
+All the properties listed below are read-only.
+
+.. py:attribute:: uuid
+
+    The Bluetooth ``UUID`` for this characteristic.
+    
+.. py:attribute:: peripheral
+
+    The ``Peripheral`` object for the device to which the characteristic belongs.
+    
+.. py:attribute:: properties
+
+    A bitmask of properties for the characteristic.
+
 

@@ -22,3 +22,11 @@ Instance Methods
     in :ref:`assignednumbers` this will be a human-readable name e.g.
     "Cycling Speed and Cadence". Otherwise, it will be a hexadecimal string.
 
+Properties
+----------
+
+All the properties listed below are read-only.
+
+.. py:attribute:: binVal
+
+    The UUID expressed in binary (a ``str`` object on Python 2.x, ``bytes`` on 3.x).

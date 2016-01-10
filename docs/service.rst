@@ -27,3 +27,16 @@ Instance Methods
     returned. If *forUUID* is given, it may be a ``UUID`` object or a value used to 
     construct one.  In this case the returned list, which may be empty, contains any
     characteristics associated with the service which match that UUID.
+
+Properties
+----------
+
+All the properties listed below are read-only.
+
+.. py:attribute:: uuid
+
+    The Bluetooth ``UUID`` for this service.
+
+.. py:attribute:: peripheral
+
+    The ``Peripheral`` object for the device to which the service belongs.
