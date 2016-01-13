@@ -1,6 +1,7 @@
 import struct
 import binascii
 import btle
+from asyncore import read
 
 ATT_OP_ERROR                = '\x01'
 ATT_OP_MTU_REQ              = '\x02'
@@ -104,17 +105,22 @@ class Attribute:
         self.type = type
         self._value = value
 
-    # can throw AttError
+    # can throw AttError in case read is not supported
     def read(self):
         return self._value
 
-    # Just return None in case of error
+    # Just return None in case of error, but it should not throw exception
     def readSafe(self):
         return self._value
 
-    def write(self):
-        raise AttError(ATT_ECODE_WRITE_NOT_PERM, self._handle)
+    def write(self, value):
+        raise AttError(ATT_ECODE_WRITE_NOT_PERM, self.h)
 
+    def notification(self, value):
+        return "\x1B" + chr2(self.handle) + value
+
+    def indication(self, value):
+        return "\x1D" + chr2(self.handle) + value
 
 class Gatts:
     def __init__(self, mtu = 23):
@@ -148,10 +154,10 @@ class Gatts:
         if h2 is None:
             if h1 <= 0 or len(self.att) <= h1:
                 raise AttError(ATT_ECODE_INVALID_HANDLE, h1)
+            return self.att[h1]
         else:
             if h1 <= 0 or h2 <= 0 or h2 < h1 or 0xFFFF < h1 or 0xFFFF < h2:
                 raise AttError(ATT_ECODE_INVALID_HANDLE, h1)
-
 
     def att_op_mtu_req(self,data):
         # Handled at higher level, just here to fill the dict
@@ -206,16 +212,17 @@ class Gatts:
     def att_op_read_req(self,data):
         op, h = struct.unpack("<BH", data)
         print "Read Req:", op, h
-        self.hcheck(h)
+
+        a = self.hcheck(h)
         return ATT_OP_READ_RESP + self.att[h].read()[:self.mtu - 1]
 
 
     def att_op_read_blob_req(self,data):
         op, h, off = struct.unpack("<BHH", data)
         print "Read Blob Req:", op, h, off
-        self.hcheck(h)
 
-        value = self.att[h].read()
+        a = self.hcheck(h)
+        value = a.read()
         if len(value) < off:
             raise AttError(ATT_ECODE_INVALID_OFFSET, h)
 
@@ -290,15 +297,20 @@ class Gatts:
 
 
     def att_op_write_req(self,data):
-        op, h = struct.unpack("<BH", data)
-        print "TODO Write Req:", op, h, binascii.b2a_hex(data[3:])
-        self.hcheck(h)
+        op, h = struct.unpack("<BH", data[:3])
+        d = data[3:]
+
+        a = self.hcheck(h)
+        a.write(d)
         return ATT_OP_WRITE_RESP
 
 
     def att_op_write_cmd(self,data):
-        op, h = struct.unpack("<BH", data)
-        print "TODO Write Cmd:", op, h, binascii.b2a_hex(data[3:])
+        op, h = struct.unpack("<BH", data[:3])
+        d = data[3:]
+
+        a = self.hcheck(h)
+        a.write(d)
 
 
     def att_op_prep_write_req(self,data):
@@ -330,8 +342,7 @@ class Gatts:
 
 
     def addService(self, uuid):
-        self.att += [ Attribute(len(self.att), GATT_PRIM_SVC_UUID, binUuid(uuid)) ]
-        return self.hmax()
+        return self.addDesc("GATT Primary Service Declaration", binUuid(uuid))
 
 
     def addChar(self, uuid, value, prop = ["READ"]):
@@ -347,9 +358,15 @@ class Gatts:
                 intprop |= btle.Characteristic.props[p]
             binprop = chr(intprop)
 
+        # handle of the characteristic value descriptor (next)
         binhandle = chr2(len(self.att) + 1)
         binuuid = binUuid(uuid)
 
-        self.att += [ Attribute(len(self.att), GATT_CHARAC_UUID, binprop + binhandle + binuuid) ]
+        self.addDesc("GATT Characteristic Declaration", binprop + binhandle + binuuid)
+        self.addDesc(uuid, value)
+        return (self.att[-2], self.att[-1])
+
+
+    def addDesc(self, uuid, value):
         self.att += [ Attribute(len(self.att), binUuid(uuid), value) ]
-        return self.hmax()
+        return self.att[-1]

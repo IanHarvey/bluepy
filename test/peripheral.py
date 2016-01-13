@@ -8,6 +8,14 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bluepy')))
 import btle
 import btle_gatts
+from types import MethodType
+
+def cccd_write(self, value):
+    print("Writing to BAS CCCD")
+
+def read_not_supported(self):
+    raise btle_gatts.AttError(btle_gatts.ATT_ECODE_READ_NOT_PERM, self.h)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -34,7 +42,11 @@ if __name__ == "__main__":
     central.gatts.addChar("Manufacturer Name String", "Bluepy")
 
     central.gatts.addService("Battery Service")
-    central.gatts.addChar("Battery Level", chr(66))
+    (bat_chr, bat_val) = central.gatts.addChar("Battery Level", chr(66))
+    cccd = central.gatts.addDesc("Client Characteristic Configuration", "\x00\x00")
+    cccd.write = MethodType(cccd_write, cccd, btle_gatts.Attribute)
+    cccd.read = MethodType(read_not_supported, cccd, btle_gatts.Attribute)
+    
 
     central.start()
 
@@ -44,5 +56,9 @@ if __name__ == "__main__":
         if dev is None:
             break
         central.poll()
+        
+        # example of dummy notification on battery level
+        central._writeCmd("gatts %s\n" % binascii.b2a_hex(bat_val.notification(chr(67))))
+
 
     central.stop()

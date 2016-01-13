@@ -65,6 +65,15 @@ def get_table(url, local_filename, table_defs):
                 raise
         yield ret
 
+def get_declaration_names():
+    for row in get_table('https://developer.bluetooth.org/gatt/declarations/Pages/DeclarationsHome.aspx','declarations.html',
+                         (('Name',None),
+                          ('Type',None),
+                          ('Number',lambda x:int(x,16)),
+                          ('Level',None))):
+        row['cname'] = row['Type'].split('.')[-1]
+        yield row
+
 def get_service_names():
     for row in get_table('https://developer.bluetooth.org/gatt/services/Pages/ServicesHome.aspx','services.html',
                          (('Name',None),
@@ -112,6 +121,7 @@ class Definitions(object):
         self._characteristics = None
         self._units = None
         self._services = None
+        self._declarations = None
         self._descriptors = None
         self._formats = None
 
@@ -127,6 +137,12 @@ class Definitions(object):
             self._units = list(get_units())
         return self._units
         
+    @property
+    def declarations(self):
+        if not self._declarations:
+            self._declarations = list(get_declaration_names())
+        return self._declarations
+
     @property
     def services(self):
         if not self._services:
@@ -154,6 +170,11 @@ class Definitions(object):
                 [(row['Number'], 
                   row['cname'], 
                   row['Name']) for row in self.characteristics],
+
+                'declaration_UUIDs':
+                [(row['Number'],
+                  row['cname'],
+                  row['Name']) for row in self.declarations],
 
                 'service_UUIDs':
                 [(row['Number'],
