@@ -21,6 +21,11 @@
             "Age"
         ], 
         [
+            10842, 
+            "aggregate", 
+            "Aggregate"
+        ], 
+        [
             10819, 
             "alert_category_id", 
             "Alert Category ID"
@@ -64,6 +69,11 @@
             10883, 
             "anaerobic_threshold", 
             "Anaerobic Threshold"
+        ], 
+        [
+            10840, 
+            "analog", 
+            "Analog"
         ], 
         [
             10867, 
@@ -256,6 +266,11 @@
             "Dew Point"
         ], 
         [
+            10838, 
+            "digital", 
+            "Digital"
+        ], 
+        [
             10765, 
             "dst_offset", 
             "DST Offset"
@@ -376,6 +391,31 @@
             "Hip Circumference"
         ], 
         [
+            10938, 
+            "http_control_point", 
+            "HTTP Control Point"
+        ], 
+        [
+            10937, 
+            "http_entity_body", 
+            "HTTP Entity Body"
+        ], 
+        [
+            10935, 
+            "http_headers", 
+            "HTTP Headers"
+        ], 
+        [
+            10936, 
+            "http_status_code", 
+            "HTTP Status Code"
+        ], 
+        [
+            10939, 
+            "https_security", 
+            "HTTPS Security"
+        ], 
+        [
             10863, 
             "humidity", 
             "Humidity"
@@ -392,7 +432,7 @@
         ], 
         [
             10806, 
-            "intermediate_blood_pressure", 
+            "intermediate_cuff_pressure", 
             "Intermediate Cuff Pressure"
         ], 
         [
@@ -432,7 +472,7 @@
         ], 
         [
             10929, 
-            "xml", 
+            "local_east_coordinate", 
             "Local East Coordinate"
         ], 
         [
@@ -506,6 +546,66 @@
             "New Alert"
         ], 
         [
+            10949, 
+            "object_action_control_point", 
+            "Object Action Control Point"
+        ], 
+        [
+            10952, 
+            "object_changed", 
+            "Object Changed"
+        ], 
+        [
+            10945, 
+            "object_first_created", 
+            "Object First-Created"
+        ], 
+        [
+            10947, 
+            "object_id", 
+            "Object ID"
+        ], 
+        [
+            10946, 
+            "object_last_modified", 
+            "Object Last-Modified"
+        ], 
+        [
+            10950, 
+            "object_list_control_point", 
+            "Object List Control Point"
+        ], 
+        [
+            10951, 
+            "object_list_filter", 
+            "Object List Filter"
+        ], 
+        [
+            10942, 
+            "object_name", 
+            "Object Name"
+        ], 
+        [
+            10948, 
+            "object_properties", 
+            "Object Properties"
+        ], 
+        [
+            10944, 
+            "object_size", 
+            "Object Size"
+        ], 
+        [
+            10943, 
+            "object_type", 
+            "Object Type"
+        ], 
+        [
+            10941, 
+            "ots_feature", 
+            "OTS Feature"
+        ], 
+        [
             10756, 
             "peripheral_preferred_connection_parameters", 
             "Peripheral Preferred Connection Parameters"
@@ -514,6 +614,21 @@
             10754, 
             "peripheral_privacy_flag", 
             "Peripheral Privacy Flag"
+        ], 
+        [
+            10847, 
+            "plx_continuous_measurement", 
+            "PLX Continuous Measurement"
+        ], 
+        [
+            10848, 
+            "plx_features", 
+            "PLX Features"
+        ], 
+        [
+            10846, 
+            "plx_spot_check_measurement", 
+            "PLX Spot-Check Measurement"
         ], 
         [
             10832, 
@@ -651,6 +766,11 @@
             "System ID"
         ], 
         [
+            10940, 
+            "tds_control_point", 
+            "TDS Control Point"
+        ], 
+        [
             10862, 
             "temperature", 
             "Temperature"
@@ -731,6 +851,11 @@
             "Unread Alert Status"
         ], 
         [
+            10934, 
+            "uri", 
+            "URI"
+        ], 
+        [
             10911, 
             "user_control_point", 
             "User Control Point"
@@ -774,6 +899,28 @@
             10873, 
             "wind_chill", 
             "Wind Chill"
+        ]
+    ], 
+    "declaration_UUIDs": [
+        [
+            10243, 
+            "characteristic_declaration", 
+            "GATT Characteristic Declaration"
+        ], 
+        [
+            10242, 
+            "include_declaration", 
+            "GATT Include Declaration"
+        ], 
+        [
+            10240, 
+            "primary_service_declaration", 
+            "GATT Primary Service Declaration"
+        ], 
+        [
+            10241, 
+            "secondary_service_declaration", 
+            "GATT Secondary Service Declaration"
         ]
     ], 
     "descriptor_UUIDs": [
@@ -823,6 +970,16 @@
             "Report Reference"
         ], 
         [
+            10505, 
+            "number_of_digitals", 
+            "Number of Digitals"
+        ], 
+        [
+            10506, 
+            "value_trigger_setting", 
+            "Value Trigger Setting"
+        ], 
+        [
             10507, 
             "es_configuration", 
             "Environmental Sensing Configuration"
@@ -836,6 +993,11 @@
             10509, 
             "es_trigger_setting", 
             "Environmental Sensing Trigger Setting"
+        ], 
+        [
+            10510, 
+            "time_trigger_setting", 
+            "Time Trigger Setting"
         ]
     ], 
     "formats": [
@@ -991,6 +1153,11 @@
             "Alert Notification Service"
         ], 
         [
+            6165, 
+            "automation_io", 
+            "Automation IO"
+        ], 
+        [
             6159, 
             "battery_service", 
             "Battery Service"
@@ -1066,6 +1233,11 @@
             "Heart Rate"
         ], 
         [
+            6179, 
+            "http_proxy", 
+            "HTTP Proxy"
+        ], 
+        [
             6162, 
             "human_interface_device", 
             "Human Interface Device"
@@ -1101,9 +1273,19 @@
             "Next DST Change Service"
         ], 
         [
+            6181, 
+            "object_transfer", 
+            "Object Transfer"
+        ], 
+        [
             6158, 
             "phone_alert_status", 
             "Phone Alert Status Service"
+        ], 
+        [
+            6178, 
+            "pulse_oximeter", 
+            "Pulse Oximeter"
         ], 
         [
             6150, 
@@ -1119,6 +1301,11 @@
             6163, 
             "scan_parameters", 
             "Scan Parameters"
+        ], 
+        [
+            6180, 
+            "transport_discovery", 
+            "Transport Discovery"
         ], 
         [
             6148, 

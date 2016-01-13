@@ -53,6 +53,7 @@ class BTLEException(Exception):
     COMM_ERROR = 2
     INTERNAL_ERROR = 3
     GATT_ERROR = 4
+    PERM_ERROR = 5
 
     def __init__(self, code, message, bt_err = 0):
         self.code = code
@@ -212,19 +213,26 @@ class DefaultDelegate:
     def handleNotification(self, cHandle, data):
         DBG("Notification:", cHandle, "sent data", binascii.b2a_hex(data))
 
+    def handleScan(self, scanEntry, isNewDev, isNewData):
+        DBG("Discovered device", scanEntry.addr)
 
-class Bluepy:
-    def __init__(self, src='hci0'):
+class BluepyHelper:
+    def __init__(self, iface='hci0'):
         self._helper = None
         self._poller = None
         self._stderr = None
-        self._src = src
+        self.delegate = DefaultDelegate()
+        self._iface = iface
+
+    def withDelegate(self, delegate_):
+        self.delegate = delegate_
+        return self
 
     def _startHelper(self):
         if self._helper is None:
             DBG("Running ", helperExe)
             self._stderr = open(os.devnull, "w")
-            self._helper = subprocess.Popen([helperExe, self._src],
+            self._helper = subprocess.Popen([helperExe, self._iface],
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
                                             stderr=self._stderr,
@@ -248,7 +256,6 @@ class Bluepy:
         if self._helper is None:
             raise BTLEException(BTLEException.INTERNAL_ERROR,
                                 "Helper not started (did you call connect()?)")
-
         DBG("Sent: ", cmd)
         self._helper.stdin.write(cmd)
         self._helper.stdin.flush()
@@ -257,14 +264,23 @@ class Bluepy:
         self._writeCmd(cmd + '\n')
         rsp = self._waitResp('mgmt')
         if rsp['code'][0] != 'success':
-            self._stopHelper()
-            raise BTLEException(BTLEException.DISCONNECTED,
+            if rsp['code'][0] == 'badperm':
+                raise BTLEException(BTLEException.PERM_ERROR, "Permission denied (need sudo?)")
+            else:
+                self._stopHelper()
+                raise BTLEException(BTLEException.DISCONNECTED,
                                 "Failed to execute mgmt cmd '%s' : %s" % (cmd, rsp['code'][0]))
         return rsp
 
-    def reset_controller(self):
-        rsp = self._mgmtCmd("settings")
-        settings = rsp['d'][0]
+    # Reset the interface device. Can be optional as super user permissions are needed
+    def reset_controller(self, required = True):
+        try:
+            rsp = self._mgmtCmd("settings")
+            settings = rsp['d'][0]
+        except BTLEException as e:
+            if e.code == BTLEException.PERM_ERROR and not required:
+                return
+            raise e
 
         # power on the HCI
         if (settings & MGMT_SETTING_POWERED) == 0:
@@ -325,12 +341,13 @@ class Bluepy:
                 if len(fds) == 0:
                     DBG("Select timeout")
                     return None
+
             rv = self._helper.stdout.readline()
             DBG("Got:", repr(rv))
             if rv.startswith('#') or rv == '\n':
                 continue
 
-            resp = Bluepy.parseResp(rv)
+            resp = BluepyHelper.parseResp(rv)
             if 'rsp' not in resp:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "No response type indicator")
 
@@ -344,27 +361,36 @@ class Bluepy:
                 errcode=resp['code'][0]
                 bt_err=resp['bterr'][0]
                 raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s, %d)" % (errcode, bt_err), bt_err)
+            elif respType == 'scan':
+                # Scan response when we weren't interested. Ignore it
+                continue
             else:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response (%s)" % respType)
 
     def status(self):
         self._writeCmd("stat\n")
-        return self._waitResp('stat')
+        return self._waitResp(['stat'])
 
 
-class Peripheral(Bluepy):
-    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC, src='hci0'):
-        Bluepy.__init__(self, src=src)
+class Peripheral(BluepyHelper):
+    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC, iface='hci0'):
+        BluepyHelper.__init__(self, iface)
         self.services = {} # Indexed by UUID
-        self.addrType = addrType
         self.discoveredAllServices = False
-        self.delegate = DefaultDelegate()
-        self.gatts = None
-        if deviceAddr is not None:
-            self.connect(deviceAddr, addrType)
+        if isinstance(deviceAddr, ScanEntry):
+            addr = deviceAddr.addr
+            self.addrType = deviceAddr.atype
+            self.iface = deviceAddr.iface
+        else:
+            addr = deviceAddr
+            self.addrType = addrType
+            self.iface = iface
 
-    def setDelegate(self, delegate_):
-        self.delegate = delegate_
+        if addr is not None:
+            self.connect(addr, self.addrType)
+
+    def setDelegate(self, delegate_): # same as withDelegate(), deprecated
+        return self.withDelegate(delegate_)
 
     def __enter__(self):
         return self
@@ -410,6 +436,8 @@ class Peripheral(Bluepy):
         if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
             raise ValueError("Expected address type public or random, got {}".format(addrType))
         self._startHelper()
+        # Simple connect can work out of the box, but needs reset (and super user perm) in some cases
+        self.reset_controller(False)
         self.deviceAddr = addr
         self._writeCmd("conn %s %s\n" % (addr, addrType))
         rsp = self._getResp('stat')
@@ -530,15 +558,96 @@ class Peripheral(Bluepy):
     def __del__(self):
         self.disconnect()
 
-class Scan(Bluepy):
-    def __init__(self, src='hci0'):
-        Bluepy.__init__(self, src=src)
+class ScanEntry:
+    addrTypes = { 1 : ADDR_TYPE_PUBLIC,
+                  2 : ADDR_TYPE_RANDOM
+                }
+
+    dataTags = {
+        1 : 'Flags',
+        2 : 'Incomplete 16b Services',
+        3 : 'Complete 16b Services',
+        4 : 'Incomplete 32b Services',
+        5 : 'Complete 32b Services',
+        6 : 'Incomplete 128b Services',
+        7 : 'Complete 128b Services',
+        8 : 'Short Local Name',
+        9 : 'Complete Local Name',
+        0xA : 'Tx Power',
+        0x14 : '16b Service Solicitation',
+        0x1F : '32b Service Solicitation',
+        0x15 : '128b Service Solicitation',
+        0x16 : '16b Service Data',
+        0x20 : '32b Service Data',
+        0x21 : '128b Service Data',
+        0x17 : 'Public Target Address',
+        0x18 : 'Random Target Address',
+        0x19 : 'Appearance',
+        0x1A : 'Advertising Interval',
+        0xFF : 'Manufacturer',
+    }
+
+    def __init__(self, addr, iface):
+        self.addr = addr
+        self.iface = iface
+        self.atype = None
+        self.rssi = []
+        self.connectable = False
+        self.rawData = None
+        self.scanData = {}
+        self.updateCount = 0
+
+    def _update(self, resp):
+        atype = self.addrTypes.get(resp['type'][0], None)
+        if (self.atype is not None) and (atype != self.atype):
+            raise BTLEException("Address type changed during scan, for address %s" % self.addr)
+        self.atype = atype
+        self.rssi += [ -resp['rssi'][0] ]
+        self.connectable = ((resp['flag'][0] & 0x4) == 0)
+        data = resp.get('d', [''])[0]
+        self.rawData = data
+
+        # Note: bluez is notifying devices twice: once with advertisement data,
+        # then with scan response data. Also, the device may update the
+        # advertisement or scan data
+        isNewData = False
+        while len(data) >= 2:
+            sdlen, sdid = struct.unpack_from('<BB', data)
+            val = data[2 : sdlen + 1]
+            if (sdid not in self.scanData) or (val != self.scanData[sdid]):
+                isNewData = True
+            self.scanData[sdid] = val
+            data = data[sdlen + 1:]
+
+        self.updateCount += 1
+        return isNewData
+
+    def getDescription(self, sdid):
+        return self.dataTags.get(sdid, hex(sdid))
+
+    def getValueText(self, sdid):
+        val = self.scanData.get(sdid, None)
+        if val is None:
+            return None
+        if (sdid==8) or (sdid==9):
+            return val.decode('utf-8')
+        else:
+            return binascii.b2a_hex(val).decode('utf-8')
+
+    def getScanData(self):
+        '''Returns list of tuples [(tag, description, value)]'''
+        return [ (sdid, self.getDescription(sdid), self.getValueText(sdid))
+                    for sdid in self.scanData.keys() ]
+
+
+class Scanner(BluepyHelper):
+    def __init__(self, iface='hci0'):
+        BluepyHelper.__init__(self, iface)
         self.scanned = {}
-        self.callback = None
 
     def start(self):
         self._startHelper()
-        self.reset_controller()
+        self.reset_controller(True)
         self._writeCmd("scan\n")
         rsp = self._waitResp("mgmt")
         if rsp["code"][0] == "success":
@@ -557,15 +666,18 @@ class Scan(Bluepy):
     def clear(self):
         self.scanned = {}
 
-    def set_callback(self, callback):
-        self.callback = callback
-
-    def process(self, timeout=10):
+    def process(self, timeout=10.0):
+        if self._helper is None:
+            raise BTLEException(BTLEException.INTERNAL_ERROR,
+                                "Helper not started (did you call start()?)")
         start = time.time()
         while True:
-            remain = timeout and start + timeout - time.time()
-            if remain and remain <= 0:
-                break
+            if timeout:
+                remain = start + timeout - time.time()
+                if remain <= 0.0:
+                    break
+            else:
+                remain = None
             resp = self._waitResp(['scan', 'stat'], remain)
             if resp is None:
                 break
@@ -578,67 +690,51 @@ class Scan(Bluepy):
 
             elif respType == 'scan':
                 # device found
-                addr = resp['addr'][0][::-1]
-                atype = { 1 : 'public', 2 : 'random' }[resp['type'][0]]
-                rssi = -resp['rssi'][0]
-                connectable = ((resp['flag'][0] & 0x4) == 0)
-                data_raw = resp.get('d', [''])[0]
-
-                entry = 'old'
+                addr = binascii.b2a_hex(resp['addr'][0]).decode('utf-8')
+                addr = ':'.join([addr[i:i+2] for i in range(0,12,2)])
                 if addr in self.scanned:
                     dev = self.scanned[addr]
-                    if dev['type'] != atype:
-                        raise BTLEException(BTLEException.COMM_ERROR, "address type changed for %s" % binascii.b2a_hex(addr))
-                    dev['rssi'] += [ rssi ]
-                    dev['connectable'] = connectable
-                    # Note: bluez is notifying devices twice: once with advertisement data, then with scan response data
-                    # in top of that, the device may update the advertisement or scan data
-                    if data_raw and data_raw not in dev['data_raw']:
-                        dev['data_raw'] += [ data_raw ]
-                        entry = 'update'
                 else:
-                    self.scanned[addr] = {'type':atype, 'rssi': [rssi], 'connectable': connectable, 'data_raw': [data_raw], 'data' : {}}
-                    entry = 'new'
-
-                while data_raw:
-                    sdl, sdid = struct.unpack_from('<BB', data_raw)
-                    self.scanned[addr]['data'][sdid] = data_raw[2 : sdl + 1]
-                    data_raw = data_raw[sdl + 1:]
-
-                if self.callback:
-                    if self.callback(entry, addr, **self.scanned[addr]):
+                    dev = ScanEntry(addr, self._iface)
+                    self.scanned[addr] = dev
+                isNewData = dev._update(resp)
+                if self.delegate :
+                    if self.delegate.handleScan(dev, (dev.updateCount <= 1), isNewData):
                         break
+
             else:
                 raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response: " + respType)
 
-    def scan(self, timeout=10, callback=None):
+    def scan(self, timeout=10):
         self.clear()
-        if callback:
-            self.set_callback(callback)
         self.start()
         self.process(timeout)
         self.stop()
-        return self.scanned
+        return self.scanned.values()
 
-class Central(Bluepy):
-    def __init__(self, src='hci0'):
-        Bluepy.__init__(self, src=src)
+class Central(BluepyHelper):
+    def __init__(self, iface='hci0'):
+        BluepyHelper.__init__(self, iface)
 
     def start(self):
         self._startHelper()
-        self.reset_controller()
-
-    def advertise(self):
+        self.reset_controller(True)
         self._mgmtCmd("connectable on")
         self._mgmtCmd("discoverable on")
+
+    def stop(self):
+        self._mgmtCmd("discoverable off")
+        self._mgmtCmd("advertising off")
+        self._stopHelper()
+
+    def advertise(self):
         self._mgmtCmd("advertising on")
         rsp = self._waitResp('stat', 1)
         if rsp['state'][0] != 'advertise':
             raise BTLEException(BTLEException.COMM_ERROR,
                                 "Failed to start advertising")
-        resp = self._waitResp(['stat'], 1)
-        if resp is None:
-            print("No reponse received")
+        # Spurious stat sometimes???:
+        #self._waitResp(['stat'], 1)
 
     def connect(self, addr, addrType):
         if len(addr.split(":")) != 6:
@@ -654,23 +750,27 @@ class Central(Bluepy):
             self._stopHelper()
             raise BTLEException(BTLEException.DISCONNECTED,
                                 "Failed to connect to peripheral %s, addr type: %s" % (addr, addrType))
+        return (addr, addrType)
 
-    def wait_conn(self):
-        resp = self._waitResp('stat', 100)
+    def wait_conn(self, timeout = None):
+        resp = self._waitResp('stat', timeout)
+        if resp is None:
+            return
         if resp['state'][0] != 'disc':
             raise BTLEException(BTLEException.COMM_ERROR,
                                 "Advertising stopped not for a disconnection")
         resp = self._waitResp('mgmt', 1)
-        addr = binascii.b2a_hex(resp['addr'][0][::-1])
+        addr = binascii.b2a_hex(resp['addr'][0])
         addr = ':'.join([ addr[2*i:2*i+2] for i in xrange(6)])
         atype = { 1 : 'public', 2 : 'random' }[resp['type'][0]]
-        self.connect(addr, atype)
+        return self.connect(addr, atype)
 
-    def poll(self):
+    def poll(self, timeout = None):
         while True:
-            resp = self._waitResp(['stat', 'gatts'], 100)
+            resp = self._waitResp(['stat', 'gatts'], timeout)
+            if resp is None:
+                break
             respType = resp['rsp'][0]
-            print (resp)
             if respType == 'stat' and resp['state'][0] == 'disc':
                 break
             elif respType == 'gatts':
@@ -708,14 +808,12 @@ class _UUIDNameMap:
 
 def get_json_uuid():
     import json
-    uuid_data = json.load(file(os.path.join(script_path, 'uuids.json')))
-    all_uuids = reduce(lambda a,b: a+b, (uuid_data[x] for x in ['service_UUIDs',
-                                                        'characteristic_UUIDs',
-                                                        'descriptor_UUIDs']))
-
-    for number,cname,name in all_uuids:
-        yield UUID(number, cname)
-        yield UUID(number, name)
+    with open(os.path.join(script_path, 'uuids.json'),"rb") as fp:
+        uuid_data = json.loads(fp.read().decode("utf-8"))
+    for k in ['service_UUIDs', 'characteristic_UUIDs', 'descriptor_UUIDs', 'declaration_UUIDs']:
+        for number,cname,name in uuid_data[k]:
+            yield UUID(number, cname)
+            yield UUID(number, name)
 
 AssignedNumbers = _UUIDNameMap( list(get_json_uuid() ))
 
@@ -747,4 +845,3 @@ if __name__ == '__main__':
 
     finally:
         conn.disconnect()
-

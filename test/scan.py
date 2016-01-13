@@ -1,11 +1,12 @@
 #!/usr/bin/env python
+from __future__ import print_function
 import argparse
 import binascii
 import time
 import os
 import sys
 # Add btle.py path for import
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bluepy')))
+sys.path.insert(0,os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bluepy')))
 import btle
 
 if os.getenv('C','1') == '0':
@@ -24,56 +25,25 @@ else:
     ANSI_WHITE = ANSI_CSI + '37m'
     ANSI_OFF = ANSI_CSI + '0m'
 
-
-DATA_TYPES = {
-    1 : 'Flags',
-    2 : 'Incomplete 16b Services',
-    3 : 'Complete 16b Services',
-    4 : 'Incomplete 32b Services',
-    5 : 'Complete 32b Services',
-    6 : 'Incomplete 128b Services',
-    7 : 'Complete 128b Services',
-    8 : 'Short Local Name',
-    9 : 'Complete Local Name',
-    0xA : 'Tx Power',
-    0x14 : '16b Service Solicitation',
-    0x1F : '32b Service Solicitation',
-    0x15 : '128b Service Solicitation',
-    0x16 : '16b Service Data',
-    0x20 : '32b Service Data',
-    0x21 : '128b Service Data',
-    0x17 : 'Public Target Address',
-    0x18 : 'Random Target Address',
-    0x19 : 'Appearance',
-    0x1A : 'Advertising Interval',
-    0xFF : 'Manufacturer',
-}
-
-
-def mac(addr):
-    addr = binascii.b2a_hex(addr)
-    return ':'.join([ addr[2*i:2*i+2] for i in xrange(6)])
-
 def dump_services(dev):
     services = sorted(dev.getServices(), key=lambda s: s.hndStart)
     for s in services:
-        print "\t%04x: %s" % (s.hndStart, s)
+        print ("\t%04x: %s" % (s.hndStart, s))
         if s.hndStart == s.hndEnd:
             continue
         chars = s.getCharacteristics()
         for i, c in enumerate(chars):
             props = c.propertiesToString()
             h = c.getHandle()
-            print "\t%04x:    %-59s %-12s" % (h, c, props),
             if 'READ' in props:
                 try:
                     val = c.read()
                     if c.uuid == btle.AssignedNumbers.device_name:
-                        string = ANSI_CYAN + '\'' + val + '\'' + ANSI_OFF
-                    elif s.uuid == btle.AssignedNumbers.device_information:
-                        string = '\'' + val + '\''
+                        string = ANSI_CYAN + '\'' + val.decode('utf-8') + '\'' + ANSI_OFF
+                    elif c.uuid == btle.AssignedNumbers.device_information:
+                        string = repr(val)
                     else:
-                        string = '<' + binascii.hexlify(val) + '>'
+                        string = '<s' + binascii.b2a_hex(val).decode('utf-8') + '>'
                 except btle.BTLEException as e:
                     if e.code == btle.BTLEException.COMM_ERROR:
                         if e.bt_err == 5:
@@ -87,7 +57,7 @@ def dump_services(dev):
                         raise e
             else:
                 string=''
-            print string
+            print ("\t%04x:    %-59s %-12s %s" % (h, c, props, string))
 
             while True:
                 h += 1
@@ -95,50 +65,62 @@ def dump_services(dev):
                     break
                 try:
                     val = dev.readCharacteristic(h)
-                    print "\t%04x:     <%s>" % (h, binascii.hexlify(val))
+                    print ("\t%04x:     <%s>" % (h, binascii.b2a_hex(val).decode('utf-8')))
                 except btle.BTLEException:
                     break
 
-def scan_cb(entry, addr, type, rssi, connectable, data, data_raw):
-    global matched
+class ScanPrint(btle.DefaultDelegate):
+    def handleScan(self, dev, isNewDev, isNewData):
+        global matched
 
-    # Filter on RSSI
-    rssi_val = sum(rssi) / len(rssi)
-    if (entry == 'old' and not arg.all) or (entry == 'update' and arg.new) or (rssi_val < arg.sensitivity):
-        return
-
-    # Filter on name or BDADDR
-    if arg.filter and arg.filter not in mac(addr):
-        for id,v in data.iteritems():
-            if id in [8,9] and arg.filter in v:
-                break
+        if isNewDev:
+            status = "new"
+        elif isNewData:
+            if arg.new: return
+            status = "update"
         else:
+            if not arg.all: return
+            status = "old"
+
+        # Filter on RSSI
+        rssi_val = sum(dev.rssi) / len(dev.rssi)
+        if rssi_val < arg.sensitivity:
             return
 
-    # Print device data
-    print '    Device (%s):' % entry, ANSI_WHITE + mac(addr) + ANSI_OFF, '(' + type + ')  ', \
-        rssi_val, 'dBm', \
-        ('' if connectable else '(not connectable)')
-    for id,v in data.iteritems():
-        if id in [8,9]:
-            print '\t' + DATA_TYPES[id] + ': \'' + ANSI_CYAN + v + ANSI_OFF + '\''
-        elif id in DATA_TYPES:
-            print '\t' + DATA_TYPES[id] + ': <' + binascii.b2a_hex(v) + '>'
-        else:
-            print '\tid 0x%x: <' + binascii.b2a_hex(v) + '>'
-    if not data:
-        print '\t(no data)'
-    print
+        # Filter on name or BDADDR
+        if arg.filter and arg.filter not in mac(dev.addr):
+            for id,v in dev.data.iteritems():
+                if id in [8,9] and arg.filter in v:
+                    break
+            else:
+                return
 
-    # Add device to connect list
-    matched += [addr]
+        print ('    Device (%s): %s (%s), %d dBm %s' %
+                  (status,
+                   ANSI_WHITE + dev.addr + ANSI_OFF,
+                   dev.atype,
+                   rssi_val,
+                   ('' if dev.connectable else '(not connectable)') )
+              )
+        for (sdid, desc, val) in dev.getScanData():
+            if sdid in [8,9]:
+                print ('\t' + desc + ': \'' + ANSI_CYAN + val + ANSI_OFF + '\'')
+            else:
+                print ('\t' + desc + ': <' + val + '>')
+        if not dev.scanData:
+            print ('\t(no data)')
+        print
+
+        # Add device to connect list
+        matched += [dev.addr]
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     #parser.add_argument('host', action='store',
     #                    help='BD address of BT device')
-    parser.add_argument('-c', '--controller', action='store', default='hci0',
-                        help='controller')
+    parser.add_argument('-i', '--interface', action='store', default='hci0',
+                        help='interface')
     parser.add_argument('-t', '--timeout', action='store', type=int, default=4,
                         help='Scan delay, 0 for continuous')
     parser.add_argument('-s', '--sensitivity', action='store', type=int, default=-128,
@@ -158,27 +140,27 @@ if __name__ == "__main__":
     btle.Debugging = arg.verbose
 
     matched = []
-    scan = btle.Scan(arg.controller)
+    scanner = btle.Scanner(arg.interface).withDelegate(ScanPrint())
 
-    print ANSI_RED + "Scanning for devices..." + ANSI_OFF
-    devices = scan.scan(arg.timeout, scan_cb)
+    print (ANSI_RED + "Scanning for devices..." + ANSI_OFF)
+    devices = scanner.scan(arg.timeout)
 
     if arg.discover:
-        print ANSI_RED + "Discovering services..." + ANSI_OFF
+        print (ANSI_RED + "Discovering services..." + ANSI_OFF)
 
-        for addr,d in devices.iteritems():
-            if not d['connectable'] or addr not in matched:
+        for d in devices:
+            if not d.connectable or d.addr not in matched:
                 continue
 
-            print "    Connecting to", ANSI_WHITE + mac(addr) + ANSI_OFF + ":"
+            print ("    Connecting to", ANSI_WHITE + d.addr + ANSI_OFF + ":")
 
             try:
-                dev = btle.Peripheral(mac(addr), d['type'], arg.controller)
+                dev = btle.Peripheral(d, iface=arg.interface)
                 dump_services(dev)
                 dev.disconnect()
             except btle.BTLEException as e:
-                print "\t" + ANSI_RED + e.message + ANSI_OFF
-                print "\tConnection failed"
+                print("\t" + ANSI_RED + e.message + ANSI_OFF)
+                print("\tConnection failed")
             print
 
 
