@@ -262,6 +262,23 @@ static void cmd_status(int argcp, char **argvp)
     resp_end();
 }
 
+static void cmd_info(int argcp, char **argvp)
+{
+    struct hci_dev_info di = { 0 };
+    char s[18];
+
+    hci_devinfo(opt_src_idx, &di);
+
+    if (ba2str(&di.bdaddr, s) != 17)
+        memset(s, 0xFF, sizeof(s) - 1);
+
+    resp_begin(rsp_MGMT);
+    send_sym(tag_ERRCODE, err_SUCCESS);
+    send_str(tag_ADDR, s);
+    send_uint(tag_TYPE, di.type);
+    resp_end();
+}
+
 static void set_state(enum state st)
 {
     conn_state = st;
@@ -1472,6 +1489,8 @@ static struct {
         "Show this help"},
     { "stat",       cmd_status, "",
         "Show current status" },
+    { "info",       cmd_info, "",
+        "Show device info" },
     { "quit",       cmd_exit,   "",
         "Exit interactive mode" },
     { "conn",       cmd_connect,    "[address [address type]]",

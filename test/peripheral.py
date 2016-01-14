@@ -47,8 +47,11 @@ if __name__ == "__main__":
     cccd.write = MethodType(cccd_write, cccd, btle_gatts.Attribute)
     cccd.read = MethodType(read_not_supported, cccd, btle_gatts.Attribute)
     
-
     central.start()
+
+    rsp = central._mgmtCmd("info")
+    print("Local device bda: %s (%d)"%(rsp["addr"][0], rsp["type"][0]))
+
 
     while True:
         central.advertise()
