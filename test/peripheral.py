@@ -46,6 +46,11 @@ if __name__ == "__main__":
     cccd = central.gatts.addDesc("Client Characteristic Configuration", "\x00\x00")
     cccd.write = MethodType(cccd_write, cccd, btle_gatts.Attribute)
     cccd.read = MethodType(read_not_supported, cccd, btle_gatts.Attribute)
+
+    # example of vendor specific UUID
+    central.gatts.addService("de305d54-75b4-431b-adb2-eb6b9e546015")
+    central.gatts.addChar("de305d54-75b4-431b-adb2-eb6b9e546016", "My private", prop = ["READ", "WRITE", "NOTIFY"])
+    cccd = central.gatts.addDesc("Client Characteristic Configuration", "\x00\x00")
     
     central.start()
 
