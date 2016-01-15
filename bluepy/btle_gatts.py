@@ -241,15 +241,14 @@ class Gatts:
 
         rlen = self.mtu - 2
         att_data_list = []
-        length = 0
 
         for att in self.att[hstart : hend]:
             if uuid == att.type:
-                if length == 0:
+                if not att_data_list:
                     val = att.read()
                 else:
                     val = att.readSafe()
-                    if val is None or len(val) != length:
+                    if val is None or len(val) != len(att_data):
                         continue
                 att_data = chr2(att.handle) + val[:min(253, self.mtu - 4)]
                 rlen -= len(att_data)
@@ -273,15 +272,14 @@ class Gatts:
 
         rlen = self.mtu - 2
         att_data_list = []
-        length = 0
 
         for att in self.att[hstart : hend]:
             if uuid == att.type:
-                if length == 0:
+                if not att_data_list:
                     val = att.read()
                 else:
                     val = att.readSafe()
-                    if val is None or len(val) != length:
+                    if val is None or len(val) != len(att_data):
                         continue
                 att_data = chr2(att.handle) + chr2(self.hend(att)) + val[:min(251, self.mtu - 6)]
                 rlen -= len(att_data)
