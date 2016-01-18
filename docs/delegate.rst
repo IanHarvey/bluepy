@@ -30,7 +30,7 @@ Instance Methods
    from multiple sources on the same peripheral. *data* is the characteristic
    data (a ``str`` type on Python 2.x, and ``bytes`` on 3.x).
 
-.. py:method:: handleScan(scanEntry, isNewDev, isNewData)
+.. py:method:: handleDiscovery(scanEntry, isNewDev, isNewData)
 
    Called when advertising data is received from an LE device while a
    ``Scanner`` object is active. *scanEntry* contains device information
