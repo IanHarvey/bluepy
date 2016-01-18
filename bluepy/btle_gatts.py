@@ -114,7 +114,7 @@ class Attribute:
         return self._value
 
     def write(self, value):
-        raise AttError(ATT_ECODE_WRITE_NOT_PERM, self.h)
+        raise AttError(ATT_ECODE_WRITE_NOT_PERM, self.handle)
 
     def notification(self, value):
         return "\x1B" + chr2(self.handle) + value
