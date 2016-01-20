@@ -164,15 +164,20 @@ class GyroscopeSensor(SensorBase):
 class KeypressSensor(SensorBase):
     svcUUID = UUID(0xFFE0)
     dataUUID = UUID(0xFFE1)
+    ctrlUUID = None
+    sensorOn = None
 
     def __init__(self, periph):
         SensorBase.__init__(self, periph)
  
     def enable(self):
-        self.periph.writeCharacteristic(0x60, struct.pack('<bb', 0x01, 0x00), True)
+        SensorBase.enable(self)
+        # NB handle value changed between v1.4 and v1.5 firmware,
+        # but is not directly discoverable by UUID. This seems to work.
+        self.periph.writeCharacteristic(self.data.handle+2, struct.pack('<bb', 0x01, 0x00), True)
 
     def disable(self):
-        self.periph.writeCharacteristic(0x60, struct.pack('<bb', 0x00, 0x00), True)
+        self.periph.writeCharacteristic(self.data.handle+2, struct.pack('<bb', 0x00, 0x00), True)
 
 class SensorTag(Peripheral):
     def __init__(self,addr):
