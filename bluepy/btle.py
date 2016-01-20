@@ -304,6 +304,12 @@ class BluepyHelper:
             self._mgmtCmd("bredr off")
             self._mgmtCmd("powered on")
 
+        rsp = self._mgmtCmd("settings")
+        settings = rsp['d'][0]
+        # make sure to launch 'le on' cmd
+        if (settings & MGMT_SETTING_LE) == 0:
+            self._mgmtCmd("le on")
+
     @staticmethod
     def parseResp(line):
         resp = {}
