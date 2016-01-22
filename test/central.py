@@ -40,7 +40,7 @@ if __name__ == "__main__":
     else:
         addrType = btle.ADDR_TYPE_RANDOM
 
-    peripheral = btle.Peripheral(src = arg.controller)
+    peripheral = btle.Peripheral(iface = arg.controller)
 
     peripheral.gatts = btle_gatts.Gatts()
 

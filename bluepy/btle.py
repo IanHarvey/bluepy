@@ -88,7 +88,7 @@ class UUID:
         else:
             self.binValShort = None
 
-        self.binVal = binascii.a2b_hex(val.encode('utf-8'))
+        self.binVal = binascii.a2b_hex(val.encode('utf-8'))[::-1]
         if len(self.binVal) != 16:
             raise ValueError(
                 "UUID must be 16 bytes, got '%s' (len=%d)" % (val,
@@ -96,7 +96,7 @@ class UUID:
         self.commonName = commonName
 
     def __str__(self):
-        s = binascii.b2a_hex(self.binVal).decode('utf-8')
+        s = binascii.b2a_hex(self.binVal[::-1]).decode('utf-8')
         return "-".join([s[0:8], s[8:12], s[12:16], s[16:20], s[20:32]])
 
     def __eq__(self, other):
@@ -303,6 +303,12 @@ class BluepyHelper:
             self._mgmtCmd("powered off")
             self._mgmtCmd("bredr off")
             self._mgmtCmd("powered on")
+
+        rsp = self._mgmtCmd("settings")
+        settings = rsp['d'][0]
+        # make sure to launch 'le on' cmd
+        if (settings & MGMT_SETTING_LE) == 0:
+            self._mgmtCmd("le on")
 
     @staticmethod
     def parseResp(line):

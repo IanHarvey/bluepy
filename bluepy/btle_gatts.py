@@ -171,7 +171,7 @@ class Gatts:
 
         rlen = self.mtu - 2
         info_data_list = []
-        for att in self.att[hstart : hend]:
+        for att in self.att[hstart : hend + 1]:
             info_data = chr2(att.handle) + att.type
             if info_data_list and len(info_data_list[0]) != len(info_data):
                 break
@@ -182,7 +182,7 @@ class Gatts:
 
         if not info_data_list:
             raise AttError(ATT_ECODE_ATTR_NOT_FOUND, hstart)
-        return ATT_OP_FIND_INFO_RESP + chr(1 if len(info_data) == 4 else 2) + ''.join(info_data_list)
+        return ATT_OP_FIND_INFO_RESP + chr(1 if len(info_data_list[0]) == 4 else 2) + ''.join(info_data_list)
 
 
     def att_op_find_by_type_req(self,data):
@@ -192,7 +192,7 @@ class Gatts:
 
         rlen = self.mtu - 1
         handle_info_list = []
-        for att in self.att[hstart : hend]:
+        for att in self.att[hstart : hend + 1]:
             if att.type == uuid and value == att.readSafe():
                 handle_info = chr2(att.handle) + chr2(self.hend(att))
                 rlen -= len(handle_info)
@@ -242,22 +242,24 @@ class Gatts:
         rlen = self.mtu - 2
         att_data_list = []
 
-        for att in self.att[hstart : hend]:
+        for att in self.att[hstart : hend + 1]:
             if uuid == att.type:
                 if not att_data_list:
                     val = att.read()
                 else:
                     val = att.readSafe()
-                    if val is None or len(val) != len(att_data):
+                    if val is None:
                         continue
                 att_data = chr2(att.handle) + val[:min(253, self.mtu - 4)]
+                if att_data_list and len(att_data) != len(att_data_list[0]):
+                    continue
                 rlen -= len(att_data)
                 if rlen < 0:
                     break
                 att_data_list += [ att_data ]
 
         if att_data_list:
-            return ATT_OP_READ_BY_TYPE_RESP + chr(len(att_data)) + ''.join(att_data_list)
+            return ATT_OP_READ_BY_TYPE_RESP + chr(len(att_data_list[0])) + ''.join(att_data_list)
         else:
             raise AttError(ATT_ECODE_ATTR_NOT_FOUND, hstart)
 
@@ -273,23 +275,24 @@ class Gatts:
         rlen = self.mtu - 2
         att_data_list = []
 
-        for att in self.att[hstart : hend]:
+        for att in self.att[hstart : hend + 1]:
             if uuid == att.type:
                 if not att_data_list:
                     val = att.read()
                 else:
                     val = att.readSafe()
-                    if val is None or len(val) != len(att_data):
+                    if val is None:
                         continue
                 att_data = chr2(att.handle) + chr2(self.hend(att)) + val[:min(251, self.mtu - 6)]
+                if att_data_list and len(att_data) != len(att_data_list[0]):
+                    continue
                 rlen -= len(att_data)
                 if rlen < 0:
                     break
                 att_data_list += [ att_data ]
 
-
         if att_data_list:
-            return ATT_OP_READ_BY_GROUP_RESP + chr(len(att_data)) + ''.join(att_data_list)
+            return ATT_OP_READ_BY_GROUP_RESP + chr(len(att_data_list[0])) + ''.join(att_data_list)
         else:
             raise AttError(ATT_ECODE_ATTR_NOT_FOUND, hstart)
 
