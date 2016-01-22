@@ -248,16 +248,18 @@ class Gatts:
                     val = att.read()
                 else:
                     val = att.readSafe()
-                    if val is None or len(val) != len(att_data):
+                    if val is None:
                         continue
                 att_data = chr2(att.handle) + val[:min(253, self.mtu - 4)]
+                if att_data_list and len(att_data) != len(att_data_list[0]):
+                    continue
                 rlen -= len(att_data)
                 if rlen < 0:
                     break
                 att_data_list += [ att_data ]
 
         if att_data_list:
-            return ATT_OP_READ_BY_TYPE_RESP + chr(len(att_data)) + ''.join(att_data_list)
+            return ATT_OP_READ_BY_TYPE_RESP + chr(len(att_data_list[0])) + ''.join(att_data_list)
         else:
             raise AttError(ATT_ECODE_ATTR_NOT_FOUND, hstart)
 
@@ -279,17 +281,18 @@ class Gatts:
                     val = att.read()
                 else:
                     val = att.readSafe()
-                    if val is None or len(val) != len(att_data):
+                    if val is None:
                         continue
                 att_data = chr2(att.handle) + chr2(self.hend(att)) + val[:min(251, self.mtu - 6)]
+                if att_data_list and len(att_data) != len(att_data_list[0]):
+                    continue
                 rlen -= len(att_data)
                 if rlen < 0:
                     break
                 att_data_list += [ att_data ]
 
-
         if att_data_list:
-            return ATT_OP_READ_BY_GROUP_RESP + chr(len(att_data)) + ''.join(att_data_list)
+            return ATT_OP_READ_BY_GROUP_RESP + chr(len(att_data_list[0])) + ''.join(att_data_list)
         else:
             raise AttError(ATT_ECODE_ATTR_NOT_FOUND, hstart)
 
