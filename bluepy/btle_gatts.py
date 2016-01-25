@@ -357,6 +357,8 @@ class Gatts:
     def addService(self, uuid):
         return self.addDesc("GATT Primary Service Declaration", binUuid(uuid))
 
+    def addInclService(self, sh, eh, uuid):
+        return self.addDesc("GATT Include Declaration", chr2(sh) + chr2(eh) + binUuid(uuid))
 
     def addChar(self, uuid, value, prop = ["READ"]):
         if isinstance(prop, int):

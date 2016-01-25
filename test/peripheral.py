@@ -41,7 +41,16 @@ if __name__ == "__main__":
     central.gatts.addChar("Software Revision String", "1.41421")
     central.gatts.addChar("Manufacturer Name String", "Bluepy")
 
-    central.gatts.addService("Battery Service")
+    hr_svc = central.gatts.addService("Heart Rate")
+    hr_start = hr_svc.handle
+
+    central.gatts.addChar("Heart Rate Measurement", chr(5))
+    (hr_first_char, hr_last_char) = central.gatts.addChar("Heart Rate Control Point", "60")
+    hr_end = hr_last_char.handle
+
+    bat_svc = central.gatts.addService("Battery Service")
+    hr_incl_svc = central.gatts.addInclService(hr_start, hr_end, "Heart Rate")
+
     (bat_chr, bat_val) = central.gatts.addChar("Battery Level", chr(66))
     cccd = central.gatts.addDesc("Client Characteristic Configuration", "\x00\x00")
     cccd.write = MethodType(cccd_write, cccd, btle_gatts.Attribute)
