@@ -100,7 +100,11 @@ class AttError(Exception):
         self.handle = h
 
 class Attribute:
-    def __init__(self, h, type, value):
+    def __init__(self, helper, h, type, value):
+        assert(helper == None or isinstance(helper, btle.BluepyHelper))
+        assert(isinstance(value, str))
+
+        self.helper = helper
         self.handle = h
         self.type = type
         self._value = value
@@ -116,15 +120,23 @@ class Attribute:
     def write(self, value):
         raise AttError(ATT_ECODE_WRITE_NOT_PERM, self.handle)
 
-    def notification(self, value):
-        return "\x1B" + chr2(self.handle) + value
+    def notify(self, value):
+        assert(isinstance(value, str))
+        self._value = value
+        if self.helper:
+            self.helper._writeCmd("gatts %s\n" % binascii.b2a_hex(ATT_OP_HANDLE_NOTIFY + chr2(self.handle) + self._value))
 
-    def indication(self, value):
-        return "\x1D" + chr2(self.handle) + value
+    def indicate(self, value):
+        assert(isinstance(value, str))
+        self._value = value
+        if self.helper:
+            self.helper._writeCmd("gatts %s\n" % binascii.b2a_hex(ATT_OP_HANDLE_IND + chr2(self.handle) + self._value))
 
 class Gatts:
-    def __init__(self, mtu = 23):
+    def __init__(self, helper = None, mtu = 23):
+        self.helper = helper
         self.mtu = mtu
+        
         # Except index 0, each element must be a valid Attribute (or derivated)
         self.att = [ None ]
         # We build a dict with constants above and functions below
@@ -369,5 +381,5 @@ class Gatts:
 
 
     def addDesc(self, uuid, value):
-        self.att += [ Attribute(len(self.att), binUuid(uuid), value) ]
+        self.att += [ Attribute(self.helper, len(self.att), binUuid(uuid), value) ]
         return self.att[-1]

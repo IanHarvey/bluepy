@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     central = btle.Central(arg.interface)
 
-    central.gatts = btle_gatts.Gatts()
+    central.gatts = btle_gatts.Gatts(central)
 
     central.gatts.addService("Device Information")
     central.gatts.addChar("Model Number String", "My Central")
@@ -63,10 +63,12 @@ if __name__ == "__main__":
         dev = central.wait_conn(arg.timeout)
         if dev is None:
             break
-        central.poll()
-        
-        # example of dummy notification on battery level
-        central._writeCmd("gatts %s\n" % binascii.b2a_hex(bat_val.notification(chr(67))))
+
+        while True:
+            central.poll(3)
+
+            # example of dummy notification on battery level
+            bat_val.notify(chr(67))
 
 
     central.stop()
