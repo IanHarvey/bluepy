@@ -45,7 +45,7 @@ Release Notes
 -------------
 
 Release 0.9.12
-- Support for CC2560 sensortag
+- Support for CC2650 sensortag
 - Documentation fixes
 - Bug fix: DefaultDelegate has a handleDiscovery method
 - Bug fix: keypress now works with both V1.4 and V1.5 firmware 
