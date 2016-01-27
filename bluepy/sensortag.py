@@ -5,6 +5,11 @@ import math
 def _TI_UUID(val):
     return UUID("%08X-0451-4000-b000-000000000000" % (0xF0000000+val))
 
+# Sensortag versions
+AUTODETECT = "-"
+SENSORTAG_V1 = "v1"
+SENSORTAG_2650 = "CC2650"
+
 class SensorBase:
     # Derived classes should set: svcUUID, ctrlUUID, dataUUID
     sensorOn  = struct.pack("B", 0x01)
@@ -70,6 +75,24 @@ class IRTemperatureSensor(SensorBase):
         return (tAmb, tObj - self.zeroC)
 
 
+class IRTemperatureSensorTMP007(SensorBase):
+    svcUUID  = _TI_UUID(0xAA00)
+    dataUUID = _TI_UUID(0xAA01)
+    ctrlUUID = _TI_UUID(0xAA02)
+
+    SCALE_LSB = 0.03125;
+ 
+    def __init__(self, periph):
+        SensorBase.__init__(self, periph)
+
+    def read(self):
+        '''Returns (ambient_temp, target_temp) in degC'''
+        # http://processors.wiki.ti.com/index.php/CC2650_SensorTag_User's_Guide?keyMatch=CC2650&tisearch=Search-EN
+        (rawTobj, rawTamb) = struct.unpack('<hh', self.data.read())
+        tObj = (rawTobj >> 2) * self.SCALE_LSB;
+        tAmb = (rawTamb >> 2) * self.SCALE_LSB;
+        return (tAmb, tObj)
+
 class AccelerometerSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA10)
     dataUUID = _TI_UUID(0xAA11)
@@ -82,6 +105,55 @@ class AccelerometerSensor(SensorBase):
         '''Returns (x_accel, y_accel, z_accel) in units of g'''
         x_y_z = struct.unpack('bbb', self.data.read())
         return tuple([ (val/64.0) for val in x_y_z ])
+
+class MovementSensorMPU9250(SensorBase):
+    svcUUID  = _TI_UUID(0xAA80)
+    dataUUID = _TI_UUID(0xAA81)
+    ctrlUUID = _TI_UUID(0xAA82)
+    sensorOn = None
+    GYRO_XYZ =  7
+    ACCEL_XYZ = 7 << 3
+    MAG_XYZ = 1 << 6
+    ACCEL_RANGE_2G  = 0 << 8
+    ACCEL_RANGE_4G  = 1 << 8
+    ACCEL_RANGE_8G  = 2 << 8
+    ACCEL_RANGE_16G = 3 << 8
+
+    def __init__(self, periph):
+        SensorBase.__init__(self, periph)
+        self.ctrlBits = 0
+
+    def enable(self, bits):
+        SensorBase.enable(self)
+        self.ctrlBits |= bits
+        self.ctrl.write( struct.pack("<H", self.ctrlBits) )
+
+    def disable(self, bits):
+        self.ctrlBits &= ~bits
+        self.ctrl.write( struct.pack("<H", self.ctrlBits) )
+
+    def rawRead(self):
+        dval = self.data.read()
+        return struct.unpack("<hhhhhhhhh", dval)
+
+class AccelerometerSensorMPU9250:
+    def __init__(self, sensor_):
+        self.sensor = sensor_
+        self.bits = self.sensor.ACCEL_XYZ | self.sensor.ACCEL_RANGE_4G
+        self.scale = 8.0/32768.0 # TODO: why not 4.0, as documented?
+
+    def enable(self):
+        self.sensor.enable(self.bits)
+
+    def disable(self):
+        self.sensor.disable(self.bits)
+
+    def read(self):
+        '''Returns (x_accel, y_accel, z_accel) in units of g'''
+        rawVals = self.sensor.rawRead()[3:6]
+        return tuple([ v*self.scale for v in rawVals ])
+
+
 
 class HumiditySensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA20)
@@ -98,6 +170,20 @@ class HumiditySensor(SensorBase):
         RH = -6.0 + 125.0 * ((rawH & 0xFFFC)/65536.0)
         return (temp, RH)
 
+class HumiditySensorHDC1000(SensorBase):
+    svcUUID  = _TI_UUID(0xAA20)
+    dataUUID = _TI_UUID(0xAA21)
+    ctrlUUID = _TI_UUID(0xAA22)
+
+    def __init__(self, periph):
+        SensorBase.__init__(self, periph)
+
+    def read(self):
+        '''Returns (ambient_temp, rel_humidity)'''
+        (rawT, rawH) = struct.unpack('<HH', self.data.read())
+        temp = -40.0 + 165.0 * (rawT / 65536.0)
+        RH = 100.0 * (rawH/65536.0)
+        return (temp, RH)
 
 class MagnetometerSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA30)
@@ -112,6 +198,23 @@ class MagnetometerSensor(SensorBase):
         x_y_z = struct.unpack('<hhh', self.data.read())
         return tuple([ 1000.0 * (v/32768.0) for v in x_y_z ])
         # Revisit - some absolute calibration is needed
+
+class MagnetometerSensorMPU9250:
+    def __init__(self, sensor_):
+        self.sensor = sensor_
+        self.scale = 4912.0 / 32760
+        # Reference: MPU-9250 register map v1.4
+
+    def enable(self):
+        self.sensor.enable(self.sensor.MAG_XYZ)
+
+    def disable(self):
+        self.sensor.disable(self.sensor.MAG_XYZ)
+
+    def read(self):
+        '''Returns (x_mag, y_mag, z_mag) in units of uT'''
+        rawVals = self.sensor.rawRead()[6:9]
+        return tuple([ v*self.scale for v in rawVals ])
 
 class BarometerSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA40)
@@ -146,6 +249,19 @@ class BarometerSensor(SensorBase):
         pres = (sens * rawP + offs) / (100.0 * float(1<<14))
         return (temp,pres)
 
+class BarometerSensorBMP280(SensorBase):
+    svcUUID  = _TI_UUID(0xAA40)
+    dataUUID = _TI_UUID(0xAA41)
+    ctrlUUID = _TI_UUID(0xAA42)
+
+    def __init__(self, periph):
+        SensorBase.__init__(self, periph)
+
+    def read(self):
+        (tL,tM,tH,pL,pM,pH) = struct.unpack('<BBBBBB', self.data.read())
+        temp = (tH*65536 + tM*256 + tL) / 100.0
+        press = (pH*65536 + pM*256 + pL) / 100.0
+        return (temp, press)
 
 class GyroscopeSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA50)
@@ -160,6 +276,22 @@ class GyroscopeSensor(SensorBase):
         '''Returns (x,y,z) rate in deg/sec'''
         x_y_z = struct.unpack('<hhh', self.data.read())
         return tuple([ 250.0 * (v/32768.0) for v in x_y_z ])
+
+class GyroscopeSensorMPU9250:
+    def __init__(self, sensor_):
+        self.sensor = sensor_
+        self.scale = 500.0/65536.0
+
+    def enable(self):
+        self.sensor.enable(self.sensor.GYRO_XYZ)
+
+    def disable(self):
+        self.sensor.disable(self.sensor.GYRO_XYZ)
+
+    def read(self):
+        '''Returns (x_gyro, y_gyro, z_gyro) in units of degrees/sec'''
+        rawVals = self.sensor.rawRead()[0:3]
+        return tuple([ v*self.scale for v in rawVals ])
 
 class KeypressSensor(SensorBase):
     svcUUID = UUID(0xFFE0)
@@ -179,18 +311,50 @@ class KeypressSensor(SensorBase):
     def disable(self):
         self.periph.writeCharacteristic(self.data.handle+2, struct.pack('<bb', 0x00, 0x00), True)
 
-class SensorTag(Peripheral):
-    def __init__(self,addr):
-        Peripheral.__init__(self,addr)
-        # self.discoverServices()
-        self.IRtemperature = IRTemperatureSensor(self)
-        self.accelerometer = AccelerometerSensor(self)
-        self.humidity = HumiditySensor(self)
-        self.magnetometer = MagnetometerSensor(self)
-        self.barometer = BarometerSensor(self)
-        self.gyroscope = GyroscopeSensor(self)
-        self.keypress = KeypressSensor(self)
+class OpticalSensorOPT3001(SensorBase):
+    svcUUID  = _TI_UUID(0xAA70)
+    dataUUID = _TI_UUID(0xAA71)
+    ctrlUUID = _TI_UUID(0xAA72)
 
+    def __init__(self, periph):
+       SensorBase.__init__(self, periph)
+
+    def read(self):
+        '''Returns value in lux'''
+        raw = struct.unpack('<h', self.data.read()) [0]
+        m = raw & 0xFFF;
+        e = (raw & 0xF000) >> 12;
+        return 0.01 * (m << e)
+
+class SensorTag(Peripheral):
+    def __init__(self,addr,version=AUTODETECT):
+        Peripheral.__init__(self,addr)
+        if version==AUTODETECT:
+            svcs = self.discoverServices()
+            if _TI_UUID(0xAA70) in svcs:
+                version = SENSORTAG_2650
+            else:
+                version = SENSORTAG_V1
+
+        if version==SENSORTAG_V1:
+            self.IRtemperature = IRTemperatureSensor(self)
+            self.accelerometer = AccelerometerSensor(self)
+            self.humidity = HumiditySensor(self)
+            self.magnetometer = MagnetometerSensor(self)
+            self.barometer = BarometerSensor(self)
+            self.gyroscope = GyroscopeSensor(self)
+            self.keypress = KeypressSensor(self)
+            self.lightmeter = None
+        elif version==SENSORTAG_2650:
+            self._mpu9250 = MovementSensorMPU9250(self)
+            self.IRtemperature = IRTemperatureSensorTMP007(self)
+            self.accelerometer = AccelerometerSensorMPU9250(self._mpu9250)
+            self.humidity = HumiditySensorHDC1000(self)
+            self.magnetometer = MagnetometerSensorMPU9250(self._mpu9250)
+            self.barometer = BarometerSensorBMP280(self)
+            self.gyroscope = GyroscopeSensorMPU9250(self._mpu9250)
+            self.keypress = KeypressSensor(self)
+            self.lightmeter = OpticalSensorOPT3001(self)
 
 class KeypressDelegate(DefaultDelegate):
     BUTTON_L = 0x02
@@ -244,6 +408,7 @@ def main():
     parser.add_argument('-B','--barometer', action='store_true', default=False)
     parser.add_argument('-G','--gyroscope', action='store_true', default=False)
     parser.add_argument('-K','--keypress', action='store_true', default=False)
+    parser.add_argument('-L','--light', action='store_true', default=False)
     parser.add_argument('--all', action='store_true', default=False)
 
     arg = parser.parse_args(sys.argv[1:])
@@ -267,6 +432,10 @@ def main():
     if arg.keypress or arg.all:
         tag.keypress.enable()
         tag.setDelegate(KeypressDelegate())
+    if arg.light and tag.lightmeter is None:
+        print("Warning: no lightmeter on this device")
+    if (arg.light or arg.all) and tag.lightmeter is not None:
+        tag.lightmeter.enable()
 
     # Some sensors (e.g., temperature, accelerometer) need some time for initialization.
     # Not waiting here after enabling a sensor, the first read value might be empty or incorrect.
@@ -286,6 +455,8 @@ def main():
            print("Magnetometer: ", tag.magnetometer.read())
        if arg.gyroscope or arg.all:
            print("Gyroscope: ", tag.gyroscope.read())
+       if (arg.light or arg.all) and tag.lightmeter is not None:
+           print("Light: ", tag.lightmeter.read())
        if counter >= arg.count and arg.count != 0:
            break
        counter += 1
