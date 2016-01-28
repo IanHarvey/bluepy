@@ -40,6 +40,7 @@
 #include "lib/uuid.h"
 #include "lib/mgmt.h"
 #include "src/shared/mgmt.h"
+#include "src/shared/att.h"
 
 #include <btio/btio.h>
 #include "att.h"
@@ -1460,16 +1461,38 @@ static void cmd_settings(int argcp, char **argvp)
     }
 }
 
+void on_indicate_complete(guint8 status, const guint8 *pdu,
+                          guint16 len, gpointer user_data)
+{
+
+}
+
 static void cmd_gatts(int argcp, char **argvp)
 {
     if (argcp == 2) {
+        GAttribResultFunc cb_func = NULL;
         uint8_t *opdu = NULL;
         size_t olen = gatt_attr_data_from_string(argvp[1], &opdu);
 
         DBG("GATTS %p %d %zd", opdu, opt_mtu, olen);
 
-        if (opdu && (opt_mtu == 0 || olen <= opt_mtu)) {
-            g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
+        /* Check if it is a value gatt server request */
+        if (opdu && (opt_mtu == 0 || olen <= opt_mtu) &&
+            !(opdu[0] == BT_ATT_OP_MTU_REQ ||
+              opdu[0] == BT_ATT_OP_FIND_INFO_REQ ||
+              opdu[0] == BT_ATT_OP_FIND_BY_TYPE_VAL_REQ ||
+              opdu[0] == BT_ATT_OP_READ_BY_TYPE_REQ ||
+              opdu[0] == BT_ATT_OP_READ_REQ ||
+              opdu[0] == BT_ATT_OP_READ_BLOB_REQ ||
+              opdu[0] == BT_ATT_OP_READ_MULT_REQ ||
+              opdu[0] == BT_ATT_OP_READ_BY_GRP_TYPE_REQ ||
+              opdu[0] == BT_ATT_OP_WRITE_REQ ||
+              opdu[0] == BT_ATT_OP_PREP_WRITE_REQ ||
+              opdu[0] == BT_ATT_OP_EXEC_WRITE_REQ)) {
+            if (opdu[0] == BT_ATT_OP_HANDLE_VAL_IND) {
+                cb_func = on_indicate_complete;
+            }
+            g_attrib_send(attrib, 0, opdu, olen, cb_func, NULL, NULL);
         } else {
             resp_error(err_BAD_PARAM, 0);
         }
