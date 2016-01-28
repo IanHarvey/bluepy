@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     # example of vendor specific UUID
     central.gatts.addService("de305d54-75b4-431b-adb2-eb6b9e546015")
-    central.gatts.addChar("de305d54-75b4-431b-adb2-eb6b9e546016", "My private", prop = ["READ", "WRITE", "NOTIFY"])
+    central.gatts.addChar("de305d54-75b4-431b-adb2-eb6b9e546016", "My private", prop = ["READ", "WRITE", "NOTIFY", "INDICATE"])
     cccd = central.gatts.addDesc("Client Characteristic Configuration", "\x00\x00")
     
     central.start()
@@ -70,5 +70,9 @@ if __name__ == "__main__":
             # example of dummy notification on battery level
             bat_val.notify(chr(67))
 
+            central.poll(3)
+
+            # example of dummy indication on battery level
+            bat_val.indicate(chr(66))
 
     central.stop()
