@@ -282,9 +282,15 @@ class BluepyHelper:
                 return
             raise e
 
-        # power on the HCI
-        if (settings & MGMT_SETTING_POWERED) == 0:
-            self._mgmtCmd("powered on")
+        if settings & MGMT_SETTING_BREDR:
+            # powered off (mandatory to set bredr off)
+            self._mgmtCmd("powered off")
+            settings &= MGMT_SETTING_POWERED
+            # first enable LE is not yet enabled
+            if (settings & MGMT_SETTING_LE) == 0:
+                self._mgmtCmd("le on")
+            # set bredr off
+            self._mgmtCmd("bredr off")
 
         # always end advertising if it is active
         if settings & MGMT_SETTING_ADVERTISING:
@@ -294,14 +300,8 @@ class BluepyHelper:
                 raise BTLEException(BTLEException.COMM_ERROR,
                                     "Failed to stop advertising")
 
-        # set bredr off
-        if settings & MGMT_SETTING_BREDR:
-            # first enable LE is not yet enabled
-            if (settings & MGMT_SETTING_LE) == 0:
-                self._mgmtCmd("le on")
-            # powered off (mandatory to set bredr off)
-            self._mgmtCmd("powered off")
-            self._mgmtCmd("bredr off")
+        # power on the HCI
+        if settings & MGMT_SETTING_POWERED == 0:
             self._mgmtCmd("powered on")
 
         rsp = self._mgmtCmd("settings")
