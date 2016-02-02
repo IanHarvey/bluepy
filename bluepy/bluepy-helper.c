@@ -1841,6 +1841,7 @@ int main(int argc, char *argv[])
 
     g_free(opt_src);
     g_free(opt_dst);
+    g_free(opt_dst_type);
     g_free(opt_sec_level);
 
     mgmt_unregister_index(mgmt_master, opt_src_idx);
