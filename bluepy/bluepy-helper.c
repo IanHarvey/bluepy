@@ -276,7 +276,7 @@ static void cmd_info(int argcp, char **argvp)
     resp_begin(rsp_MGMT);
     send_sym(tag_ERRCODE, err_SUCCESS);
     send_str(tag_ADDR, s);
-    send_uint(tag_TYPE, di.type);
+    send_str(tag_TYPE, di.type == BDADDR_LE_PUBLIC?"public":"random");
     resp_end();
 }
 
@@ -1783,9 +1783,9 @@ static int parse_dev_src(const char * arg, gchar **addr, int *index)
     if (hci_devinfo(*index, &di))
         return -1;
 
-    DBG("devinfo: %02x:%02x:%02x:%02x:%02x:%02x  hci%d  '%s'  f:0x%08x  t:%d",
+    DBG("devinfo: %02x:%02x:%02x:%02x:%02x:%02x  hci%d  '%s'  f:0x%08x  t:%s",
         di.bdaddr.b[5], di.bdaddr.b[4], di.bdaddr.b[3], di.bdaddr.b[2], di.bdaddr.b[1], di.bdaddr.b[0],
-        di.dev_id, di.name, di.flags, di.type);
+        di.dev_id, di.name, di.flags, di.type == BDADDR_LE_PUBLIC?"public":"random");
 
     *addr = g_malloc(18);
     if (*addr == NULL)
