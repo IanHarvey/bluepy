@@ -239,6 +239,13 @@ class BluepyHelper:
                                             universal_newlines=True)
             self._poller = select.poll()
             self._poller.register(self._helper.stdout, select.POLLIN)
+            # retrieve the controller info
+            rv = self._mgmtCmd("info")
+            if rv == None or rv["code"][0] != "success":
+                raise BTLEException(BTLEException.INTERNAL_ERROR,
+                                    "Helper not started (did you call connect()?)")
+            self.addr = rv["addr"][0]
+            self.addr_type = rv["type"][0]
 
     def _stopHelper(self):
         if self._helper is not None:
@@ -376,7 +383,6 @@ class BluepyHelper:
     def status(self):
         self._writeCmd("stat\n")
         return self._waitResp(['stat'])
-
 
 class Peripheral(BluepyHelper):
     def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC, iface='hci0'):
