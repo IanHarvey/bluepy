@@ -73,6 +73,9 @@ if __name__ == "__main__":
         if dev is None:
             break
 
+        # uncomment if bonding support required
+        # central.setSecurityLevel("medium")
+
         while True:
             central.poll(3)
 

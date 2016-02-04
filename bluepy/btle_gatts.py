@@ -125,6 +125,8 @@ class Attribute:
         self._value = value
         if self.helper:
             self.helper._writeCmd("gatts %s\n" % binascii.b2a_hex(ATT_OP_HANDLE_NOTIFY + chr2(self.handle) + self._value))
+        else:
+            print("notify ERROR")
 
     def indicate(self, value):
         assert(isinstance(value, str))
@@ -178,7 +180,7 @@ class Gatts:
 
     def att_op_find_info_req(self,data):
         op, hstart, hend = struct.unpack("<BHH", data)
-        print "Find info Req:", op, hstart, hend
+        btle.DBG("Find info Req:", op, hstart, hend)
         self.hcheck(hstart, hend)
 
         rlen = self.mtu - 2
@@ -199,7 +201,7 @@ class Gatts:
 
     def att_op_find_by_type_req(self,data):
         op, hstart, hend, uuid, value = struct.unpack("<BHH2s" + str(len(data) - 7) + "s", data)
-        print "Find Type Value Req:", op, hstart, hend, binascii.b2a_hex(uuid), binascii.b2a_hex(value)
+        btle.DBG("Find Type Value Req:", op, hstart, hend, binascii.b2a_hex(uuid), binascii.b2a_hex(value))
         self.hcheck(hstart, hend)
 
         rlen = self.mtu - 1
@@ -216,14 +218,9 @@ class Gatts:
             raise AttError(ATT_ECODE_ATTR_NOT_FOUND, hstart)
         return ATT_OP_FIND_BY_TYPE_RESP + ''.join(handle_info_list)
 
-
-        print "Req FIND TYPE not supported: " + binascii.b2a_hex(data)
-        raise AttError(ATT_ECODE_REQ_NOT_SUPP, 0)
-
-
     def att_op_read_req(self,data):
         op, h = struct.unpack("<BH", data)
-        print "Read Req:", op, h
+        btle.DBG("Read Req:", op, h)
 
         a = self.hcheck(h)
         return ATT_OP_READ_RESP + self.att[h].read()[:self.mtu - 1]
@@ -231,7 +228,7 @@ class Gatts:
 
     def att_op_read_blob_req(self,data):
         op, h, off = struct.unpack("<BHH", data)
-        print "Read Blob Req:", op, h, off
+        btle.DBG("Read Blob Req:", op, h, off)
 
         a = self.hcheck(h)
         value = a.read()
@@ -242,13 +239,13 @@ class Gatts:
 
 
     def att_op_read_multi_req(self,data):
-        print "Req READ MULTI not supported: " + binascii.b2a_hex(data)
+        btle.DBG("Req READ MULTI not supported: " + binascii.b2a_hex(data))
         raise AttError(ATT_ECODE_REQ_NOT_SUPP, 0)
 
 
     def att_op_read_by_type_req(self,data):
         op, hstart, hend, uuid = struct.unpack("<BHH" + str(len(data) - 5) + "s", data)
-        print "Read Type Req:", op, hstart, hend, binascii.b2a_hex(uuid)
+        btle.DBG("Read Type Req:", op, hstart, hend, binascii.b2a_hex(uuid))
         self.hcheck(hstart, hend)
 
         rlen = self.mtu - 2
@@ -278,7 +275,7 @@ class Gatts:
 
     def att_op_read_by_group_req(self,data):
         op, hstart, hend, uuid = struct.unpack("<BHH" + str(len(data) - 5) + "s", data)
-        print "Read Group Type Req:", op, hstart, hend, binascii.b2a_hex(uuid)
+        btle.DBG("Read Group Type Req:", op, hstart, hend, binascii.b2a_hex(uuid))
         self.hcheck(hstart, hend)
 
         if uuid not in [GATT_PRIM_SVC_UUID, GATT_SND_SVC_UUID, GATT_CHARAC_UUID]:
@@ -327,22 +324,22 @@ class Gatts:
 
 
     def att_op_prep_write_req(self,data):
-        print "Req PREP WRITE not supported: " + binascii.b2a_hex(data)
+        btle.DBG("Req PREP WRITE not supported: " + binascii.b2a_hex(data))
         raise AttError(ATT_ECODE_REQ_NOT_SUPP, 0)
 
 
     def att_op_exec_write_req(self,data):
-        print "Req EXEC WRITE not supported: " + binascii.b2a_hex(data)
+        btle.DBG("Req EXEC WRITE not supported: " + binascii.b2a_hex(data))
         raise AttError(ATT_ECODE_REQ_NOT_SUPP, 0)
 
 
     def att_op_signed_write_cmd(self,data):
-        print "Req SIGNED WRITE not supported: " + binascii.b2a_hex(data)
+        btle.DBG("Req SIGNED WRITE not supported: " + binascii.b2a_hex(data))
         raise AttError(ATT_ECODE_REQ_NOT_SUPP, 0)
 
 
     def att_op_unknown(self,data):
-        print "Req unknown: " + binascii.b2a_hex(data)
+        btle.DBG("Req unknown: " + binascii.b2a_hex(data))
         raise AttError(ATT_ECODE_REQ_NOT_SUPP, 0)
 
 

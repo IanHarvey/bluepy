@@ -384,6 +384,13 @@ class BluepyHelper:
         self._writeCmd("stat\n")
         return self._waitResp(['stat'])
 
+    def setSecurityLevel(self, level):
+        self._writeCmd("secu %s\n" % level)
+        return self._waitResp('stat', 60)
+
+    def unpair(self, address):
+        self._mgmtCmd("unpair %s" % (address))
+
 class Peripheral(BluepyHelper):
     def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC, iface='hci0'):
         BluepyHelper.__init__(self, iface)
@@ -551,13 +558,6 @@ class Peripheral(BluepyHelper):
         cmd = "wrr" if withResponse else "wr"
         self._writeCmd("%s %X %s\n" % (cmd, handle, binascii.b2a_hex(val).decode('utf-8')))
         return self._getResp('wr')
-
-    def setSecurityLevel(self, level):
-        self._writeCmd("secu %s\n" % level)
-        return self._getResp('stat')
-
-    def unpair(self, address):
-        self._mgmtCmd("unpair %s" % (address))
 
     def setMTU(self, mtu):
         self._writeCmd("mtu %x\n" % mtu)
