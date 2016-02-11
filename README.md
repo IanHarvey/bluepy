@@ -21,7 +21,8 @@ To build on the Pi:
     $ sudo apt-get install build-essential libglib2.0-dev libdbus-1-dev
     $ git clone https://github.com/IanHarvey/bluepy.git
     $ cd bluepy
-    $ make
+    $ python setup.py build
+    $ python setup.py install
 
 Once 'bluepy-helper' is built, you can copy it and the two .py files to somewhere
 convenient on your Python path (e.g. /usr/local/lib/python2.7/site-packages/).
