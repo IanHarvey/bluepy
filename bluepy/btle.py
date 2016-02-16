@@ -396,6 +396,7 @@ class Peripheral(BluepyHelper):
         BluepyHelper.__init__(self, iface)
         self.services = {} # Indexed by UUID
         self.discoveredAllServices = False
+        self.gatts = None
         if isinstance(deviceAddr, ScanEntry):
             addr = deviceAddr.addr
             self.addrType = deviceAddr.atype
