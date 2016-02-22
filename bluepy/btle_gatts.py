@@ -175,7 +175,7 @@ class Gatts:
 
     def att_op_mtu_req(self,data):
         # Handled at higher level, just here to fill the dict
-        pass
+        return None
 
 
     def att_op_find_info_req(self,data):
@@ -217,6 +217,7 @@ class Gatts:
         if not handle_info_list:
             raise AttError(ATT_ECODE_ATTR_NOT_FOUND, hstart)
         return ATT_OP_FIND_BY_TYPE_RESP + ''.join(handle_info_list)
+
 
     def att_op_read_req(self,data):
         op, h = struct.unpack("<BH", data)
@@ -333,6 +334,7 @@ class Gatts:
 
         a = self.hcheck(h)
         a.write(d)
+        return None
 
 
     def att_op_prep_write_req(self,data):

@@ -789,13 +789,15 @@ class Central(BluepyHelper):
             elif respType == 'gatts':
                 if self.gatts:
                     data = self.gatts(resp['d'][0])
-                    if 23 < len(data):
-                        raise Exception
                 else:
                     # Send back error not supported
                     data = '\x01' + resp['d'][0][0] + '\x00\x00\x06'
 
-                self._writeCmd("gatts %s\n" % binascii.b2a_hex(data))
+                # data can be None : write_cmd, mtu_req
+                if data is not None:
+                    if 23 < len(data):
+                        raise Exception
+                    self._writeCmd("gatts %s\n" % binascii.b2a_hex(data))
 
 def capitaliseName(descr):
     words = descr.split(" ")
