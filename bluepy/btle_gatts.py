@@ -239,9 +239,21 @@ class Gatts:
 
 
     def att_op_read_multi_req(self,data):
-        btle.DBG("Req READ MULTI not supported: " + binascii.b2a_hex(data))
-        raise AttError(ATT_ECODE_REQ_NOT_SUPP, 0)
+        h = []
+        val = ""
+        rv = struct.unpack("<B%dH"%((len(data) - 1)/2), data)
+        op = rv[0]
+        handles = rv[1:]
 
+        btle.DBG("Read Multi Req:", op, str(handles))
+
+        for h in handles:
+            a = self.hcheck(h)
+            val += self.att[h].read()
+
+        val = val[:self.mtu - 1]
+
+        return ATT_OP_READ_MULTI_RESP + val
 
     def att_op_read_by_type_req(self,data):
         op, hstart, hend, uuid = struct.unpack("<BHH" + str(len(data) - 5) + "s", data)
