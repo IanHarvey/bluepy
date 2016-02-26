@@ -44,12 +44,16 @@ class BluepyDevelop(develop):
 
 setup (
     name='bluepy',
-    version='0.9.11',
+    version='1.0.0',
     description='Python module for interfacing with BLE devices through Bluez',
     author='Ian Harvey',
     url='https://github.com/IanHarvey/bluepy',
+    download_url='https://github.com/IanHarvey/bluepy/tarball/v/1.0.0',
+    keywords=[ 'Bluetooth', 'Bluetooth Smart', 'BLE', 'Bluetooth Low Energy' ],
     classifiers=[
-        'Programming Language :: Python :: 2.7'
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
     ],
     packages=['bluepy'],
     package_data={
