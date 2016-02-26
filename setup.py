@@ -3,19 +3,22 @@
 from setuptools.command.install import install
 from setuptools.command.develop import develop
 from setuptools import setup
-from subprocess import Popen, PIPE
+import subprocess
 import shlex
 import sys
+import os
 
 
 def pre_install():
     """Do the custom compiling of the bluepy-helper executable from the makefile"""
-    cmd = shlex.split("make -C ./bluepy")
-    proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=False)
-    proc.wait()
-    if proc.returncode != 0:
-        print("Bluez build failed. Exiting install. Make output:")
-        print(proc.stdout.read())
+    cmd = "make -C ./bluepy"
+    try:
+        msgs = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        print("Failed to compile bluepy-helper. Exiting install.")
+        print("Command was " + repr(cmd) + " in " + os.getcwd())
+        print("Return code was %d" % e.returncode)
+        print("Output was:\n" + e.output)
         sys.exit(1)
 
 def post_install():
@@ -44,11 +47,12 @@ class BluepyDevelop(develop):
 
 setup (
     name='bluepy',
-    version='1.0.0',
+    version='1.0.1',
     description='Python module for interfacing with BLE devices through Bluez',
     author='Ian Harvey',
+    author_email='website-contact@fenditton.org',
     url='https://github.com/IanHarvey/bluepy',
-    download_url='https://github.com/IanHarvey/bluepy/tarball/v/1.0.0',
+    download_url='https://github.com/IanHarvey/bluepy/tarball/v/1.0.1',
     keywords=[ 'Bluetooth', 'Bluetooth Smart', 'BLE', 'Bluetooth Low Energy' ],
     classifiers=[
         'Programming Language :: Python :: 2.7',
