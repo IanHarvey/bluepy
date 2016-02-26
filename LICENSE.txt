@@ -1,0 +1,6 @@
+This project uses code from the bluez project, which is made available under
+Version 2 of the GNU Public License. File COPYING in the bluez-x.xx/ directory
+contains the full text of this license.
+
+Code outside the bluez-x.xx/ directory is placed into the public domain. Note that
+there is NO WARRANTY.
