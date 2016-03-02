@@ -19,8 +19,8 @@ endif
 
 CPPFLAGS += -I$(BLUEZ_PATH)/attrib -I$(BLUEZ_PATH) -I$(BLUEZ_PATH)/lib -I$(BLUEZ_PATH)/src -I$(BLUEZ_PATH)/gdbus -I$(BLUEZ_PATH)/btio
 
-CPPFLAGS += `pkg-config glib-2.0 dbus-1 --cflags`
-LDLIBS += `pkg-config glib-2.0 --libs`
+CPPFLAGS += $(shell pkg-config glib-2.0 --cflags)
+LDLIBS += $(shell pkg-config glib-2.0 --libs)
 
 all: bluepy-helper 
 
