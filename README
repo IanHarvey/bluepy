@@ -1,0 +1,11 @@
+bluepy README
+=============
+
+Bluepy is a Python package to allow Bluetooth Low Energy (a.k.a Bluetooth
+Smart) peripherals to be controlled from Python. Installation instructions
+and release notes are in the file README.md.
+
+Source code and further documentation is at:
+  https://github.com/IanHarvey/bluepy
+  http://ianharvey.github.io/bluepy-doc/
+
