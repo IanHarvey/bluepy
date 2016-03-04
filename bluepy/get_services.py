@@ -59,9 +59,9 @@ def get_table(url, local_filename, table_defs):
                     func = lambda x:x
                 ret[name] = func(col)
             except:
-                print name
-                print col
-                print row
+                print(name)
+                print(col)
+                print(row)
                 raise
         yield ret
 
@@ -185,5 +185,5 @@ if __name__=="__main__":
                    ensure_ascii = False,
                    sort_keys = True)
 
-    print s.encode('utf-8')
+    print(s.encode('utf-8'))
 
