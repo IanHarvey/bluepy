@@ -18,7 +18,7 @@ you can rebuild it using the Makefile in the `bluepy` directory.
 
 To install the current released version, on most Debian-based systems:
 
-    $ sudo apt-get install python-pip libgdlib2.0-dev
+    $ sudo apt-get install python-pip libglib2.0-dev
     $ sudo pip install bluepy
     
 To install the source and build locally:
@@ -115,7 +115,8 @@ TO DO list
 ----------
 
 The following are still missing from the current release:
-- Build into easily installable package
 - Unit test 
+- Peripheral role support
+
 
 
