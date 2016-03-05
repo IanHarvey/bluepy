@@ -1,4 +1,4 @@
-from btle import UUID, Peripheral, DefaultDelegate
+from .btle import UUID, Peripheral, DefaultDelegate
 import struct
 import math
 
