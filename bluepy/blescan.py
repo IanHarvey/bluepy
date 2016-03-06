@@ -5,9 +5,7 @@ import binascii
 import time
 import os
 import sys
-# Add btle.py path for import
-sys.path.insert(0,os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bluepy')))
-import btle
+from . import btle
 
 if os.getenv('C','1') == '0':
     ANSI_RED = ''
@@ -58,17 +56,21 @@ def dump_services(dev):
                     break
 
 class ScanPrint(btle.DefaultDelegate):
+    def __init__(self, opts):
+        btle.DefaultDelegate.__init__(self)
+        self.opts = opts
+
     def handleDiscovery(self, dev, isNewDev, isNewData):
         if isNewDev:
             status = "new"
         elif isNewData:
-            if arg.new: return
+            if self.opts.new: return
             status = "update"
         else:
-            if not arg.all: return
+            if not self.opts.all: return
             status = "old"
 
-        if dev.rssi < arg.sensitivity:
+        if dev.rssi < self.opts.sensitivity:
             return
           
         print ('    Device (%s): %s (%s), %d dBm %s' % 
@@ -87,7 +89,7 @@ class ScanPrint(btle.DefaultDelegate):
             print ('\t(no data)')
         print
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     #parser.add_argument('host', action='store',
     #                    help='BD address of BT device')
@@ -107,7 +109,7 @@ if __name__ == "__main__":
 
     btle.Debugging = arg.verbose
 
-    scanner = btle.Scanner().withDelegate(ScanPrint())
+    scanner = btle.Scanner().withDelegate(ScanPrint(arg))
 
     print (ANSI_RED + "Scanning for devices..." + ANSI_OFF)
     devices = scanner.scan(arg.timeout)
@@ -126,6 +128,10 @@ if __name__ == "__main__":
             dump_services(dev)
             dev.disconnect()
             print
+
+if __name__ == "__main__":
+    main()
+
 
 
 
