@@ -406,6 +406,10 @@ class Peripheral(BluepyHelper):
             self.addrType = addrType
             self.iface = iface
 
+        self._startHelper()
+        # Simple connect can work out of the box, but needs reset (and super user perm) in some cases
+        self.reset_controller(False)
+
         if addr is not None:
             self.connect(addr, self.addrType)
 
@@ -455,9 +459,6 @@ class Peripheral(BluepyHelper):
             raise ValueError("Expected MAC address, got %s" % repr(addr))
         if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
             raise ValueError("Expected address type public or random, got {}".format(addrType))
-        self._startHelper()
-        # Simple connect can work out of the box, but needs reset (and super user perm) in some cases
-        self.reset_controller(False)
         self.deviceAddr = addr
         self._writeCmd("conn %s %s\n" % (addr, addrType))
         rsp = self._getResp('stat')
