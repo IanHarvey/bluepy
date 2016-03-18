@@ -388,8 +388,14 @@ class BluepyHelper:
         self._writeCmd("secu %s\n" % level)
         return self._waitResp('stat', 60)
 
-    def unpair(self, address):
-        self._mgmtCmd("unpair %s" % (address))
+    def unpair(self, addr, addrType):
+        assert(isinstance(addr, str))
+        assert(isinstance(addrType, str))
+        if len(addr.split(":")) != 6:
+            raise ValueError("Expected MAC address, got %s" % repr(addr))
+        if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
+            raise ValueError("Expected address type public or random, got {}".format(addrType))
+        self._mgmtCmd("unpair %s %s\n" % (addr, addrType))
 
 class Peripheral(BluepyHelper):
     def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC, iface='hci0'):
@@ -476,7 +482,7 @@ class Peripheral(BluepyHelper):
         self.setDelegate(None)
 
         self._writeCmd("disc\n")
-        self._getResp('stat')
+        self._getResp('stat', 5)
         self._stopHelper()
 
     def discoverServices(self):

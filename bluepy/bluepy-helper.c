@@ -1290,14 +1290,19 @@ static void cmd_unpair(int argcp, char **argvp)
     bdaddr_t bdaddr;
     uint8_t addr_type = BDADDR_LE_RANDOM;
 
-    if (str2ba(opt_dst, &bdaddr)) {
+    if (argcp != 3) {
+        resp_mgmt(err_BAD_PARAM);
+        return;
+    }
+
+    if (str2ba(argvp[1], &bdaddr)) {
         DBG("str2ba failed");
         resp_mgmt(err_NOT_FOUND);
         return;
     }
 
-    if (!memcmp(opt_dst_type, "public", 6)) {
-        addr_type = BDADDR_LE_PUBLIC;
+    if (!memcmp(argvp[2], "public", 6)) {
+            addr_type = BDADDR_LE_PUBLIC;
     }
 
     memset(&cp, 0, sizeof(cp));
@@ -1562,7 +1567,7 @@ static struct {
         "Control BR/EDR feature on the controller" },
     { "pair",       cmd_pair,   "",
         "Start pairing with the device" },
-    { "unpair",     cmd_unpair, "",
+    { "unpair",     cmd_unpair, "<address> <address type>",
         "Start unpairing with the device" },
     { "settings",       cmd_settings,   "",
         "Get the current settings" },
