@@ -1558,7 +1558,7 @@ static void mgmt_setup(unsigned int idx)
     mgmt_set_debug(mgmt_master, mgmt_debug, "mgmt: ", NULL);
 
     if (mgmt_send(mgmt_master, MGMT_OP_READ_VERSION,
-        mgmt_ind, 0, NULL,
+        MGMT_INDEX_NONE, 0, NULL,
         read_version_complete, NULL, NULL) == 0) {
         DBG("mgmt_send(MGMT_OP_READ_VERSION) failed");
     }
