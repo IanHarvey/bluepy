@@ -470,7 +470,7 @@ class Peripheral(BluepyHelper):
         return self._getResp('stat')
 
     def waitForNotifications(self, timeout):
-         resp = self._getResp('ntfy', timeout)
+         resp = self._getResp(['ntfy','ind'], timeout)
          return (resp != None)
 
     def __del__(self):
