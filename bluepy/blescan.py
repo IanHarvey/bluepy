@@ -91,8 +91,8 @@ class ScanPrint(btle.DefaultDelegate):
 
 def main():
     parser = argparse.ArgumentParser()
-    #parser.add_argument('host', action='store',
-    #                    help='BD address of BT device')
+    parser.add_argument('-i', '--hci', action='store', type=int, default=0,
+                        help='Interface number for scan')
     parser.add_argument('-t', '--timeout', action='store', type=int, default=4,
                         help='Scan delay, 0 for continuous')
     parser.add_argument('-s', '--sensitivity', action='store', type=int, default=-128,
@@ -109,7 +109,7 @@ def main():
 
     btle.Debugging = arg.verbose
 
-    scanner = btle.Scanner().withDelegate(ScanPrint(arg))
+    scanner = btle.Scanner(arg.hci).withDelegate(ScanPrint(arg))
 
     print (ANSI_RED + "Scanning for devices..." + ANSI_OFF)
     devices = scanner.scan(arg.timeout)

@@ -355,7 +355,7 @@ class Peripheral(BluepyHelper):
         self.addrType = addrType
         self.iface = iface
         if iface is not None:
-            self._writeCmd("conn %s %s %s\n" % (addr, addrType, iface))
+            self._writeCmd("conn %s %s %s\n" % (addr, addrType, "hci"+str(iface)))
         else:
             self._writeCmd("conn %s %s\n" % (addr, addrType))
         rsp = self._getResp('stat')
