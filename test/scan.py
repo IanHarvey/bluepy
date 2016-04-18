@@ -5,6 +5,8 @@ import binascii
 import time
 import os
 import sys
+import string
+
 # Add btle.py path for import
 sys.path.insert(0,os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'bluepy')))
 import btle
@@ -39,25 +41,27 @@ def dump_services(dev):
                 try:
                     val = c.read()
                     if c.uuid == btle.AssignedNumbers.device_name:
-                        string = ANSI_CYAN + '\'' + val.decode('utf-8') + '\'' + ANSI_OFF
+                        str = '\'' + ANSI_CYAN + val.decode('utf-8') + ANSI_OFF + '\''
                     elif c.uuid == btle.AssignedNumbers.device_information:
-                        string = repr(val)
+                        str = repr(val)
+                    elif all(c in string.printable for c in val):
+                        str = '\'' + ANSI_CYAN + val + ANSI_OFF + '\''
                     else:
-                        string = '<s' + binascii.b2a_hex(val).decode('utf-8') + '>'
+                        str = '<' + ANSI_YELLOW + binascii.b2a_hex(val).decode('utf-8') + ANSI_OFF + '>'
                 except btle.BTLEException as e:
                     if e.code == btle.BTLEException.COMM_ERROR:
                         if e.bt_err == 5:
                             # Device sent "authentication failure"
-                            string = ANSI_RED + "DENIED" + ANSI_OFF
+                            str = ANSI_RED + "DENIED" + ANSI_OFF
                         else:
                             # Device sent other error
-                            string = ANSI_RED + "BT error:", e.bt_err, ANSI_OFF
+                            str = ANSI_RED + "BT error:", e.bt_err, ANSI_OFF
                     else:
                         # Probably internal error
                         raise e
             else:
-                string=''
-            print ("\t%04x:    %-59s %-12s %s" % (h, c, props, string))
+                str = ''
+            print ("\t%04x:    %-59s %-12s %s" % (h, c, props, str))
 
             while True:
                 h += 1
@@ -88,9 +92,9 @@ class ScanPrint(btle.DefaultDelegate):
             return
 
         # Filter on name or BDADDR
-        if arg.filter and arg.filter not in mac(dev.addr):
-            for id,v in dev.data.iteritems():
-                if id in [8,9] and arg.filter in v:
+        if arg.filter and arg.filter not in dev.addr:
+            for (id, desc, val) in dev.getScanData():
+                if id in [8,9] and arg.filter in val:
                     break
             else:
                 return
