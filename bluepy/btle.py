@@ -402,6 +402,7 @@ class Peripheral(BluepyHelper):
         BluepyHelper.__init__(self, iface)
         self.services = {} # Indexed by UUID
         self.discoveredAllServices = False
+        self.gatts = None
         if isinstance(deviceAddr, ScanEntry):
             addr = deviceAddr.addr
             self.addrType = deviceAddr.atype
@@ -410,6 +411,10 @@ class Peripheral(BluepyHelper):
             addr = deviceAddr
             self.addrType = addrType
             self.iface = iface
+
+        self._startHelper()
+        # Simple connect can work out of the box, but needs reset (and super user perm) in some cases
+        self.reset_controller(False)
 
         if addr is not None:
             self.connect(addr, self.addrType)
@@ -460,9 +465,6 @@ class Peripheral(BluepyHelper):
             raise ValueError("Expected MAC address, got %s" % repr(addr))
         if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
             raise ValueError("Expected address type public or random, got {}".format(addrType))
-        self._startHelper()
-        # Simple connect can work out of the box, but needs reset (and super user perm) in some cases
-        self.reset_controller(False)
         self.deviceAddr = addr
         self._writeCmd("conn %s %s\n" % (addr, addrType))
         rsp = self._getResp('stat')
@@ -794,13 +796,15 @@ class Central(BluepyHelper):
             elif respType == 'gatts':
                 if self.gatts:
                     data = self.gatts(resp['d'][0])
-                    if 23 < len(data):
-                        raise Exception
                 else:
                     # Send back error not supported
                     data = '\x01' + resp['d'][0][0] + '\x00\x00\x06'
 
-                self._writeCmd("gatts %s\n" % binascii.b2a_hex(data))
+                # data can be None : write_cmd, mtu_req
+                if data is not None:
+                    if 23 < len(data):
+                        raise Exception
+                    self._writeCmd("gatts %s\n" % binascii.b2a_hex(data))
 
 def capitaliseName(descr):
     words = descr.split(" ")
