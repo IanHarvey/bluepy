@@ -64,7 +64,7 @@ if __name__ == "__main__":
     central.start()
 
     rsp = central._mgmtCmd("info")
-    print("Local device bda: %s (%d)"%(rsp["addr"][0], rsp["type"][0]))
+    print("Local device bda: %s (%s)"%(rsp["addr"][0], rsp["type"][0]))
 
 
     while True:
