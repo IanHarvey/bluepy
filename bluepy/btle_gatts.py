@@ -126,7 +126,7 @@ class Attribute:
         if self.helper:
             self.helper._writeCmd("gatts %s\n" % binascii.b2a_hex(ATT_OP_HANDLE_NOTIFY + chr2(self.handle) + self._value))
         else:
-            raise btle.BTLEException(btle.BTLEException.GATT_ERROR, "notify command failed, object does not contain helper instance")
+            print("notify ERROR")
 
     def indicate(self, value):
         assert(isinstance(value, str))
