@@ -292,7 +292,7 @@ class BluepyHelper:
         if settings & MGMT_SETTING_BREDR:
             # powered off (mandatory to set bredr off)
             self._mgmtCmd("powered off")
-            settings &= MGMT_SETTING_POWERED
+            settings &= ~MGMT_SETTING_POWERED
             # first enable LE is not yet enabled
             if (settings & MGMT_SETTING_LE) == 0:
                 self._mgmtCmd("le on")
