@@ -53,7 +53,7 @@ class BTLEException(Exception):
     COMM_ERROR = 2
     INTERNAL_ERROR = 3
     GATT_ERROR = 4
-    PERM_ERROR = 5
+    MGMT_ERROR = 5
 
     def __init__(self, code, message, bt_err = 0):
         self.code = code
@@ -271,12 +271,9 @@ class BluepyHelper:
         self._writeCmd(cmd + '\n')
         rsp = self._waitResp('mgmt')
         if rsp['code'][0] != 'success':
-            if rsp['code'][0] == 'badperm':
-                raise BTLEException(BTLEException.PERM_ERROR, "Permission denied (need sudo?)")
-            else:
-                self._stopHelper()
-                raise BTLEException(BTLEException.DISCONNECTED,
-                                "Failed to execute mgmt cmd '%s' : %s" % (cmd, rsp['code'][0]))
+            self._stopHelper()
+            raise BTLEException(BTLEException.DISCONNECTED,
+                            "Failed to execute mgmt cmd '%s' : %s" % (cmd, rsp['code'][0]))
         return rsp
 
     # Reset the interface device. Can be optional as super user permissions are needed
@@ -285,7 +282,7 @@ class BluepyHelper:
             rsp = self._mgmtCmd("settings")
             settings = rsp['d'][0]
         except BTLEException as e:
-            if e.code == BTLEException.PERM_ERROR and not required:
+            if e.code == BTLEException.MGMT_ERROR and not required:
                 return
             raise e
 
@@ -304,7 +301,7 @@ class BluepyHelper:
             self._mgmtCmd("advertising off")
             rsp = self._waitResp('stat', 0.5)
             if rsp['state'][0] != 'disc':
-                raise BTLEException(BTLEException.COMM_ERROR,
+                raise BTLEException(BTLEException.INTERNAL_ERROR,
                                     "Failed to stop advertising")
 
         # power on the HCI
@@ -372,8 +369,13 @@ class BluepyHelper:
                 raise BTLEException(BTLEException.DISCONNECTED, "Device disconnected")
             elif respType == 'err':
                 errcode=resp['code'][0]
-                bt_err=resp['bterr'][0]
-                raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s, %d)" % (errcode, bt_err), bt_err)
+                if errcode=='nomgmt':
+                    raise BTLEException(BTLEException.MGMT_ERROR, "Management not available (permissions problem?)")
+                elif errcode=='comerr':
+                    bt_err=resp['bterr'][0]
+                    raise BTLEException(BTLEException.COMM_ERROR, "Bluetooth error (%d)" % bt_err, bt_err)
+                else:
+                    raise BTLEException(BTLEException.INTERNAL_ERROR, "Error (%s)" % errcode)
             elif respType == 'scan':
                 # Scan response when we weren't interested. Ignore it
                 continue
@@ -751,7 +753,7 @@ class Central(BluepyHelper):
         self._mgmtCmd("advertising on")
         rsp = self._waitResp('stat', 1)
         if rsp['state'][0] != 'advertise':
-            raise BTLEException(BTLEException.COMM_ERROR,
+            raise BTLEException(BTLEException.INTERNAL_ERROR,
                                 "Failed to start advertising")
         # Spurious stat sometimes???:
         #self._waitResp(['stat'], 1)
@@ -777,7 +779,7 @@ class Central(BluepyHelper):
         if resp is None:
             return
         if resp['state'][0] != 'disc':
-            raise BTLEException(BTLEException.COMM_ERROR,
+            raise BTLEException(BTLEException.INTERNAL_ERROR,
                                 "Advertising stopped not for a disconnection")
         resp = self._waitResp('mgmt', 1)
         addr = binascii.b2a_hex(resp['addr'][0])

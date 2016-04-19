@@ -148,7 +148,7 @@ static const char
     *err_BAD_STATE  = "badstate",
     *err_BAD_HCI    = "badhci",
     *err_BUSY       = "busy",
-    *err_PERMISSION = "badperm",
+    *err_NO_MGMT    = "nomgmt",
     *err_SUCCESS    = "success";
 
 static const char
@@ -204,10 +204,17 @@ static void resp_end()
     fflush(stdout);
 }
 
-static void resp_error(const char *errcode, unsigned int bt_err)
+static void resp_error(const char *errcode)
 {
     resp_begin(rsp_ERROR);
     send_sym(tag_ERRCODE, errcode);
+    resp_end();
+}
+
+static void resp_error_comm(unsigned int bt_err)
+{
+    resp_begin(rsp_ERROR);
+    send_sym(tag_ERRCODE, err_COMM_ERR);
     // BT error code (BT spec Vol2 PartD) or 0 if NA
     send_uint(tag_BT_ERR, bt_err);
     resp_end();
@@ -220,10 +227,10 @@ static void resp_mgmt(const char *errcode)
     resp_end();
 }
 
-static void resp_mgmt_with_data(const char *errcode, unsigned int data)
+static void resp_mgmt_with_data(unsigned int data)
 {
     resp_begin(rsp_MGMT);
-    send_sym(tag_ERRCODE, errcode);
+    send_sym(tag_ERRCODE, err_SUCCESS);
     send_uint(tag_DATA, data);
     resp_end();
 }
@@ -337,7 +344,7 @@ static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
     if (err) {
         DBG("err = %s", err->message);
         set_state(STATE_DISCONNECTED);
-        resp_error(err_CONN_FAIL, 0);
+        resp_error(err_CONN_FAIL);
         printf("# Connect error: %s\n", err->message);
         return;
     }
@@ -408,7 +415,7 @@ static void primary_all_cb(uint8_t status, GSList *services, void *user_data)
     GSList *l;
 
     if (status) {
-        resp_error(err_COMM_ERR, status);
+        resp_error_comm(status);
         return;
     }
 
@@ -428,7 +435,7 @@ static void primary_by_uuid_cb(uint8_t status, GSList *ranges, void *user_data)
     GSList *l;
 
     if (status) {
-        resp_error(err_COMM_ERR, status);
+        resp_error_comm(status);
         return;
     }
 
@@ -446,7 +453,7 @@ static void included_cb(uint8_t status, GSList *includes, void *user_data)
     GSList *l;
 
     if (status) {
-        resp_error(err_COMM_ERR, status);
+        resp_error_comm(status);
         return;
     }
 
@@ -466,7 +473,7 @@ static void char_cb(uint8_t status, GSList *characteristics, void *user_data)
     GSList *l;
 
     if (status) {
-        resp_error(err_COMM_ERR, status);
+        resp_error_comm(status);
         return;
     }
 
@@ -486,7 +493,7 @@ static void char_desc_cb(uint8_t status, GSList *descriptors, void *user_data)
     GSList *l;
 
     if (status != 0) {
-        resp_error(err_COMM_ERR, status);
+        resp_error_comm(status);
         return;
     }
 
@@ -506,13 +513,13 @@ static void char_read_cb(guint8 status, const guint8 *pdu, guint16 plen,
     ssize_t vlen;
 
     if (status != 0) {
-        resp_error(err_COMM_ERR, status);
+        resp_error_comm(status);
         return;
     }
 
     vlen = dec_read_resp(pdu, plen, value, sizeof(value));
     if (vlen < 0) {
-        resp_error(err_COMM_ERR, 0);
+        resp_error(err_PROTO_ERR);
         return;
     }
 
@@ -536,7 +543,7 @@ static void char_read_by_uuid_cb(guint8 status, const guint8 *pdu,
     }
 
     if (status != 0) {
-        resp_error(err_COMM_ERR, status);
+        resp_error_comm(status);
         goto done;
     }
 
@@ -598,7 +605,7 @@ static void cmd_connect(int argcp, char **argvp)
     }
 
     if (opt_dst == NULL) {
-        resp_error(err_BAD_PARAM, 0);
+        resp_error(err_BAD_PARAM);;
         return;
     }
 
@@ -626,7 +633,7 @@ static void cmd_primary(int argcp, char **argvp)
     bt_uuid_t uuid;
 
     if (conn_state != STATE_CONNECTED) {
-        resp_error(err_BAD_STATE, 0);
+        resp_error(err_BAD_STATE);
         return;
     }
 
@@ -636,7 +643,7 @@ static void cmd_primary(int argcp, char **argvp)
     }
 
     if (bt_string_to_uuid(&uuid, argvp[1]) < 0) {
-        resp_error(err_BAD_PARAM, 0);
+        resp_error(err_BAD_PARAM);;
         return;
     }
 
@@ -662,14 +669,14 @@ static void cmd_included(int argcp, char **argvp)
     int end = 0xffff;
 
     if (conn_state != STATE_CONNECTED) {
-        resp_error(err_BAD_STATE, 0);
+        resp_error(err_BAD_STATE);
         return;
     }
 
     if (argcp > 1) {
         start = strtohandle(argvp[1]);
         if (start < 0) {
-            resp_error(err_BAD_PARAM, 0);
+            resp_error(err_BAD_PARAM);
             return;
         }
         end = start;
@@ -678,7 +685,7 @@ static void cmd_included(int argcp, char **argvp)
     if (argcp > 2) {
         end = strtohandle(argvp[2]);
         if (end < 0) {
-            resp_error(err_BAD_PARAM, 0);
+            resp_error(err_BAD_PARAM);;
             return;
         }
     }
@@ -692,14 +699,14 @@ static void cmd_char(int argcp, char **argvp)
     int end = 0xffff;
 
     if (conn_state != STATE_CONNECTED) {
-        resp_error(err_BAD_STATE, 0);
+        resp_error(err_BAD_STATE);
         return;
     }
 
     if (argcp > 1) {
         start = strtohandle(argvp[1]);
         if (start < 0) {
-            resp_error(err_BAD_PARAM, 0);
+            resp_error(err_BAD_PARAM);;
             return;
         }
     }
@@ -707,7 +714,7 @@ static void cmd_char(int argcp, char **argvp)
     if (argcp > 2) {
         end = strtohandle(argvp[2]);
         if (end < 0) {
-            resp_error(err_BAD_PARAM, 0);
+            resp_error(err_BAD_PARAM);;
             return;
         }
     }
@@ -716,7 +723,7 @@ static void cmd_char(int argcp, char **argvp)
         bt_uuid_t uuid;
 
         if (bt_string_to_uuid(&uuid, argvp[3]) < 0) {
-            resp_error(err_BAD_PARAM, 0);
+            resp_error(err_BAD_PARAM);;
             return;
         }
 
@@ -730,14 +737,14 @@ static void cmd_char(int argcp, char **argvp)
 static void cmd_char_desc(int argcp, char **argvp)
 {
     if (conn_state != STATE_CONNECTED) {
-        resp_error(err_BAD_STATE, 0);
+        resp_error(err_BAD_STATE);
         return;
     }
 
     if (argcp > 1) {
         start = strtohandle(argvp[1]);
         if (start < 0) {
-            resp_error(err_BAD_PARAM, 0);
+            resp_error(err_BAD_PARAM);;
             return;
         }
     } else
@@ -746,7 +753,7 @@ static void cmd_char_desc(int argcp, char **argvp)
     if (argcp > 2) {
         end = strtohandle(argvp[2]);
         if (end < 0) {
-            resp_error(err_BAD_PARAM, 0);
+            resp_error(err_BAD_PARAM);;
             return;
         }
     } else
@@ -760,18 +767,18 @@ static void cmd_read_hnd(int argcp, char **argvp)
     int handle;
 
     if (conn_state != STATE_CONNECTED) {
-        resp_error(err_BAD_STATE, 0);
+        resp_error(err_BAD_STATE);
         return;
     }
 
     if (argcp < 2) {
-        resp_error(err_BAD_PARAM, 0);
+        resp_error(err_BAD_PARAM);;
         return;
     }
 
     handle = strtohandle(argvp[1]);
     if (handle < 0) {
-        resp_error(err_BAD_PARAM, 0);
+        resp_error(err_BAD_PARAM);;
         return;
     }
 
@@ -786,20 +793,20 @@ static void cmd_read_uuid(int argcp, char **argvp)
     bt_uuid_t uuid;
 
     if (conn_state != STATE_CONNECTED) {
-        resp_error(err_BAD_STATE, 0);
+        resp_error(err_BAD_STATE);
         return;
     }
 
     if (argcp < 2 ||
         bt_string_to_uuid(&uuid, argvp[1]) < 0) {
-        resp_error(err_BAD_PARAM, 0);
+        resp_error(err_BAD_PARAM);;
         return;
     }
 
     if (argcp > 2) {
         start = strtohandle(argvp[2]);
         if (start < 0) {
-            resp_error(err_BAD_PARAM, 0);
+            resp_error(err_BAD_PARAM);;
             return;
         }
     }
@@ -807,7 +814,7 @@ static void cmd_read_uuid(int argcp, char **argvp)
     if (argcp > 3) {
         end = strtohandle(argvp[3]);
         if (end < 0) {
-            resp_error(err_BAD_PARAM, 0);
+            resp_error(err_BAD_PARAM);;
             return;
         }
     }
@@ -826,12 +833,12 @@ static void char_write_req_cb(guint8 status, const guint8 *pdu, guint16 plen,
                             gpointer user_data)
 {
     if (status != 0) {
-        resp_error(err_COMM_ERR, status);
+        resp_error_comm(status);
         return;
     }
 
     if (!dec_write_resp(pdu, plen) && !dec_exec_write_resp(pdu, plen)) {
-        resp_error(err_PROTO_ERR, 0);
+        resp_error(err_PROTO_ERR);
         return;
     }
 
@@ -847,24 +854,24 @@ static void cmd_char_write_common(int argcp, char **argvp, int with_response)
     int handle;
 
     if (conn_state != STATE_CONNECTED) {
-        resp_error(err_BAD_STATE, 0);
+        resp_error(err_BAD_STATE);
         return;
     }
 
     if (argcp < 3) {
-        resp_error(err_BAD_PARAM, 0);
+        resp_error(err_BAD_PARAM);;
         return;
     }
 
     handle = strtohandle(argvp[1]);
     if (handle <= 0) {
-        resp_error(err_BAD_PARAM, 0);
+        resp_error(err_BAD_PARAM);;
         return;
     }
 
     plen = gatt_attr_data_from_string(argvp[2], &value);
     if (plen == 0) {
-        resp_error(err_BAD_PARAM, 0);
+        resp_error(err_BAD_PARAM);;
         return;
     }
 
@@ -897,7 +904,7 @@ static void cmd_sec_level(int argcp, char **argvp)
     BtIOSecLevel sec_level;
 
     if (argcp < 2) {
-        resp_error(err_BAD_PARAM, 0);
+        resp_error(err_BAD_PARAM);;
         return;
     }
 
@@ -908,7 +915,7 @@ static void cmd_sec_level(int argcp, char **argvp)
     else if (strcasecmp(argvp[1], "low") == 0)
         sec_level = BT_IO_SEC_LOW;
     else {
-        resp_error(err_BAD_PARAM, 0);
+        resp_error(err_BAD_PARAM);;
         return;
     }
 
@@ -925,7 +932,7 @@ static void cmd_sec_level(int argcp, char **argvp)
             BT_IO_OPT_INVALID);
     if (gerr) {
         printf("# Error: %s\n", gerr->message);
-        resp_error(err_COMM_ERR, 0);
+        resp_error(err_PROTO_ERR);
         g_error_free(gerr);
     }
     else {
@@ -941,12 +948,12 @@ static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
     uint16_t mtu;
 
     if (status != 0) {
-        resp_error(err_COMM_ERR, status);
+        resp_error_comm(status);
         return;
     }
 
     if (!dec_mtu_resp(pdu, plen, &mtu)) {
-        resp_error(err_PROTO_ERR, 0);
+        resp_error(err_PROTO_ERR);
         return;
     }
 
@@ -960,26 +967,26 @@ static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
     else
     {
         printf("# Error exchanging MTU\n");
-        resp_error(err_COMM_ERR, 0);
+        resp_error(err_PROTO_ERR);
     }
 }
 
 static void cmd_mtu(int argcp, char **argvp)
 {
     if (conn_state != STATE_CONNECTED) {
-        resp_error(err_BAD_STATE, 0);
+        resp_error(err_BAD_STATE);
         return;
     }
 
     assert(!opt_psm);
 
     if (argcp < 2) {
-        resp_error(err_BAD_PARAM, 0);
+        resp_error(err_BAD_PARAM);;
         return;
     }
 
     if (opt_mtu) {
-        resp_error(err_BAD_STATE, 0);
+        resp_error(err_BAD_STATE);
         /* Can only set once per connection */
         return;
     }
@@ -987,7 +994,7 @@ static void cmd_mtu(int argcp, char **argvp)
     errno = 0;
     opt_mtu = strtoll(argvp[1], NULL, 16);
     if (errno != 0 || opt_mtu < ATT_DEFAULT_LE_MTU) {
-        resp_error(err_BAD_PARAM, 0);
+        resp_error(err_BAD_PARAM);;
         return;
     }
 
@@ -1033,7 +1040,7 @@ static bool set_mode_with_cb(uint16_t opcode, char *p_mode, mgmt_request_func_t 
     else user_data = 0;
 
     if (!mgmt_master) {
-        resp_mgmt(err_PERMISSION);
+        resp_error(err_NO_MGMT);
         return true;
     }
 
@@ -1078,7 +1085,7 @@ static void cmd_discoverable(int argcp, char **argvp)
     }
 
     if (!mgmt_master) {
-        resp_mgmt(err_PERMISSION);
+        resp_error(err_NO_MGMT);
         return;
     }
 
@@ -1257,7 +1264,7 @@ static void cmd_pair(int argcp, char **argvp)
     cp.io_cap = io_cap;
 
     if (!mgmt_master) {
-        resp_mgmt(err_PERMISSION);
+        resp_error(err_NO_MGMT);
         return;
     }
 
@@ -1311,7 +1318,7 @@ static void cmd_unpair(int argcp, char **argvp)
     cp.disconnect = 1;
 
     if (!mgmt_master) {
-        resp_mgmt(err_PERMISSION);
+        resp_error(err_NO_MGMT);
         return;
     }
 
@@ -1346,7 +1353,7 @@ static void scan(bool start)
     DBG("Scan %s", start? "start" : "stop");
 
     if (!mgmt_master) {
-        resp_mgmt(err_PERMISSION);
+        resp_error(err_NO_MGMT);
         return;
     }
 
@@ -1444,7 +1451,7 @@ static void read_info_complete(uint8_t status, uint16_t length,
 
     show_device_info();
 
-    resp_mgmt_with_data(err_SUCCESS, dev_info.current_settings);
+    resp_mgmt_with_data(dev_info.current_settings);
 }
 
 static void cmd_settings(int argcp, char **argvp)
@@ -1454,7 +1461,7 @@ static void cmd_settings(int argcp, char **argvp)
     }
 
     if (!mgmt_master) {
-        resp_mgmt(err_PERMISSION);
+        resp_error(err_NO_MGMT);
         return;
     }
 
@@ -1499,11 +1506,11 @@ static void cmd_gatts(int argcp, char **argvp)
             }
             g_attrib_send(attrib, 0, opdu, olen, cb_func, NULL, NULL);
         } else {
-            resp_error(err_BAD_PARAM, 0);
+            resp_error(err_BAD_PARAM);;
         }
         g_free(opdu);
     } else {
-        resp_error(err_BAD_PARAM, 0);
+        resp_error(err_BAD_PARAM);;
     }
 }
 
@@ -1612,7 +1619,7 @@ static void parse_line(char *line_read)
     if (commands[i].cmd)
         commands[i].func(argcp, argvp);
     else
-        resp_error(err_BAD_CMD, 0);
+        resp_error(err_BAD_CMD);
 
     g_strfreev(argvp);
 
@@ -1815,7 +1822,7 @@ int main(int argc, char *argv[])
 
     if (parse_dev_src(hci, &opt_src, &opt_src_idx)) {
         fprintf(stderr,"%s: expected optional argument 'hciX' valid and up\n", argv[0]);
-        resp_error(err_BAD_HCI, 0);
+        resp_error(err_BAD_HCI);
         return EXIT_FAILURE;
     }
 
