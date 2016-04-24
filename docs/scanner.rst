@@ -83,7 +83,7 @@ Basic code to run a LE device scan follows this example::
             elif isNewData:
                 print "Received new data from", dev.addr
     
-    scanner = Scanner()
+    scanner = Scanner().withDelegate(ScanDelegate())
     devices = scanner.scan(10.0)
 
     for dev in devices:
