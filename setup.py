@@ -18,7 +18,7 @@ def pre_install():
         print("Failed to compile bluepy-helper. Exiting install.")
         print("Command was " + repr(cmd) + " in " + os.getcwd())
         print("Return code was %d" % e.returncode)
-        print("Output was:\n" + e.output)
+        print("Output was:\n%s" % e.output)
         sys.exit(1)
 
 def post_install():
