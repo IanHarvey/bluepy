@@ -52,6 +52,11 @@ The Python files are released into the public domain by their author, Ian Harvey
 Release Notes
 -------------
 
+Release 1.0.5
+- Fix issue #123: Scanner documentation updated
+- Fix #125: setup.py error reporting on Python 3 if compilation fails
+- Fix for issue #127: setup.py fails to rebuild bluepy-helper 
+
 Release 1.0.4
 - Scanner now available as bluepy.blescan module and 'blescan' command
 - Fix example scanner code in documentation
