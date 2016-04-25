@@ -145,7 +145,7 @@ class Characteristic:
         return self.peripheral.readCharacteristic(self.valHandle)
 
     def write(self, val, withResponse=False):
-        self.peripheral.writeCharacteristic(self.valHandle, val, withResponse)
+        return self.peripheral.writeCharacteristic(self.valHandle, val, withResponse)
 
     # TODO: descriptors
 
