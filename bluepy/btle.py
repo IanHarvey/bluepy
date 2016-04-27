@@ -139,6 +139,9 @@ class Service:
             return [ch for ch in self.chars if ch.uuid==u]
         return self.chars
 
+    def getIncludedServices(self, startHnd=1, endHnd=0xFFFF):
+        return self.peripheral._getIncludedServices(self.hndStart, self.hndEnd)
+
     def __str__(self):
         return "Service <uuid=%s handleStart=%s handleEnd=%s>" % (self.uuid.getCommonName(),
                                                                  self.hndStart,
@@ -519,9 +522,12 @@ class Peripheral(BluepyHelper):
         return svc
 
     def _getIncludedServices(self, startHnd=1, endHnd=0xFFFF):
-        # TODO: No working example of this yet
         self._writeCmd("incl %X %X\n" % (startHnd, endHnd))
-        return self._getResp('find')
+        rsp = self._getResp('find')
+        if 'hstart' not in rsp:
+            return None
+
+        return rsp
 
     def getCharacteristics(self, startHnd=1, endHnd=0xFFFF, uuid=None):
         cmd = 'char %X %X' % (startHnd, endHnd)
