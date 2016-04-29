@@ -506,6 +506,55 @@ static void char_desc_cb(uint8_t status, GSList *descriptors, void *user_data)
     resp_end();
 }
 
+ssize_t dec_read_blob_resp(const uint8_t *pdu, size_t len, uint8_t *value,
+                            size_t vlen)
+{
+    if (pdu == NULL)
+        return -EINVAL;
+
+    if (pdu[0] != ATT_OP_READ_BLOB_RESP)
+        return -EINVAL;
+
+    if (value == NULL)
+        return len - 1;
+
+    if (vlen < (len - 1))
+        return -ENOBUFS;
+
+    memcpy(value, pdu + 1, len - 1);
+
+    return len - 1;
+}
+
+static void char_read_single_cb(guint8 status, const guint8 *pdu, guint16 plen,
+                            gpointer user_data)
+{
+    uint8_t value[plen];
+    ssize_t vlen;
+
+    if (status != 0) {
+        resp_error_comm(status);
+        return;
+    }
+
+    if ((pdu != NULL) && (plen >= 1)) {
+        if (pdu[0] == ATT_OP_READ_RESP)
+            vlen = dec_read_resp(pdu, plen, value, sizeof(value));
+        else
+            vlen = dec_read_blob_resp(pdu, plen, value, sizeof(value));
+    } else {
+        vlen = -EINVAL;
+    }
+    if (vlen < 0) {
+        resp_error(err_PROTO_ERR);
+        return;
+    }
+
+    resp_begin(rsp_READ);
+    send_data(value, vlen);
+    resp_end();
+}
+
 static void char_read_cb(guint8 status, const guint8 *pdu, guint16 plen,
                             gpointer user_data)
 {
@@ -762,6 +811,75 @@ static void cmd_char_desc(int argcp, char **argvp)
     gatt_discover_desc(attrib, start, end, NULL, char_desc_cb, NULL);
 }
 
+struct read_data {
+    GAttrib *attrib;
+    GAttribResultFunc func;
+    gpointer user_data;
+    guint16 offset;
+    guint16 handle;
+    guint id;
+    int ref;
+};
+
+static void read_destroy(gpointer user_data)
+{
+    struct read_data *read = user_data;
+
+    if (__sync_sub_and_fetch(&read->ref, 1) > 0)
+        return;
+
+    g_attrib_unref(read->attrib);
+
+    g_free(read);
+}
+
+static void read_char_helper(guint8 status, const guint8 *rpdu,
+                    guint16 rlen, gpointer user_data)
+{
+    struct read_data *read = user_data;
+
+    read->func(status, rpdu, rlen, read->user_data);
+}
+
+guint gatt_read_char_single(GAttrib *attrib, uint16_t handle, uint16_t offset,
+                GAttribResultFunc func, gpointer user_data)
+{
+    uint8_t *buf;
+    size_t buflen;
+    guint16 plen;
+    guint id;
+    struct read_data *read;
+
+    read = g_try_new0(struct read_data, 1);
+
+    if (read == NULL)
+        return 0;
+
+    read->attrib = g_attrib_ref(attrib);
+    read->func = func;
+    read->user_data = user_data;
+    read->handle = handle;
+    read->offset = offset;
+
+    buf = g_attrib_get_buffer(attrib, &buflen);
+    if (!offset)
+        plen = enc_read_req(handle, buf, buflen);
+    else
+        plen = enc_read_blob_req(handle, offset, buf, buflen);
+
+    id = g_attrib_send(attrib, 0, buf, plen, read_char_helper,
+                       read, read_destroy);
+    if (id == 0) {
+        g_attrib_unref(read->attrib);
+        g_free(read);
+    } else {
+        __sync_fetch_and_add(&read->ref, 1);
+        read->id = id;
+    }
+
+    return id;
+}
+
 static void cmd_read_hnd(int argcp, char **argvp)
 {
     int handle;
@@ -782,7 +900,20 @@ static void cmd_read_hnd(int argcp, char **argvp)
         return;
     }
 
-    gatt_read_char(attrib, handle, char_read_cb, attrib);
+    if (argcp == 2) {
+        gatt_read_char(attrib, handle, char_read_cb, attrib);
+    } else {
+        char *end;
+        int offset = strtol(argvp[2], &end, 0);
+
+        if (*end != '\0') {
+            resp_error(err_BAD_PARAM);;
+            return;
+        }
+
+        gatt_read_char_single(attrib, handle, offset, char_read_single_cb,
+                            attrib);
+    }
 }
 
 static void cmd_read_uuid(int argcp, char **argvp)
@@ -1540,8 +1671,8 @@ static struct {
         "Characteristics Discovery" },
     { "desc",       cmd_char_desc,  "[start hnd] [end hnd]",
         "Characteristics Descriptor Discovery" },
-    { "rd",         cmd_read_hnd,   "<handle>",
-        "Characteristics Value/Descriptor Read by handle" },
+    { "rd",         cmd_read_hnd,   "<handle> [offset]",
+        "Characteristics Value/Descriptor Read by handle. offset: app handled read" },
     { "rdu",        cmd_read_uuid,  "<UUID> [start hnd] [end hnd]",
         "Characteristics Value/Descriptor Read by UUID" },
     { "wrr",        cmd_char_write_rsp, "<handle> <new value>",
