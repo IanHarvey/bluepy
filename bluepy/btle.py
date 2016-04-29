@@ -174,8 +174,8 @@ class Characteristic:
         (self.peripheral, uuidVal, self.handle, self.properties, self.valHandle) = args
         self.uuid = UUID(uuidVal)
 
-    def read(self):
-        return self.peripheral.readCharacteristic(self.valHandle)
+    def read(self, offset=None):
+        return self.peripheral.readCharacteristic(self.valHandle, offset)
 
     def write(self, val, withResponse=False):
         self.peripheral.writeCharacteristic(self.valHandle, val, withResponse)
@@ -559,8 +559,11 @@ class Peripheral(BluepyHelper):
             descriptors += [Descriptor(self, resp['uuid'][i], resp['hnd'][i]) for i in range(nDesc)]
         return descriptors
 
-    def readCharacteristic(self, handle):
-        self._writeCmd("rd %X\n" % handle)
+    def readCharacteristic(self, handle, offset=None):
+        cmd = "rd %X" % handle
+        if offset:
+            cmd += " %X" % offset
+        self._writeCmd(cmd + "\n")
         resp = self._getResp('rd')
         return resp['d'][0]
 
