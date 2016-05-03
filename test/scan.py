@@ -30,7 +30,7 @@ else:
 def dump_services(dev):
     services = sorted(dev.getServices(), key=lambda s: s.hndStart)
     for s in services:
-        print ("\t%04x: %s" % (s.hndStart, s))
+        print ("\t%02x/%2d: %s" % (s.hndStart, s.hndStart, s))
         if s.hndStart == s.hndEnd:
             continue
         chars = s.getCharacteristics()
@@ -61,7 +61,7 @@ def dump_services(dev):
                         raise e
             else:
                 str = ''
-            print ("\t%04x:    %-59s %-12s %s" % (h, c, props, str))
+            print ("\t%02x/%2d:    %-59s %-12s %s" % (h, h, c, props, str))
 
             while True:
                 h += 1
@@ -69,7 +69,7 @@ def dump_services(dev):
                     break
                 try:
                     val = dev.readCharacteristic(h)
-                    print ("\t%04x:     <%s>" % (h, binascii.b2a_hex(val).decode('utf-8')))
+                    print ("\t%02x/%2d:     <%s>" % (h, h, binascii.b2a_hex(val).decode('utf-8')))
                 except btle.BTLEException:
                     break
 
