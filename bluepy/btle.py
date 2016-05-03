@@ -468,6 +468,7 @@ class Peripheral(BluepyHelper):
         if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
             raise ValueError("Expected address type public or random, got {}".format(addrType))
         self.deviceAddr = addr
+        self._startHelper()
         self._writeCmd("conn %s %s\n" % (addr, addrType))
         rsp = self._getResp('stat')
         while rsp['state'][0] == 'tryconn':
