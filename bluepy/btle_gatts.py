@@ -338,13 +338,35 @@ class Gatts:
 
 
     def att_op_prep_write_req(self,data):
-        btle.DBG("Req PREP WRITE not supported: " + binascii.b2a_hex(data))
-        raise AttError(ATT_ECODE_REQ_NOT_SUPP, 0)
+        op, h, off = struct.unpack("<BHH", data[:5])
+        try:
+            a = self.hcheck(h)
+        except AttError:
+            self.prepare_list = None
+            raise
+        d = {"off" : off, "data" : data[5:]}
+        try:
+            self.prepare_list[h].append(d)
+        except AttributeError:
+            self.prepare_list = {h:[d]}
+        except KeyError:
+            self.prepare_list[h] = [d]
+        return ATT_OP_PREP_WRITE_RESP + data[1:]
 
 
     def att_op_exec_write_req(self,data):
-        btle.DBG("Req EXEC WRITE not supported: " + binascii.b2a_hex(data))
-        raise AttError(ATT_ECODE_REQ_NOT_SUPP, 0)
+        op, flags = struct.unpack("<BB", data[:2])
+        for h in self.prepare_list.keys():
+            a = self.hcheck(h)
+            for d in self.prepare_list[h]:
+                try:
+                    if len(data) < d["off"]:
+                        data += "\0" * (d["off"] - len(data))
+                except NameError:
+                    data = "\0" * d["off"]
+                data = data[:d["off"]] + d["data"] + data[d["off"] + len(d["data"]):]
+            a.write(data)
+        return ATT_OP_EXEC_WRITE_RESP
 
 
     def att_op_signed_write_cmd(self,data):
