@@ -282,8 +282,10 @@ static void cmd_info(int argcp, char **argvp)
 
     resp_begin(rsp_MGMT);
     send_sym(tag_ERRCODE, err_SUCCESS);
+    /* Always returns the programmed public bdaddr of the device */
     send_str(tag_ADDR, s);
-    send_str(tag_TYPE, di.type == BDADDR_LE_PUBLIC?"public":"random");
+    send_str(tag_TYPE, "public");
+
     resp_end();
 }
 

@@ -247,8 +247,8 @@ class BluepyHelper:
             if rv == None or rv["code"][0] != "success":
                 raise BTLEException(BTLEException.INTERNAL_ERROR,
                                     "Helper not started (did you call connect()?)")
-            self.addr = rv["addr"][0]
-            self.addr_type = rv["type"][0]
+            # Not possible to retrieve current random address (Except via debugfs)
+            self.local_public = rv["addr"][0]
 
     def _stopHelper(self):
         if self._helper is not None:
@@ -316,6 +316,14 @@ class BluepyHelper:
         # make sure to launch 'le on' cmd
         if (settings & MGMT_SETTING_LE) == 0:
             self._mgmtCmd("le on")
+
+        # Only public address for local device is supported.
+        # Bluez/Linux 3.19 use random addresses in the following cases:
+        # - scan request (we do not care)
+        # - FORCE STATIC debug setting (only API is debugfs)
+        # - PRIVACY setting (not supported)
+        # - CONNECTABLE setting when peripheral (not supported)
+        assert (settings & MGMT_SETTING_PRIVACY) == 0
 
     @staticmethod
     def parseResp(line):
@@ -410,11 +418,11 @@ class Peripheral(BluepyHelper):
         self.gatts = None
         if isinstance(deviceAddr, ScanEntry):
             addr = deviceAddr.addr
-            self.addrType = deviceAddr.atype
+            addr_type = deviceAddr.atype
             self.iface = deviceAddr.iface
         else:
             addr = deviceAddr
-            self.addrType = addrType
+            addr_type = addrType
             self.iface = iface
 
         self._startHelper()
@@ -422,7 +430,7 @@ class Peripheral(BluepyHelper):
         self.reset_controller(False)
 
         if addr is not None:
-            self.connect(addr, self.addrType)
+            self.connect(addr, addr_type)
 
     def setDelegate(self, delegate_): # same as withDelegate(), deprecated
         return self.withDelegate(delegate_)
@@ -470,7 +478,11 @@ class Peripheral(BluepyHelper):
             raise ValueError("Expected MAC address, got %s" % repr(addr))
         if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
             raise ValueError("Expected address type public or random, got {}".format(addrType))
-        self.deviceAddr = addr
+        # Local random addr no supported (see PRIVACY comment)
+        self.local_addr = self.local_public
+        self.local_type = ADDR_TYPE_PUBLIC
+        self.remote_addr = addr
+        self.remote_type = addrType
         self._startHelper()
         self._writeCmd("conn %s %s\n" % (addr, addrType))
         rsp = self._getResp('stat')
@@ -760,6 +772,10 @@ class Central(BluepyHelper):
         self._stopHelper()
 
     def advertise(self):
+        # Local random addr no supported (see PRIVACY comment)
+        self.local_addr = self.local_public
+        self.local_type = ADDR_TYPE_PUBLIC
+
         self._mgmtCmd("advertising on")
         rsp = self._waitResp('stat', 1)
         if rsp['state'][0] != 'advertise':
