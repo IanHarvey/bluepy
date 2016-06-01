@@ -492,6 +492,8 @@ class Peripheral(BluepyHelper):
             self._stopHelper()
             raise BTLEException(BTLEException.DISCONNECTED,
                                 "Failed to connect to peripheral %s, addr type: %s" % (addr, addrType))
+        if self.gatts:
+            self.gatts.reconnect(addr, addrType)
 
     def disconnect(self):
         if self._helper is None:
@@ -798,6 +800,8 @@ class Central(BluepyHelper):
             self._stopHelper()
             raise BTLEException(BTLEException.DISCONNECTED,
                                 "Failed to connect to peripheral %s, addr type: %s" % (addr, addrType))
+        if self.gatts:
+            self.gatts.reconnect(addr, addrType)
         return (addr, addrType)
 
     def wait_conn(self, timeout = None):

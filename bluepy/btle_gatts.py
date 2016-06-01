@@ -138,7 +138,7 @@ class Gatts:
     def __init__(self, helper = None, mtu = 23):
         self.helper = helper
         self.mtu = mtu
-        
+
         # Except index 0, each element must be a valid Attribute (or derivated)
         self.att = [ None ]
         # We build a dict with constants above and functions below
@@ -147,6 +147,8 @@ class Gatts:
             if name[0:7] == 'ATT_OP_' and name[-4:] in ['_REQ', '_CMD']:
                 self.op_func[value] = getattr(self, name.lower())
 
+    def reconnect(self, addr, addr_type):
+        self.prepare_list = {}
 
     def hmax(self, h = 0xFFFF):
         return min(len(self.att) - 1, h)
@@ -339,18 +341,10 @@ class Gatts:
 
     def att_op_prep_write_req(self,data):
         op, h, off = struct.unpack("<BHH", data[:5])
-        try:
-            a = self.hcheck(h)
-        except AttError:
-            self.prepare_list = None
-            raise
+        a = self.hcheck(h)
         d = {"off" : off, "data" : data[5:]}
-        try:
-            self.prepare_list[h].append(d)
-        except AttributeError:
-            self.prepare_list = {h:[d]}
-        except KeyError:
-            self.prepare_list[h] = [d]
+        # Append d to key h, or create it if not existing
+        self.prepare_list.setdefault(h,[]).append(d)
         return ATT_OP_PREP_WRITE_RESP + data[1:]
 
 
