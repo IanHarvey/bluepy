@@ -1,4 +1,4 @@
-from .btle import UUID, Peripheral, DefaultDelegate
+from btle import UUID, Peripheral, DefaultDelegate
 import struct
 import math
 
@@ -326,6 +326,20 @@ class OpticalSensorOPT3001(SensorBase):
         e = (raw & 0xF000) >> 12;
         return 0.01 * (m << e)
 
+class BatterySensor(SensorBase):
+    svcUUID  = UUID("0000180f-0000-1000-8000-00805f9b34fb")
+    dataUUID = UUID("00002a19-0000-1000-8000-00805f9b34fb")
+    ctrlUUID = None
+    sensorOn = None
+
+    def __init__(self, periph):
+       SensorBase.__init__(self, periph)
+
+    def read(self):
+        '''Returns the battery level in percent'''
+        val = ord(self.data.read())
+        return val
+
 class SensorTag(Peripheral):
     def __init__(self,addr,version=AUTODETECT):
         Peripheral.__init__(self,addr)
@@ -355,6 +369,7 @@ class SensorTag(Peripheral):
             self.gyroscope = GyroscopeSensorMPU9250(self._mpu9250)
             self.keypress = KeypressSensor(self)
             self.lightmeter = OpticalSensorOPT3001(self)
+	     self.battery = BatterySensor(self)		
 
 class KeypressDelegate(DefaultDelegate):
     BUTTON_L = 0x02
@@ -409,6 +424,7 @@ def main():
     parser.add_argument('-G','--gyroscope', action='store_true', default=False)
     parser.add_argument('-K','--keypress', action='store_true', default=False)
     parser.add_argument('-L','--light', action='store_true', default=False)
+    parser.add_argument('-P','--battery', action='store_true', default=False)
     parser.add_argument('--all', action='store_true', default=False)
 
     arg = parser.parse_args(sys.argv[1:])
@@ -429,6 +445,8 @@ def main():
         tag.magnetometer.enable()
     if arg.gyroscope or arg.all:
         tag.gyroscope.enable()
+    if arg.battery or arg.all:
+        tag.battery.enable()
     if arg.keypress or arg.all:
         tag.keypress.enable()
         tag.setDelegate(KeypressDelegate())
@@ -457,6 +475,8 @@ def main():
            print("Gyroscope: ", tag.gyroscope.read())
        if (arg.light or arg.all) and tag.lightmeter is not None:
            print("Light: ", tag.lightmeter.read())
+       if arg.battery or arg.all:
+           print("Battery: ", tag.battery.read())
        if counter >= arg.count and arg.count != 0:
            break
        counter += 1
