@@ -94,4 +94,8 @@ The following are still missing from the current release:
 - Reading RSSI
 - Unit test 
 
-
+Examples
+--------
+usage: ```python BleHost.py <your sensor address> <random or public>```
+This program will continually trying to connect the ble sensor, and get the data.
+Remember to replace the uuid first.
