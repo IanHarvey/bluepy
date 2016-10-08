@@ -308,8 +308,8 @@ class BluepyHelper:
 class Peripheral(BluepyHelper):
     def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC, iface=None):
         BluepyHelper.__init__(self)
-        (self.addr, self.addrType, self.iface) = (None, None, None)
         self._serviceMap = None # Indexed by UUID
+        (self.deviceAddr, self.addrType, self.iface) = (None, None, None)
 
         if isinstance(deviceAddr, ScanEntry):
             self.connect(deviceAddr.addr, deviceAddr.addrType, deviceAddr.iface)
