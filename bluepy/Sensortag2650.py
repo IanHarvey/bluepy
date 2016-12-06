@@ -54,12 +54,6 @@ class IRTemperatureSensor(SensorBase):
     dataUUID = _TI_UUID(0xAA01)
     ctrlUUID = _TI_UUID(0xAA02)
 
-    zeroC = 273.15 # Kelvin
-    tRef  = 298.15
-    Apoly = [1.0,      1.75e-3, -1.678e-5]
-    Bpoly = [-2.94e-5, -5.7e-7,  4.63e-9]
-    Cpoly = [0.0,      1.0,      13.4]
-
     def __init__(self, periph):
         SensorBase.__init__(self, periph)
         self.S0 = 6.4e-14
@@ -72,23 +66,12 @@ class IRTemperatureSensor(SensorBase):
         tAmb = rawTamb / 128.0
         Vobj = rawVobj / 128.0
         return (tAmb, Vobj)
-          
-        # old sensor tag math for Obj temp
-        '''Vobj = 1.5625e-7 * rawVobj        
-        tDie = tAmb + self.zeroC
-        S   = self.S0 * calcPoly(self.Apoly, tDie-self.tRef)
-        Vos = calcPoly(self.Bpoly, tDie-self.tRef)
-        fObj = calcPoly(self.Cpoly, Vobj-Vos)
-        tObj = math.pow( math.pow(tDie,4.0) + (fObj/S), 0.25 )
-        return (tAmb, tObj - self.zeroC)'''
-
 
 
 class AccelerometerSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA80)
     dataUUID = _TI_UUID(0xAA81)
     ctrlUUID = _TI_UUID(0xAA82)
-    
 
     def __init__(self, periph):
         SensorBase.__init__(self, periph)
@@ -99,7 +82,6 @@ class AccelerometerSensor(SensorBase):
         #scale = float(4096)
         (x,y,z,a,b,c,d,e,f) = struct.unpack('<hhhhhhhhh', self.data.read())
         return (a/scale,b/scale,c/scale)
- 
 
 
 class HumiditySensor(SensorBase):
@@ -111,27 +93,30 @@ class HumiditySensor(SensorBase):
         SensorBase.__init__(self, periph)
 
     def read(self):
-        '''Returns (ambient_temp, rel_humidity)'''
+        '''Returns (ambient_temperature, rel_humidity)'''
         (rawT, rawH) = struct.unpack('<HH', self.data.read())
-        temp = -46.85 + 175.72 * (rawT / 65536.0)
-        RH = -6.0 + 125.0 * ((rawH & 0xFFFC)/65536.0)
-        return (temp, RH)
+        temperature = -40.00 + 165 * (rawT / 65536.0)
+        RH = 100.0 * (rawH / 65536.0)
+        return (temperature, RH)
 
 
 class LuxometerSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA70)
     dataUUID = _TI_UUID(0xAA71)
-    ctrlUUID = _TI_UUID(0xAA72)    
+    ctrlUUID = _TI_UUID(0xAA72)
 
     def __init__(self, periph):
         SensorBase.__init__(self, periph)
 
     def read(self):
         '''Returns (lux)'''
-        (rawL) = struct.unpack('<H', self.data.read())
-        RL = tup2float(rawL) / 100.0
+        (rawData) = struct.unpack('<H', self.data.read())
+        rawLux = int(rawData[0])
+        mantissa = rawLux & 0x0FFF
+        exponent = (rawLux & 0xF000) >> 12
+        RL = mantissa * (0.01 * pow(2.0, exponent))
         return (RL)
-        
+
 
 class MagnetometerSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA80)
@@ -195,10 +180,10 @@ class KeypressSensor(SensorBase):
         SensorBase.__init__(self, periph)
  
     def enable(self):
-        self.periph.writeCharacteristic(0x60, struct.pack('<bb', 0x01, 0x00))
+        self.periph.writeCharacteristic(0x4A, struct.pack('<bb', 0x01, 0x00))
 
     def disable(self):
-        self.periph.writeCharacteristic(0x60, struct.pack('<bb', 0x00, 0x00))
+        self.periph.writeCharacteristic(0x4A, struct.pack('<bb', 0x00, 0x00))
 
 
 class SensorTag(Peripheral):
