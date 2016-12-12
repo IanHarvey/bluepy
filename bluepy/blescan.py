@@ -5,7 +5,7 @@ import binascii
 import time
 import os
 import sys
-from . import btle
+from bluepy import btle
 
 if os.getenv('C','1') == '0':
     ANSI_RED = ''
