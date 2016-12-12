@@ -24,7 +24,7 @@ else:
     ANSI_OFF = ANSI_CSI + '0m'
 
 def dump_services(dev):
-    services = sorted(dev.getServices(), key=lambda s: s.hndStart)
+    services = sorted(dev.services, key=lambda s: s.hndStart)
     for s in services:
         print ("\t%04x: %s" % (s.hndStart, s))
         if s.hndStart == s.hndEnd:
