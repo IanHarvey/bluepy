@@ -352,6 +352,7 @@ class Peripheral(BluepyHelper):
             raise ValueError("Expected address type public or random, got {}".format(addrType))
         self._startHelper()
         self.deviceAddr = addr
+        self.addr = addr
         self.addrType = addrType
         self.iface = iface
         if iface is not None:
@@ -375,6 +376,8 @@ class Peripheral(BluepyHelper):
         self._writeCmd("disc\n")
         self._getResp('stat')
         self._stopHelper()
+    def get_addr(self):
+        return self.addr
 
     def discoverServices(self):
         self._writeCmd("svcs\n")
