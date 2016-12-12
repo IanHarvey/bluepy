@@ -369,7 +369,7 @@ class SensorTag(Peripheral):
             self.gyroscope = GyroscopeSensorMPU9250(self._mpu9250)
             self.keypress = KeypressSensor(self)
             self.lightmeter = OpticalSensorOPT3001(self)
-	     self.battery = BatterySensor(self)		
+            self.battery = BatterySensor(self)
 
 class KeypressDelegate(DefaultDelegate):
     BUTTON_L = 0x02
