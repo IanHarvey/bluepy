@@ -308,9 +308,8 @@ class BluepyHelper:
 class Peripheral(BluepyHelper):
     def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC, iface=None):
         BluepyHelper.__init__(self)
-        self.services = {} # Indexed by UUID
-        self.discoveredAllServices = False
-        (self.addr, self.addrType, self.iface) = (None, None, None)
+        self._serviceMap = None # Indexed by UUID
+        (self.deviceAddr, self.addrType, self.iface) = (None, None, None)
 
         if isinstance(deviceAddr, ScanEntry):
             self.connect(deviceAddr.addr, deviceAddr.addrType, deviceAddr.iface)
@@ -384,27 +383,30 @@ class Peripheral(BluepyHelper):
         uuids  = rsp['uuid']
         nSvcs = len(uuids)
         assert(len(starts)==nSvcs and len(ends)==nSvcs)
-        self.services = {}
+        self._serviceMap = {}
         for i in range(nSvcs):
-            self.services[UUID(uuids[i])] = Service(self, uuids[i], starts[i], ends[i])
-        self.discoveredAllServices = True
-        return self.services
+            self._serviceMap[UUID(uuids[i])] = Service(self, uuids[i], starts[i], ends[i])
+        return self._serviceMap
+
+    @property
+    def services(self):
+        if self._serviceMap is None:
+            self._serviceMap = self.discoverServices()
+        return self._serviceMap.values()
 
     def getServices(self):
-        if not self.discoveredAllServices:
-            self.discoverServices()
-        return self.services.values()
+        return self.services
 
     def getServiceByUUID(self, uuidVal):
         uuid = UUID(uuidVal)
-        if uuid in self.services:
-            return self.services[uuid]
+        if uuid in self._serviceMap:
+            return self._serviceMap[uuid]
         self._writeCmd("svcs %s\n" % uuid)
         rsp = self._getResp('find')
         if 'hstart' not in rsp:
             raise BTLEException(BTLEException.GATT_ERROR, "Service %s not found" % (uuid.getCommonName()))
         svc = Service(self, uuid, rsp['hstart'][0], rsp['hend'][0])
-        self.services[uuid] = svc
+        self._serviceMap[uuid] = svc
         return svc
 
     def _getIncludedServices(self, startHnd=1, endHnd=0xFFFF):
@@ -682,7 +684,7 @@ if __name__ == '__main__':
     print("Connecting to: {}, address type: {}".format(devAddr, addrType))
     conn = Peripheral(devAddr, addrType)
     try:
-        for svc in conn.getServices():
+        for svc in conn.services:
             print(str(svc), ":")
             for ch in svc.getCharacteristics():
                 print("    {}, hnd={}, supports {}".format(ch, hex(ch.handle), ch.propertiesToString()))
