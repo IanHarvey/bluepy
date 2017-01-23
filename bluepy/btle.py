@@ -442,9 +442,9 @@ class Peripheral(BluepyHelper):
         if 'hstart' not in rsp:
             raise BTLEException(BTLEException.GATT_ERROR, "Service %s not found" % (uuid.getCommonName()))
         svc = Service(self, uuid, rsp['hstart'][0], rsp['hend'][0])
+        
         if self._serviceMap is None:
             self._serviceMap = {}
-
         self._serviceMap[uuid] = svc
         return svc
 
