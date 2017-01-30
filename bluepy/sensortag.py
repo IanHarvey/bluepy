@@ -1,4 +1,4 @@
-from bluepy.btle import UUID, Peripheral, DefaultDelegate
+from bluepy.btle import UUID, Peripheral, DefaultDelegate, AssignedNumbers
 import struct
 import math
 
@@ -100,11 +100,15 @@ class AccelerometerSensor(SensorBase):
 
     def __init__(self, periph):
         SensorBase.__init__(self, periph)
+        if periph.firmwareVersion.startswith("1.4 "):
+            self.scale = 64.0
+        else:
+            self.scale = 16.0
 
     def read(self):
         '''Returns (x_accel, y_accel, z_accel) in units of g'''
         x_y_z = struct.unpack('bbb', self.data.read())
-        return tuple([ (val/64.0) for val in x_y_z ])
+        return tuple([ (val/self.scale) for val in x_y_z ])
 
 class MovementSensorMPU9250(SensorBase):
     svcUUID  = _TI_UUID(0xAA80)
@@ -349,6 +353,12 @@ class SensorTag(Peripheral):
                 version = SENSORTAG_2650
             else:
                 version = SENSORTAG_V1
+
+        fwVers = self.getCharacteristics(uuid=AssignedNumbers.firmwareRevisionString)
+        if len(fwVers) >= 1:
+            self.firmwareVersion = fwVers[0].read().decode("utf-8")
+        else:
+            self.firmwareVersion = u''
 
         if version==SENSORTAG_V1:
             self.IRtemperature = IRTemperatureSensor(self)
