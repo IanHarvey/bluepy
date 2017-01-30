@@ -669,7 +669,7 @@ class Scanner(BluepyHelper):
 
 
 def capitaliseName(descr):
-    words = descr.split(" ")
+    words = descr.replace("("," ").replace(")"," ").replace('-',' ').split(" ")
     capWords =  [ words[0].lower() ]
     capWords += [ w[0:1].upper() + w[1:].lower() for w in words[1:] ]
     return "".join(capWords)
@@ -694,12 +694,12 @@ def get_json_uuid():
     import json
     with open(os.path.join(script_path, 'uuids.json'),"rb") as fp:
         uuid_data = json.loads(fp.read().decode("utf-8"))
-    for k in ['service_UUIDs', 'characteristic_UUIDs', 'descriptor_UUIDs', 'declaration_UUIDs' ]:
+    for k in uuid_data.keys():
         for number,cname,name in uuid_data[k]:
             yield UUID(number, cname)
             yield UUID(number, name)
 
-AssignedNumbers = _UUIDNameMap( list(get_json_uuid() ))
+AssignedNumbers = _UUIDNameMap( get_json_uuid() )
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
