@@ -694,7 +694,7 @@ def get_json_uuid():
     import json
     with open(os.path.join(script_path, 'uuids.json'),"rb") as fp:
         uuid_data = json.loads(fp.read().decode("utf-8"))
-    for k in ['service_UUIDs', 'characteristic_UUIDs', 'descriptor_UUIDs' ]:
+    for k in ['service_UUIDs', 'characteristic_UUIDs', 'descriptor_UUIDs', 'declaration_UUIDs' ]:
         for number,cname,name in uuid_data[k]:
             yield UUID(number, cname)
             yield UUID(number, name)

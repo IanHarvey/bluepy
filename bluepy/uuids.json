@@ -1,4 +1,11 @@
 {
+    "declaration_UUIDs": [
+        [ 10240, "gatt_primary_service_declaration", "Primary Service Declaration" ],
+        [ 10241, "gatt_secondary_service_declaration", "Secondary Service Declaration" ],
+        [ 10242, "gatt_include_declaration", "Include Declaration" ],
+        [ 10243, "gatt_characteristic_declaration", "Characteristic Declaration" ]
+    ],
+
     "characteristic_UUIDs": [
         [
             10878, 
