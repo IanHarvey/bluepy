@@ -308,12 +308,11 @@ class KeypressSensor(SensorBase):
  
     def enable(self):
         SensorBase.enable(self)
-        # NB handle value changed between v1.4 and v1.5 firmware,
-        # but is not directly discoverable by UUID. This seems to work.
-        self.periph.writeCharacteristic(self.data.handle+2, struct.pack('<bb', 0x01, 0x00), True)
+        self.char_descr = self.service.getDescriptors(forUUID=0x2902)[0]
+        self.char_descr.write(struct.pack('<bb', 0x01, 0x00), True)
 
     def disable(self):
-        self.periph.writeCharacteristic(self.data.handle+2, struct.pack('<bb', 0x00, 0x00), True)
+        self.char_descr.write(struct.pack('<bb', 0x00, 0x00), True)
 
 class OpticalSensorOPT3001(SensorBase):
     svcUUID  = _TI_UUID(0xAA70)
