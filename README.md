@@ -29,7 +29,7 @@ To install the source and build locally:
     $ git clone https://github.com/IanHarvey/bluepy.git
     $ cd bluepy
     $ python setup.py build
-    $ python setup.py install
+    $ sudo python setup.py install
 
 I would recommend having command-line tools from BlueZ available for debugging. There
 are instructions for building BlueZ on the Raspberry Pi at http://www.elinux.org/RPi_Bluetooth_LE.
