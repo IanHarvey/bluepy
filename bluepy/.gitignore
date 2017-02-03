@@ -1,4 +1,5 @@
 bluepy-helper
 *.pyc
 *.o
+*.idea
 
