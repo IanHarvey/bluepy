@@ -1016,7 +1016,7 @@ static void cmd_char_write_common(int argcp, char **argvp, int with_response)
     }
 
     plen = gatt_attr_data_from_string(argvp[2], &value);
-    if (plen == 0) {
+    if (plen == (size_t)-1) {
         resp_error(err_BAD_PARAM);
         return;
     }

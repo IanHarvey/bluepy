@@ -110,7 +110,7 @@ size_t gatt_attr_data_from_string(const char *str, uint8_t **data)
 	size = strlen(str) / 2;
 	*data = g_try_malloc0(size);
 	if (*data == NULL)
-		return 0;
+		return (size_t)-1;
 
 	tmp[2] = '\0';
 	for (i = 0; i < size; i++) {
