@@ -105,10 +105,21 @@ GIOChannel *gatt_connect(const char *src, const char *dst,
 size_t gatt_attr_data_from_string(const char *str, uint8_t **data)
 {
 	char tmp[3];
-	size_t size, i;
+	size_t size, len, i;
 
-	size = strlen(str) / 2;
-	*data = g_try_malloc0(size);
+	if (str[0] != '\'')
+		return (size_t)-1;
+
+	len = strlen(str);
+
+	if (str[len - 1] != '\'')
+		return (size_t)-1;
+
+	str = str + 1;
+	len = len - 2;
+
+	size = len / 2;
+	*data = g_try_malloc0(len == 0 ? 1 : size);
 	if (*data == NULL)
 		return (size_t)-1;
 
