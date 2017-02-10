@@ -61,7 +61,8 @@ def get_table(url, local_filename, table_defs):
         for col, (name, func) in zip(row, table_defs):
             try:
                 if func is None:
-                    func = lambda x: x
+                    def func(x):
+                        return x
                 ret[name] = func(col)
             except:
                 print(name)
