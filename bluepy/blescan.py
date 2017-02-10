@@ -2,7 +2,6 @@
 from __future__ import print_function
 import argparse
 import binascii
-import time
 import os
 import sys
 from bluepy import btle
