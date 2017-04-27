@@ -2,12 +2,11 @@
 from __future__ import print_function
 import argparse
 import binascii
-import time
 import os
 import sys
 from bluepy import btle
 
-if os.getenv('C','1') == '0':
+if os.getenv('C', '1') == '0':
     ANSI_RED = ''
     ANSI_GREEN = ''
     ANSI_YELLOW = ''
@@ -23,6 +22,7 @@ else:
     ANSI_WHITE = ANSI_CSI + '37m'
     ANSI_OFF = ANSI_CSI + '0m'
 
+
 def dump_services(dev):
     services = sorted(dev.services, key=lambda s: s.hndStart)
     for s in services:
@@ -36,26 +36,30 @@ def dump_services(dev):
             if 'READ' in props:
                 val = c.read()
                 if c.uuid == btle.AssignedNumbers.device_name:
-                    string = ANSI_CYAN + '\'' + val.decode('utf-8') + '\'' + ANSI_OFF
+                    string = ANSI_CYAN + '\'' + \
+                        val.decode('utf-8') + '\'' + ANSI_OFF
                 elif c.uuid == btle.AssignedNumbers.device_information:
                     string = repr(val)
                 else:
                     string = '<s' + binascii.b2a_hex(val).decode('utf-8') + '>'
             else:
-                string=''
+                string = ''
             print ("\t%04x:    %-59s %-12s %s" % (h, c, props, string))
 
             while True:
                 h += 1
-                if h > s.hndEnd or (i < len(chars) -1 and h >= chars[i+1].getHandle() - 1):
+                if h > s.hndEnd or (i < len(chars) - 1 and h >= chars[i + 1].getHandle() - 1):
                     break
                 try:
                     val = dev.readCharacteristic(h)
-                    print ("\t%04x:     <%s>" % (h, binascii.b2a_hex(val).decode('utf-8')))
+                    print ("\t%04x:     <%s>" %
+                           (h, binascii.b2a_hex(val).decode('utf-8')))
                 except btle.BTLEException:
                     break
 
+
 class ScanPrint(btle.DefaultDelegate):
+
     def __init__(self, opts):
         btle.DefaultDelegate.__init__(self)
         self.opts = opts
@@ -64,30 +68,33 @@ class ScanPrint(btle.DefaultDelegate):
         if isNewDev:
             status = "new"
         elif isNewData:
-            if self.opts.new: return
+            if self.opts.new:
+                return
             status = "update"
         else:
-            if not self.opts.all: return
+            if not self.opts.all:
+                return
             status = "old"
 
         if dev.rssi < self.opts.sensitivity:
             return
-          
-        print ('    Device (%s): %s (%s), %d dBm %s' % 
-                  (status,
+
+        print ('    Device (%s): %s (%s), %d dBm %s' %
+               (status,
                    ANSI_WHITE + dev.addr + ANSI_OFF,
                    dev.addrType,
                    dev.rssi,
-                   ('' if dev.connectable else '(not connectable)') )
-              )
+                   ('' if dev.connectable else '(not connectable)'))
+               )
         for (sdid, desc, val) in dev.getScanData():
-            if sdid in [8,9]:
+            if sdid in [8, 9]:
                 print ('\t' + desc + ': \'' + ANSI_CYAN + val + ANSI_OFF + '\'')
             else:
                 print ('\t' + desc + ': <' + val + '>')
         if not dev.scanData:
             print ('\t(no data)')
         print
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -99,11 +106,11 @@ def main():
                         help='dBm value for filtering far devices')
     parser.add_argument('-d', '--discover', action='store_true',
                         help='Connect and discover service to scanned devices')
-    parser.add_argument('-a','--all', action='store_true',
+    parser.add_argument('-a', '--all', action='store_true',
                         help='Display duplicate adv responses, by default show new + updated')
-    parser.add_argument('-n','--new', action='store_true',
+    parser.add_argument('-n', '--new', action='store_true',
                         help='Display only new adv responses, by default show new + updated')
-    parser.add_argument('-v','--verbose', action='store_true',
+    parser.add_argument('-v', '--verbose', action='store_true',
                         help='Increase output verbosity')
     arg = parser.parse_args(sys.argv[1:])
 
@@ -131,9 +138,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
