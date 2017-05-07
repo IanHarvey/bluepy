@@ -2,6 +2,7 @@
 
 from setuptools.command.install import install
 from setuptools.command.develop import develop
+from setuptools.command.build_ext import build_ext
 from setuptools import setup
 import subprocess
 import shlex
@@ -47,6 +48,10 @@ class BluepyInstall(install):
 class BluepyDevelop(develop):
     pass
 
+@setup_command
+class BluepyBuildExt(build_ext):
+    pass
+
 setup (
     name='bluepy',
     version='1.0.5',
@@ -65,7 +70,11 @@ setup (
     package_data={
         'bluepy': ['bluepy-helper', '*.json', 'bluez-src.tgz', 'bluepy-helper.c', 'Makefile']
     },
-    cmdclass={'install': BluepyInstall, 'develop': BluepyDevelop},
+    cmdclass={
+        'install': BluepyInstall,
+        'develop': BluepyDevelop,
+        'build_ext': BluepyBuildExt,
+    },
     entry_points={
         'console_scripts': [
             'sensortag=bluepy.sensortag:main',
