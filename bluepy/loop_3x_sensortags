@@ -1,0 +1,8 @@
+#!/bin/bash
+
+while :
+	do
+		timeout 10 python sensortag_xively.py -n 1 -H -f 175453399 -a YOURAPIID BC:6A:29:C3:4C:16 #place your own feed number and api id
+		timeout 10 python sensortag_xively.py -n 1 -H -f 199299397 -a YOURAPIID 34:B1:F7:D1:45:77 #from your  
+		timeout 10 python sensortag_xively.py -n 1 -H -f 211211846 -a YOURAPIID 34:B1:F7:D5:0C:14 #xively devices 
+done
