@@ -52,6 +52,19 @@ The Python files are released into the public domain by their author, Ian Harvey
 Release Notes
 -------------
 
+Release 1.1.0
+- Merge #180: Peripheral.connect() can now take ScanEntry object (like constructor)
+- Merge #162: Add build_ext builder to setup.py
+- Merge #166: Fix crash in getServiceByUUID()
+- Fix #148: Add UUIDs for declarations (e.g. 0x2800 = Primary Service Declaration)
+- Fix #28: Sensortag accelerometer values now scaled properly
+- Merge #89: Add support for descriptors
+- Fix #157: make 'services' a property
+- Fix #111: make parameter names match documentation
+- Fix #128: Characteristic.write() was missing a return value
+- Read battery level on Sensortag
+- Formatting/style fixes (#170 and others)
+
 Release 1.0.5
 - Fix issue #123: Scanner documentation updated
 - Fix #125: setup.py error reporting on Python 3 if compilation fails
