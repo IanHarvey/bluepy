@@ -13,3 +13,4 @@ bluez-5.4/attrib/gatttool
 *.swp
 /build
 /bluepy.egg-info
+/dist
