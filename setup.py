@@ -14,7 +14,7 @@ def pre_install():
     """Do the custom compiling of the bluepy-helper executable from the makefile"""
     try:
         print("Working dir is " + os.getcwd())
-        for cmd in [ "make -C ./bluepy clean", "make -C bluepy" ]:
+        for cmd in [ "make -C ./bluepy clean", "make -C bluepy -j1" ]:
             print("execute " + cmd)
             msgs = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
