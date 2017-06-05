@@ -104,7 +104,7 @@ class Service:
 
     def getCharacteristics(self, forUUID=None):
         if not self.chars: # Unset, or empty
-            self.chars = self.peripheral.getCharacteristics(self.hndStart, self.hndEnd)
+            self.chars = [] if self.hndEnd <= self.hndStart else self.peripheral.getCharacteristics(self.hndStart, self.hndEnd)
         if forUUID is not None:
             u = UUID(forUUID)
             return [ch for ch in self.chars if ch.uuid==u]
