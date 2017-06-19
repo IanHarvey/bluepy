@@ -311,7 +311,7 @@ class BluepyHelper:
 
             rv = self._helper.stdout.readline()
             DBG("Got:", repr(rv))
-            if rv.startswith('#') or rv == '\n':
+            if rv.startswith('#') or rv == '\n' or len(rv)==0:
                 continue
 
             resp = BluepyHelper.parseResp(rv)
