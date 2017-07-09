@@ -52,6 +52,12 @@ The Python files are released into the public domain by their author, Ian Harvey
 Release Notes
 -------------
 
+Release 1.1.1
+- Workaround #200: remove -Werror from Makefile
+- Fix #191: generate BTLEException not ValueError, if helper is killed
+- Fix #189: error calling getCharacteristics() when Service has no characteristics
+- Workaround #192: Use make -j1 explicitly
+
 Release 1.1.0
 - Merge #180: Peripheral.connect() can now take ScanEntry object (like constructor)
 - Merge #162: Add build_ext builder to setup.py
