@@ -10,7 +10,7 @@ IMPORT_SRCS = $(addprefix $(BLUEZ_PATH)/, $(BLUEZ_SRCS))
 LOCAL_SRCS  = bluepy-helper.c
 
 CC = gcc
-CFLAGS = -Os -g -Wall -Werror
+CFLAGS = -Os -g -Wall # -Werror
 
 CPPFLAGS = -DHAVE_CONFIG_H
 ifneq ($(DEBUGGING),)
