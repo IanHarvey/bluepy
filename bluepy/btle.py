@@ -606,23 +606,28 @@ class Scanner(BluepyHelper):
         BluepyHelper.__init__(self)
         self.scanned = {}
         self.iface=iface
+        self.passive=False
     
-    def start(self):
+    def _cmd(self):
+        return "pasv" if self.passive else "scan"
+
+    def start(self, passive=False):
+        self.passive = passive
         self._startHelper(iface=self.iface)
         self._mgmtCmd("le on")
-        self._writeCmd("scan\n")
+        self._writeCmd(self._cmd()+"\n")
         rsp = self._waitResp("mgmt")
         if rsp["code"][0] == "success":
             return
         # Sometimes previous scan still ongoing
         if rsp["code"][0] == "busy":
-            self._mgmtCmd("scanend")
+            self._mgmtCmd(self._cmd()+"end")
             rsp = self._waitResp("stat")
             assert rsp["state"][0] == "disc"
-            self._mgmtCmd("scan")
+            self._mgmtCmd(self._cmd())
 
     def stop(self):
-        self._mgmtCmd("scanend")
+        self._mgmtCmd(self._cmd()+"end")
         self._stopHelper()
 
     def clear(self):
@@ -669,9 +674,9 @@ class Scanner(BluepyHelper):
     def getDevices(self):
         return self.scanned.values()
 
-    def scan(self, timeout=10):
+    def scan(self, timeout=10, passive=False):
         self.clear()
-        self.start()
+        self.start(passive=passive)
         self.process(timeout)
         self.stop()
         return self.getDevices()
