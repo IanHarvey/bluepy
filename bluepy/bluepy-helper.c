@@ -83,6 +83,9 @@ static int end;
 static uint16_t mgmt_ind = MGMT_INDEX_NONE;
 static struct mgmt *mgmt_master = NULL;
 
+static int hci_dd = -1;
+static GIOChannel *hci_io = NULL;
+
 struct characteristic_data {
     uint16_t orig_start;
     uint16_t start;
@@ -771,6 +774,7 @@ static void cmd_connect(int argcp, char **argvp)
 
 static void cmd_disconnect(int argcp, char **argvp)
 {
+    DBG("");
     disconnect_io();
 }
 
@@ -1369,6 +1373,226 @@ static void cmd_scan(int argcp, char **argvp)
     }
 }
 
+#include "hci.h"
+#include "hci_lib.h"
+
+static gboolean hci_monitor_cb(GIOChannel *chan, GIOCondition cond, gpointer user_data)
+{
+    unsigned char buf[HCI_MAX_FRAME_SIZE], *ptr;
+    int type;
+    gsize len;
+    GError *err= NULL;
+    int r;
+
+    if ((r= g_io_channel_read_chars(chan, (gchar *) buf, 1, &len, &err)) != G_IO_STATUS_NORMAL) {
+        if (err) DBG("reading pkt type reports state %d: %s", r, err->message);
+        //andy: stop passive scan
+        return TRUE;
+    }
+    type= *buf;
+    switch (type) {
+        case HCI_COMMAND_PKT: {
+            hci_command_hdr *ch;
+            if ((r= g_io_channel_read_chars(chan, (gchar *) buf, HCI_COMMAND_HDR_SIZE, &len, &err)) != G_IO_STATUS_NORMAL) {
+                if (err) DBG("g_io_channel_read_chars() reports state %d: %s", r, err->message);
+                return TRUE;
+            }
+            ch = (hci_command_hdr *) buf;
+            ptr = buf + HCI_COMMAND_HDR_SIZE;
+            if ((r= g_io_channel_read_chars(chan, (gchar *) ptr, ch->plen, &len, &err)) != G_IO_STATUS_NORMAL) {
+                if (err) DBG("g_io_channel_read_chars() reports state %d: %s", r, err->message);
+                return TRUE;
+            }
+            switch(ch->opcode) {
+                case 0x2000|OCF_LE_SET_SCAN_ENABLE: {
+                    le_set_scan_enable_cp *lescan = (le_set_scan_enable_cp *) ptr;
+                    if (lescan->enable) {
+                        DBG("Start of passive scan.");
+                    } else {
+                        if (conn_state == STATE_SCANNING) {
+                            resp_mgmt(err_SUCCESS);
+                            set_state(STATE_DISCONNECTED);
+                        }
+                        DBG("End of passive scan - removing watch.");
+                        return FALSE; // remove watch
+                    }
+                }
+                break;
+
+                default:
+                    DBG("Ignoring HCI COMMAND 0x%04x", ch->opcode);
+            } // switch(ch->opcode)
+        } break;
+
+        case HCI_EVENT_PKT: {
+            hci_event_hdr *eh;
+            if ((r= g_io_channel_read_chars(chan, (gchar *) buf, HCI_EVENT_HDR_SIZE, &len, &err)) != G_IO_STATUS_NORMAL) {
+                if (err) DBG("g_io_channel_read_chars() reports state %d: %s", r, err->message);
+                return TRUE;
+            }
+            eh = (hci_event_hdr *) buf;
+            ptr = buf + HCI_EVENT_HDR_SIZE;
+            if ((r= g_io_channel_read_chars(chan, (gchar *) ptr, eh->plen, &len, &err)) != G_IO_STATUS_NORMAL) {
+                if (err) DBG("g_io_channel_read_chars() reports state %d: %s", r, err->message);
+                return TRUE;
+            }
+            switch(eh->evt) {
+                case EVT_CMD_COMPLETE: {
+                    // evt_cmd_complete *cmpl = (void *) ptr;
+                    // DBG("command complete (0x%02x|0x%04x) 0x%02x 0x%02x", cmpl->ncmd, cmpl->opcode, *(uint8_t *)(ptr+3), *(uint8_t *)(ptr+4));
+                }
+                break;
+
+                case EVT_LE_META_EVENT: {
+                    evt_le_meta_event *meta = (void *) ptr;
+
+                    switch(meta->subevent) {
+                        case EVT_LE_ADVERTISING_REPORT: {
+                            le_advertising_info *ev = (le_advertising_info *) (meta->data + 1);
+                            // const uint8_t *val= ev->bdaddr.b;
+                            const uint8_t rssi= ev->data[ev->length];
+                            struct mgmt_addr_info addr;
+                            addr.type= ev->bdaddr_type;
+                            addr.bdaddr= ev->bdaddr;
+                            // DBG("Device found: %02X:%02X:%02X:%02X:%02X:%02X type=%X length=%d data[0]=0x%02x rssi=0x%02x", 
+                            //     val[5], val[4], val[3], val[2], val[1], val[0], 
+                            //     ev->bdaddr_type, ev->length, ev->data[0], ev->data[ev->length]);
+                            if (0) {
+                                int i=0;
+                                for (i=0; i<ev->length; i++)
+                                    DBG("buf: %02x", ev->data[i]);
+                            }
+
+                            if (conn_state == STATE_SCANNING) {
+                                resp_begin(rsp_SCAN);
+                                send_addr(&addr);
+                                send_uint(tag_RSSI, 256-rssi);
+                                send_uint(tag_FLAG, 0);   //andy: where do we get these from?
+                                if (ev->length)
+                                    send_data(ev->data, ev->length);
+                                resp_end();
+                            }
+                        }
+                        break;
+
+                        default:
+                            DBG("Ignoring EVT_LE_ADVERTISING_REPORT subevent %02x", meta->subevent);
+                            return TRUE;
+                    } // switch (meta->subevent)
+
+                } // case EVT_LE_META_EVENT
+                break;
+                default:
+                    DBG("Ignoring event %02x", eh->evt);
+                    return TRUE;
+            } // switch(eh->evt)
+
+        } // case HCI_EVENT_PKT
+        break;
+
+        default:
+            DBG("Ignoring packet type %02x", type);
+            return TRUE;
+    }// switch (type)
+    return TRUE;
+}
+
+
+// perform a passive scan, i.e. report ADV_IND packets but do not request SCN_RSP packets
+static void discover(bool start)
+{
+    int err;
+    uint8_t own_type = LE_PUBLIC_ADDRESS;
+    uint8_t scan_type = 0x00;  // passive
+    uint8_t filter_policy = 0x00;
+    uint16_t interval = htobs(0x0010);
+    uint16_t window = htobs(0x0010);
+    uint8_t filter_dup = 0x00;  // do not filter duplicates
+
+    struct hci_filter nf, of;
+    //struct sigaction sa;
+    socklen_t olen;
+
+    hci_dd = hci_open_dev(mgmt_ind);
+    DBG("hcidev handle is 0x%x, mgmt_ind is %d", hci_dd, mgmt_ind);
+    if (start) {
+        err = hci_le_set_scan_enable(hci_dd, 0x00, filter_dup, 10000);
+        err = hci_le_set_scan_parameters(hci_dd, scan_type, interval, window,
+                                             own_type, filter_policy, 10000);
+        if (err < 0) {
+            DBG("Set scan parameters failed");
+            return;
+        }
+        hci_io = g_io_channel_unix_new(hci_dd);
+        g_io_channel_set_encoding(hci_io, NULL, NULL);
+        g_io_channel_set_close_on_unref(hci_io, TRUE);
+        g_io_add_watch(hci_io, G_IO_IN | G_IO_ERR | G_IO_HUP | G_IO_NVAL, hci_monitor_cb, NULL);
+        g_io_channel_unref(hci_io);
+
+        // setup filter
+        olen = sizeof(of);
+        if (getsockopt(hci_dd, SOL_HCI, HCI_FILTER, &of, &olen) < 0) {
+            printf("Could not get socket options\n");
+            return;
+        }
+        hci_filter_clear(&nf);
+        hci_filter_set_ptype(HCI_EVENT_PKT, &nf);
+        hci_filter_set_event(EVT_LE_META_EVENT, &nf);
+        hci_filter_set_event(EVT_CMD_COMPLETE, &nf);
+        hci_filter_set_ptype(HCI_COMMAND_PKT, &nf);
+        hci_filter_set_event(OCF_LE_SET_SCAN_ENABLE, &nf);
+
+        if (setsockopt(hci_dd, SOL_HCI, HCI_FILTER, &nf, sizeof(nf)) < 0) {
+            printf("Could not set socket options\n");
+            return;
+        }
+
+        DBG("LE Scan ...");
+        err = hci_le_set_scan_enable(hci_dd, 0x01, filter_dup, 10000);
+        if (err < 0) {
+            //andy: signal error
+            DBG("Enable scan failed");
+            return;
+        }
+
+        resp_mgmt(err_SUCCESS);
+        set_state(STATE_SCANNING);
+    } else {
+        // set filter to receive no events
+        DBG(" stop pasv scan -----------------------------------");
+        setsockopt(hci_dd, SOL_HCI, HCI_FILTER, &of, sizeof(of));
+
+        err = hci_le_set_scan_enable(hci_dd, 0x00, filter_dup, 10000);
+        if (err < 0) {
+            DBG("Disable scan failed");
+            exit(1);
+        }
+        hci_close_dev(hci_dd);
+        hci_dd= -1;
+        hci_io= NULL;
+        resp_mgmt(err_SUCCESS);
+        set_state(STATE_DISCONNECTED);
+    }
+}
+
+static void cmd_pasvend(int argcp, char **argvp)
+{
+    if (1 < argcp) {
+        resp_mgmt(err_BAD_PARAM);
+    } else {
+        discover(FALSE);
+    }
+}
+
+static void cmd_pasv(int argcp, char **argvp)
+{
+    if (1 < argcp) {
+        resp_mgmt(err_BAD_PARAM);
+    } else {
+        discover(TRUE);
+    }
+}
+
 static struct {
     const char *cmd;
     void (*func)(int argcp, char **argvp);
@@ -1417,6 +1641,10 @@ static struct {
         "Start scan" },
     { "scanend",    cmd_scanend,    "",
         "Force scan end" },
+    { "pasv",       cmd_pasv,  "",
+        "Start passive scan" },
+    { "pasvend",    cmd_pasvend,  "",
+        "Force passive scan end" },
     { NULL, NULL, NULL}
 };
 
@@ -1524,11 +1752,14 @@ static void mgmt_device_found(uint16_t index, uint16_t length,
                             const void *param, void *user_data)
 {
     const struct mgmt_ev_device_found *ev = param;
+    // const uint8_t *val = ev->addr.bdaddr.b;
     assert(length == sizeof(*ev) + ev->eir_len);
+    // DBG("Device found: %02X:%02X:%02X:%02X:%02X:%02X type=%X flags=%X", val[5], val[4], val[3], val[2], val[1], val[0], ev->addr.type, ev->flags);
 
     // Result sometimes sent too early
     if (conn_state != STATE_SCANNING)
         return;
+    //confirm_name(&ev->addr, 1);
 
     resp_begin(rsp_SCAN);
     send_addr(&ev->addr);
@@ -1626,4 +1857,5 @@ int main(int argc, char *argv[])
 
     return EXIT_SUCCESS;
 }
+
 
