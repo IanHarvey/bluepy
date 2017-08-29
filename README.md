@@ -11,6 +11,9 @@ The code is tested on Python 2.7 and 3.4; it should also work on 3.3.
 
 There is also code which uses this to talk to a TI SensorTag (www.ti.com/sensortag).
 
+An example to interface the Nordic Semiconductor ASA IoT Sensor Kit, Thingy:52 is available 
+in thingy52.py (https://www.nordicsemi.com/eng/Products/Nordic-Thingy-52).
+
 Installation
 ------------
 
