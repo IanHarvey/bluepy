@@ -24,8 +24,19 @@ you can rebuild it using the Makefile in the `bluepy` directory.
 To install the current released version, on most Debian-based systems:
 
     $ sudo apt-get install python-pip libglib2.0-dev
-    $ sudo pip install --no-binary :all: bluepy
+    $ sudo pip install bluepy
     
+If you find `bluepy-helper` isn't being built, please try:
+
+    $ sudo pip install --no-binary :all: bluepy
+
+before reporting any issues.
+
+For Python 3, you may need to use `pip3`:
+
+    $ sudo apt-get install python-pip3 libglib2.0-dev
+    $ sudo pip3 install bluepy
+
 To install the source and build locally:
 
     $ sudo apt-get install git build-essential libglib2.0-dev
