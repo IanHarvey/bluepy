@@ -66,6 +66,11 @@ The Python files are released into the public domain by their author, Ian Harvey
 Release Notes
 -------------
 
+Release 1.1.2:
+- Re #158: Try to make PyPI installation more robust
+- Merge #214: add passive scan support
+- Merge #213: Add Thingy:52 support
+
 Release 1.1.1
 - Workaround #200: remove -Werror from Makefile
 - Fix #191: generate BTLEException not ValueError, if helper is killed
