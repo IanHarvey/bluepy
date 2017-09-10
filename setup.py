@@ -52,14 +52,36 @@ class BluepyDevelop(develop):
 class BluepyBuildExt(build_ext):
     pass
 
+setup_cmdclass = {
+    'install': BluepyInstall,
+    'develop': BluepyDevelop,
+    'build_ext': BluepyBuildExt,
+}
+
+# Force package to be *not* pure Python
+# Discusssed at issue #158
+
+try:
+    from wheel.bdist_wheel import bdist_wheel
+
+    class BluepyBdistWheel(bdist_wheel):
+        def finalize_options(self):
+            bdist_wheel.finalize_options(self)
+            self.root_is_pure = False
+
+    setup_cmdclass['bdist_wheel'] = BluepyBdistWheel
+except ImportError:
+    pass
+
+
 setup (
     name='bluepy',
-    version='1.1.1',
+    version='1.1.2',
     description='Python module for interfacing with BLE devices through Bluez',
     author='Ian Harvey',
     author_email='website-contact@fenditton.org',
     url='https://github.com/IanHarvey/bluepy',
-    download_url='https://github.com/IanHarvey/bluepy/tarball/v/1.1.1',
+    download_url='https://github.com/IanHarvey/bluepy/tarball/v/1.1.2',
     keywords=[ 'Bluetooth', 'Bluetooth Smart', 'BLE', 'Bluetooth Low Energy' ],
     classifiers=[
         'Programming Language :: Python :: 2.7',
@@ -70,11 +92,7 @@ setup (
     package_data={
         'bluepy': ['bluepy-helper', '*.json', 'bluez-src.tgz', 'bluepy-helper.c', 'Makefile']
     },
-    cmdclass={
-        'install': BluepyInstall,
-        'develop': BluepyDevelop,
-        'build_ext': BluepyBuildExt,
-    },
+    cmdclass=setup_cmdclass,
     entry_points={
         'console_scripts': [
             'thingy52=bluepy.thingy52:main',
