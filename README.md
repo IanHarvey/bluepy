@@ -34,7 +34,7 @@ before reporting any issues.
 
 For Python 3, you may need to use `pip3`:
 
-    $ sudo apt-get install python-pip3 libglib2.0-dev
+    $ sudo apt-get install python3-pip libglib2.0-dev
     $ sudo pip3 install bluepy
 
 To install the source and build locally:
