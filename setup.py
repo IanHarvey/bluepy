@@ -1,8 +1,6 @@
 """Python setup script for bluepy"""
 
-from setuptools.command.install import install
-from setuptools.command.develop import develop
-from setuptools.command.build_ext import build_ext
+from setuptools.command.build_py import build_py
 from setuptools import setup
 import subprocess
 import shlex
@@ -24,38 +22,13 @@ def pre_install():
         print("Output was:\n%s" % e.output)
         sys.exit(1)
 
-def post_install():
-    """Post installation tasks"""
-    pass
-
-def setup_command(command_subclass):
-    """Decorator for customizing setuptools.command subclasses"""
-    orig_run = command_subclass.run
-    def custom_run(self):
-
-        pre_install()        
-        orig_run(self)
-        post_install()
-
-    command_subclass.run = custom_run
-    return command_subclass
-
-@setup_command
-class BluepyInstall(install):
-    pass
-
-@setup_command
-class BluepyDevelop(develop):
-    pass
-
-@setup_command
-class BluepyBuildExt(build_ext):
-    pass
+class my_build_py(build_py):
+    def run(self):
+        pre_install()
+        build_py.run(self)
 
 setup_cmdclass = {
-    'install': BluepyInstall,
-    'develop': BluepyDevelop,
-    'build_ext': BluepyBuildExt,
+    'build_py' : my_build_py,
 }
 
 # Force package to be *not* pure Python
@@ -76,12 +49,12 @@ except ImportError:
 
 setup (
     name='bluepy',
-    version='1.1.3',
+    version='1.1.4',
     description='Python module for interfacing with BLE devices through Bluez',
     author='Ian Harvey',
     author_email='website-contact@fenditton.org',
     url='https://github.com/IanHarvey/bluepy',
-    download_url='https://github.com/IanHarvey/bluepy/tarball/v/1.1.3',
+    download_url='https://github.com/IanHarvey/bluepy/tarball/v/1.1.4',
     keywords=[ 'Bluetooth', 'Bluetooth Smart', 'BLE', 'Bluetooth Low Energy' ],
     classifiers=[
         'Programming Language :: Python :: 2.7',
@@ -89,6 +62,7 @@ setup (
         'Programming Language :: Python :: 3.4',
     ],
     packages=['bluepy'],
+    
     package_data={
         'bluepy': ['bluepy-helper', '*.json', 'bluez-src.tgz', 'bluepy-helper.c', 'Makefile']
     },
@@ -101,6 +75,4 @@ setup (
         ]
     }
 )
-
-
 
