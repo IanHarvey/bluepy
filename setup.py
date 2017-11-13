@@ -76,12 +76,12 @@ except ImportError:
 
 setup (
     name='bluepy',
-    version='1.1.2',
+    version='1.1.3',
     description='Python module for interfacing with BLE devices through Bluez',
     author='Ian Harvey',
     author_email='website-contact@fenditton.org',
     url='https://github.com/IanHarvey/bluepy',
-    download_url='https://github.com/IanHarvey/bluepy/tarball/v/1.1.2',
+    download_url='https://github.com/IanHarvey/bluepy/tarball/v/1.1.3',
     keywords=[ 'Bluetooth', 'Bluetooth Smart', 'BLE', 'Bluetooth Low Energy' ],
     classifiers=[
         'Programming Language :: Python :: 2.7',
