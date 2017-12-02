@@ -103,7 +103,7 @@ static enum state {
 } conn_state;
 
 
-static const char 
+static const char
   *tag_RESPONSE  = "rsp",
   *tag_ERRCODE   = "code",
   *tag_HANDLE    = "hnd",
@@ -146,7 +146,7 @@ static const char
   *err_NO_MGMT   = "nomgmt",
   *err_SUCCESS   = "success";
 
-static const char 
+static const char
   *st_DISCONNECTED = "disc",
   *st_CONNECTING   = "tryconn",
   *st_CONNECTED    = "conn",
@@ -1086,7 +1086,7 @@ static void cmd_sec_level(int argcp, char **argvp)
         g_error_free(gerr);
     }
     else {
-        /* Tell bluepy the security level 
+        /* Tell bluepy the security level
          * has been changed successfuly */
         cmd_status(0, NULL);
     }
@@ -1454,8 +1454,8 @@ static gboolean hci_monitor_cb(GIOChannel *chan, GIOCondition cond, gpointer use
                             struct mgmt_addr_info addr;
                             addr.type= ev->bdaddr_type;
                             addr.bdaddr= ev->bdaddr;
-                            // DBG("Device found: %02X:%02X:%02X:%02X:%02X:%02X type=%X length=%d data[0]=0x%02x rssi=0x%02x", 
-                            //     val[5], val[4], val[3], val[2], val[1], val[0], 
+                            // DBG("Device found: %02X:%02X:%02X:%02X:%02X:%02X type=%X length=%d data[0]=0x%02x rssi=0x%02x",
+                            //     val[5], val[4], val[3], val[2], val[1], val[0],
                             //     ev->bdaddr_type, ev->length, ev->data[0], ev->data[ev->length]);
                             if (0) {
                                 int i=0;
@@ -1823,7 +1823,7 @@ int main(int argc, char *argv[])
     if (argc > 1) {
         int index;
 
-        if (sscanf (argv[1], "%i", &index)!=1) { 
+        if (sscanf (argv[1], "%i", &index)!=1) {
             DBG("error converting argument: %s  to device index integer",argv[1]);
         } else {
             mgmt_setup(index);
