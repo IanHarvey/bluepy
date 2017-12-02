@@ -37,6 +37,22 @@
 
 #include "src/shared/util.h"
 
+void *btd_malloc(size_t size)
+{
+	if (__builtin_expect(!!size, 1)) {
+		void *ptr;
+
+		ptr = malloc(size);
+		if (ptr)
+			return ptr;
+
+		fprintf(stderr, "failed to allocate %zu bytes\n", size);
+		abort();
+	}
+
+	return NULL;
+}
+
 void util_debug(util_debug_func_t function, void *user_data,
 						const char *format, ...)
 {
@@ -101,7 +117,7 @@ unsigned char util_get_dt(const char *parent, const char *name)
 	char filename[PATH_MAX];
 	struct stat st;
 
-	snprintf(filename, sizeof(filename), "%s/%s", parent, name);
+	snprintf(filename, PATH_MAX, "%s/%s", parent, name);
 	if (lstat(filename, &st) == 0 && S_ISDIR(st.st_mode))
 		return DT_DIR;
 

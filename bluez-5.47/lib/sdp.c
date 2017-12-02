@@ -932,8 +932,12 @@ int sdp_gen_record_pdu(const sdp_record_t *rec, sdp_buf_t *buf)
 
 void sdp_attr_replace(sdp_record_t *rec, uint16_t attr, sdp_data_t *d)
 {
-	sdp_data_t *p = sdp_data_get(rec, attr);
+	sdp_data_t *p;
 
+	if (!rec)
+		return;
+
+	p = sdp_data_get(rec, attr);
 	if (p) {
 		rec->attrlist = sdp_list_remove(rec->attrlist, p);
 		sdp_data_free(p);
@@ -1667,7 +1671,7 @@ void sdp_data_print(sdp_data_t *d)
 
 sdp_data_t *sdp_data_get(const sdp_record_t *rec, uint16_t attrId)
 {
-	if (rec->attrlist) {
+	if (rec && rec->attrlist) {
 		sdp_data_t sdpTemplate;
 		sdp_list_t *p;
 
@@ -4906,6 +4910,7 @@ int sdp_get_supp_feat(const sdp_record_t *rec, sdp_list_t **seqp)
 				length = 0;
 				break;
 			default:
+				sdp_list_free(subseq, free);
 				goto fail;
 			}
 

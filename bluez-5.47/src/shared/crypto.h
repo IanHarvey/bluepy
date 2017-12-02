@@ -32,7 +32,7 @@ struct bt_crypto *bt_crypto_ref(struct bt_crypto *crypto);
 void bt_crypto_unref(struct bt_crypto *crypto);
 
 bool bt_crypto_random_bytes(struct bt_crypto *crypto,
-					uint8_t *buf, uint8_t num_bytes);
+					void *buf, uint8_t num_bytes);
 
 bool bt_crypto_e(struct bt_crypto *crypto, const uint8_t key[16],
 			const uint8_t plaintext[16], uint8_t encrypted[16]);
@@ -56,6 +56,8 @@ bool bt_crypto_f6(struct bt_crypto *crypto, uint8_t w[16], uint8_t n1[16],
 			uint8_t a1[7], uint8_t a2[7], uint8_t res[16]);
 bool bt_crypto_g2(struct bt_crypto *crypto, uint8_t u[32], uint8_t v[32],
 				uint8_t x[16], uint8_t y[16], uint32_t *val);
+bool bt_crypto_h6(struct bt_crypto *crypto, const uint8_t w[16],
+				const uint8_t keyid[4], uint8_t res[16]);
 bool bt_crypto_sign_att(struct bt_crypto *crypto, const uint8_t key[16],
 				const uint8_t *m, uint16_t m_len,
 				uint32_t sign_cnt, uint8_t signature[12]);

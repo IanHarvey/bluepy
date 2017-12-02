@@ -34,7 +34,7 @@
 
 
 #include "lib/bluetooth.h"
-#include "lib/bluetooth/sdp.h"
+#include "lib/sdp.h"
 #include "lib/uuid.h"
 #include "lib/mgmt.h"
 #include "src/shared/mgmt.h"
@@ -503,7 +503,7 @@ static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
     else if (cid == ATT_CID)
         mtu = ATT_DEFAULT_LE_MTU;
 
-    attrib = g_attrib_new(iochannel, mtu);
+    attrib = g_attrib_new(iochannel, mtu, false);
 
     g_attrib_register(attrib, ATT_OP_HANDLE_NOTIFY, GATTRIB_ALL_HANDLES,
                         events_handler, attrib, NULL);

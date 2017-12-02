@@ -28,7 +28,6 @@ typedef void (*queue_destroy_func_t)(void *data);
 struct queue;
 
 struct queue_entry {
-	int ref_count;
 	void *data;
 	struct queue_entry *next;
 };

@@ -69,6 +69,7 @@ struct bt_security {
 #define BT_SECURITY_LOW		1
 #define BT_SECURITY_MEDIUM	2
 #define BT_SECURITY_HIGH	3
+#define BT_SECURITY_FIPS	4
 
 #define BT_DEFER_SETUP	7
 
@@ -345,8 +346,8 @@ typedef struct {
 
 static inline void bswap_128(const void *src, void *dst)
 {
-	const uint8_t *s = src;
-	uint8_t *d = dst;
+	const uint8_t *s = (const uint8_t *) src;
+	uint8_t *d = (uint8_t *) dst;
 	int i;
 
 	for (i = 0; i < 16; i++)

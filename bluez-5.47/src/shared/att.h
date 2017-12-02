@@ -28,7 +28,7 @@
 
 struct bt_att;
 
-struct bt_att *bt_att_new(int fd);
+struct bt_att *bt_att_new(int fd, bool ext_signed);
 
 struct bt_att *bt_att_ref(struct bt_att *att);
 void bt_att_unref(struct bt_att *att);
@@ -53,6 +53,7 @@ bool bt_att_set_debug(struct bt_att *att, bt_att_debug_func_t callback,
 
 uint16_t bt_att_get_mtu(struct bt_att *att);
 bool bt_att_set_mtu(struct bt_att *att, uint16_t mtu);
+uint8_t bt_att_get_link_type(struct bt_att *att);
 
 bool bt_att_set_timeout_cb(struct bt_att *att, bt_att_timeout_func_t callback,
 						void *user_data,
@@ -83,8 +84,8 @@ bool bt_att_unregister_disconnect(struct bt_att *att, unsigned int id);
 
 bool bt_att_unregister_all(struct bt_att *att);
 
-int bt_att_get_sec_level(struct bt_att *att);
-bool bt_att_set_sec_level(struct bt_att *att, int level);
+int bt_att_get_security(struct bt_att *att);
+bool bt_att_set_security(struct bt_att *att, int level);
 
 bool bt_att_set_local_key(struct bt_att *att, uint8_t sign_key[16],
 			bt_att_counter_func_t func, void *user_data);
