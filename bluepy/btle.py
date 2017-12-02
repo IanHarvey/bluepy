@@ -385,7 +385,7 @@ class Peripheral(BluepyHelper):
             raise ValueError("Expected MAC address, got %s" % repr(addr))
         if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
             raise ValueError("Expected address type public or random, got {}".format(addrType))
-        self._startHelper()
+        self._startHelper(iface)
         self.addr = addr
         self.addrType = addrType
         self.iface = iface
