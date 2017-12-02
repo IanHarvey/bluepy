@@ -55,10 +55,14 @@ extern "C" {
 #define HCI_RS232	4
 #define HCI_PCI		5
 #define HCI_SDIO	6
+#define HCI_SPI		7
+#define HCI_I2C		8
+#define HCI_SMD		9
 
 /* HCI controller types */
-#define HCI_BREDR	0x00
+#define HCI_PRIMARY	0x00
 #define HCI_AMP		0x01
+#define HCI_BREDR	HCI_PRIMARY
 
 /* HCI device flags */
 enum {
@@ -2348,6 +2352,7 @@ struct sockaddr_hci {
 #define HCI_CHANNEL_USER	1
 #define HCI_CHANNEL_MONITOR	2
 #define HCI_CHANNEL_CONTROL	3
+#define HCI_CHANNEL_LOGGING	4
 
 struct hci_filter {
 	uint32_t type_mask;

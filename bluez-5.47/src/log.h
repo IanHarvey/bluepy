@@ -21,11 +21,23 @@
  *
  */
 
-void info(const char *format, ...) __attribute__((format(printf, 1, 2)));
-void warn(const char *format, ...) __attribute__((format(printf, 1, 2)));
-void error(const char *format, ...) __attribute__((format(printf, 1, 2)));
+#include <stdint.h>
 
-void btd_debug(const char *format, ...) __attribute__((format(printf, 1, 2)));
+void error(const char *format, ...) __attribute__((format(printf, 1, 2)));
+void warn(const char *format, ...) __attribute__((format(printf, 1, 2)));
+void info(const char *format, ...) __attribute__((format(printf, 1, 2)));
+
+void btd_log(uint16_t index, int priority, const char *format, ...)
+					__attribute__((format(printf, 3, 4)));
+
+void btd_error(uint16_t index, const char *format, ...)
+					__attribute__((format(printf, 2, 3)));
+void btd_warn(uint16_t index, const char *format, ...)
+					__attribute__((format(printf, 2, 3)));
+void btd_info(uint16_t index, const char *format, ...)
+					__attribute__((format(printf, 2, 3)));
+void btd_debug(uint16_t index, const char *format, ...)
+					__attribute__((format(printf, 2, 3)));
 
 void __btd_log_init(const char *debug, int detach);
 void __btd_log_cleanup(void);
@@ -49,11 +61,13 @@ void __btd_enable_debug(struct btd_debug_desc *start,
  * Simple macro around btd_debug() which also include the function
  * name it is called in.
  */
-#define DBG(fmt, arg...) do { \
+#define DBG_IDX(idx, fmt, arg...) do { \
 	static struct btd_debug_desc __btd_debug_desc \
 	__attribute__((used, section("__debug"), aligned(8))) = { \
 		.file = __FILE__, .flags = BTD_DEBUG_FLAG_DEFAULT, \
 	}; \
 	if (__btd_debug_desc.flags & BTD_DEBUG_FLAG_PRINT) \
-		btd_debug("%s:%s() " fmt,  __FILE__, __func__ , ## arg); \
+		btd_debug(idx, "%s:%s() " fmt, __FILE__, __func__ , ## arg); \
 } while (0)
+
+#define DBG(fmt, arg...) DBG_IDX(0xffff, fmt, ## arg)

@@ -103,6 +103,12 @@ struct bnep_set_filter_req {
 	uint8_t  list[0];
 } __attribute__((packed));
 
+struct bnep_ctrl_cmd_not_understood_cmd {
+	uint8_t type;
+	uint8_t ctrl;
+	uint8_t unkn_ctrl;
+} __attribute__((packed));
+
 struct bnep_control_rsp {
 	uint8_t  type;
 	uint8_t  ctrl;
@@ -120,6 +126,9 @@ struct bnep_ext_hdr {
 #define BNEPCONNDEL	_IOW('B', 201, int)
 #define BNEPGETCONNLIST	_IOR('B', 210, int)
 #define BNEPGETCONNINFO	_IOR('B', 211, int)
+#define BNEPGETSUPPFEAT	_IOR('B', 212, int)
+
+#define BNEP_SETUP_RESPONSE	0
 
 struct bnep_connadd_req {
 	int      sock;		/* Connected socket */

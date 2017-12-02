@@ -51,6 +51,8 @@ struct mgmt {
 	struct queue *notify_list;
 	unsigned int next_request_id;
 	unsigned int next_notify_id;
+	bool need_notify_cleanup;
+	bool in_notify;
 	void *buf;
 	uint16_t len;
 	mgmt_debug_func_t debug_callback;
@@ -73,6 +75,7 @@ struct mgmt_notify {
 	unsigned int id;
 	uint16_t event;
 	uint16_t index;
+	bool removed;
 	mgmt_notify_func_t callback;
 	mgmt_destroy_func_t destroy;
 	void *user_data;
@@ -129,6 +132,22 @@ static bool match_notify_index(const void *a, const void *b)
 	uint16_t index = PTR_TO_UINT(b);
 
 	return notify->index == index;
+}
+
+static bool match_notify_removed(const void *a, const void *b)
+{
+	const struct mgmt_notify *notify = a;
+
+	return notify->removed;
+}
+
+static void mark_notify_removed(void *data , void *user_data)
+{
+	struct mgmt_notify *notify = data;
+	uint16_t index = PTR_TO_UINT(user_data);
+
+	if (notify->index == index || index == MGMT_INDEX_NONE)
+		notify->removed = true;
 }
 
 static void write_watch_destroy(void *user_data)
@@ -260,6 +279,9 @@ static void notify_handler(void *data, void *user_data)
 	struct mgmt_notify *notify = data;
 	struct event_index *match = user_data;
 
+	if (notify->removed)
+		return;
+
 	if (notify->event != match->event)
 		return;
 
@@ -277,7 +299,17 @@ static void process_notify(struct mgmt *mgmt, uint16_t event, uint16_t index,
 	struct event_index match = { .event = event, .index = index,
 					.length = length, .param = param };
 
+	mgmt->in_notify = true;
+
 	queue_foreach(mgmt->notify_list, notify_handler, &match);
+
+	mgmt->in_notify = false;
+
+	if (mgmt->need_notify_cleanup) {
+		queue_remove_all(mgmt->notify_list, match_notify_removed,
+							NULL, destroy_notify);
+		mgmt->need_notify_cleanup = false;
+	}
 }
 
 static bool can_read_data(struct io *io, void *user_data)
@@ -353,9 +385,6 @@ struct mgmt *mgmt_new(int fd)
 		return NULL;
 
 	mgmt = new0(struct mgmt, 1);
-	if (!mgmt)
-		return NULL;
-
 	mgmt->fd = fd;
 	mgmt->close_on_unref = false;
 
@@ -374,42 +403,9 @@ struct mgmt *mgmt_new(int fd)
 	}
 
 	mgmt->request_queue = queue_new();
-	if (!mgmt->request_queue) {
-		io_destroy(mgmt->io);
-		free(mgmt->buf);
-		free(mgmt);
-		return NULL;
-	}
-
 	mgmt->reply_queue = queue_new();
-	if (!mgmt->reply_queue) {
-		queue_destroy(mgmt->request_queue, NULL);
-		io_destroy(mgmt->io);
-		free(mgmt->buf);
-		free(mgmt);
-		return NULL;
-	}
-
 	mgmt->pending_list = queue_new();
-	if (!mgmt->pending_list) {
-		queue_destroy(mgmt->reply_queue, NULL);
-		queue_destroy(mgmt->request_queue, NULL);
-		io_destroy(mgmt->io);
-		free(mgmt->buf);
-		free(mgmt);
-		return NULL;
-	}
-
 	mgmt->notify_list = queue_new();
-	if (!mgmt->notify_list) {
-		queue_destroy(mgmt->pending_list, NULL);
-		queue_destroy(mgmt->reply_queue, NULL);
-		queue_destroy(mgmt->request_queue, NULL);
-		io_destroy(mgmt->io);
-		free(mgmt->buf);
-		free(mgmt);
-		return NULL;
-	}
 
 	if (!io_set_read_handler(mgmt->io, can_read_data, mgmt, NULL)) {
 		queue_destroy(mgmt->notify_list, NULL);
@@ -501,11 +497,12 @@ void mgmt_unref(struct mgmt *mgmt)
 	free(mgmt->buf);
 	mgmt->buf = NULL;
 
-	queue_destroy(mgmt->notify_list, NULL);
-	queue_destroy(mgmt->pending_list, NULL);
-	free(mgmt);
-
-	return;
+	if (!mgmt->in_notify) {
+		queue_destroy(mgmt->notify_list, NULL);
+		queue_destroy(mgmt->pending_list, NULL);
+		free(mgmt);
+		return;
+	}
 }
 
 bool mgmt_set_debug(struct mgmt *mgmt, mgmt_debug_func_t callback,
@@ -549,9 +546,6 @@ static struct mgmt_request *create_request(uint16_t opcode, uint16_t index,
 		return NULL;
 
 	request = new0(struct mgmt_request, 1);
-	if (!request)
-		return NULL;
-
 	request->len = length + MGMT_HDR_SIZE;
 	request->buf = malloc(request->len);
 	if (!request->buf) {
@@ -732,9 +726,6 @@ unsigned int mgmt_register(struct mgmt *mgmt, uint16_t event, uint16_t index,
 		return 0;
 
 	notify = new0(struct mgmt_notify, 1);
-	if (!notify)
-		return 0;
-
 	notify->event = event;
 	notify->index = index;
 
@@ -767,7 +758,14 @@ bool mgmt_unregister(struct mgmt *mgmt, unsigned int id)
 	if (!notify)
 		return false;
 
-	destroy_notify(notify);
+	if (!mgmt->in_notify) {
+		destroy_notify(notify);
+		return true;
+	}
+
+	notify->removed = true;
+	mgmt->need_notify_cleanup = true;
+
 	return true;
 }
 
@@ -776,7 +774,12 @@ bool mgmt_unregister_index(struct mgmt *mgmt, uint16_t index)
 	if (!mgmt)
 		return false;
 
-	queue_remove_all(mgmt->notify_list, match_notify_index,
+	if (mgmt->in_notify) {
+		queue_foreach(mgmt->notify_list, mark_notify_removed,
+							UINT_TO_PTR(index));
+		mgmt->need_notify_cleanup = true;
+	} else
+		queue_remove_all(mgmt->notify_list, match_notify_index,
 					UINT_TO_PTR(index), destroy_notify);
 
 	return true;
@@ -787,7 +790,12 @@ bool mgmt_unregister_all(struct mgmt *mgmt)
 	if (!mgmt)
 		return false;
 
-	queue_remove_all(mgmt->notify_list, NULL, NULL, destroy_notify);
+	if (mgmt->in_notify) {
+		queue_foreach(mgmt->notify_list, mark_notify_removed,
+						UINT_TO_PTR(MGMT_INDEX_NONE));
+		mgmt->need_notify_cleanup = true;
+	} else
+		queue_remove_all(mgmt->notify_list, NULL, NULL, destroy_notify);
 
 	return true;
 }

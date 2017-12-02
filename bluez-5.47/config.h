@@ -1,14 +1,26 @@
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Directory for the Android daemon storage files */
+#define ANDROID_STORAGEDIR "/var/lib/bluetooth/android"
+
 /* Directory for the configuration files */
 #define CONFIGDIR "/usr/local/etc/bluetooth"
+
+/* Define to 1 if you have the backtrace support. */
+/* #undef HAVE_BACKTRACE_SUPPORT */
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #define HAVE_DLFCN_H 1
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
+
+/* Define to 1 if you have the <linux/if_alg.h> header file. */
+#define HAVE_LINUX_IF_ALG_H 1
+
+/* Define to 1 if you have the <linux/types.h> header file. */
+#define HAVE_LINUX_TYPES_H 1
 
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
@@ -40,6 +52,9 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
+/* Define to 1 if you have the <valgrind/memcheck.h> header file. */
+/* #undef HAVE_VALGRIND_MEMCHECK_H */
+
 /* Define to the sub-directory in which libtool stores uninstalled libraries.
    */
 #define LT_OBJDIR ".libs/"
@@ -57,7 +72,7 @@
 #define PACKAGE_NAME "bluez"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "bluez 5.9"
+#define PACKAGE_STRING "bluez 5.47"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "bluez"
@@ -66,7 +81,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "5.9"
+#define PACKAGE_VERSION "5.47"
 
 /* Define to 1 if you have the ANSI C header files. */
 #define STDC_HEADERS 1
@@ -97,7 +112,7 @@
 
 
 /* Version number of package */
-#define VERSION "5.9"
+#define VERSION "5.47"
 
 /* Define to 1 if on MINIX. */
 /* #undef _MINIX */

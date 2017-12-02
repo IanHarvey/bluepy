@@ -143,7 +143,7 @@ char *hci_bustostr(int bus)
 {
 	switch (bus) {
 	case HCI_VIRTUAL:
-		return "VIRTUAL";
+		return "Virtual";
 	case HCI_USB:
 		return "USB";
 	case HCI_PCCARD:
@@ -156,8 +156,14 @@ char *hci_bustostr(int bus)
 		return "PCI";
 	case HCI_SDIO:
 		return "SDIO";
+	case HCI_SPI:
+		return "SPI";
+	case HCI_I2C:
+		return "I2C";
+	case HCI_SMD:
+		return "SMD";
 	default:
-		return "UNKNOWN";
+		return "Unknown";
 	}
 }
 
@@ -169,12 +175,12 @@ char *hci_dtypetostr(int type)
 char *hci_typetostr(int type)
 {
 	switch (type) {
-	case HCI_BREDR:
-		return "BR/EDR";
+	case HCI_PRIMARY:
+		return "Primary";
 	case HCI_AMP:
 		return "AMP";
 	default:
-		return "UNKNOWN";
+		return "Unknown";
 	}
 }
 
@@ -651,6 +657,7 @@ static hci_map ver_map[] = {
 	{ "4.0",	0x06 },
 	{ "4.1",	0x07 },
 	{ "4.2",	0x08 },
+	{ "5.0",	0x09 },
 	{ NULL }
 };
 
