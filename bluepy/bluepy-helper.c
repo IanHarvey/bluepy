@@ -558,6 +558,8 @@ static void primary_all_cb(uint8_t status, GSList *services, void *user_data)
     GSList *l;
 
     if (status) {
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
         resp_error(err_COMM_ERR); // Todo: status
         return;
     }
@@ -578,6 +580,8 @@ static void primary_by_uuid_cb(uint8_t status, GSList *ranges, void *user_data)
     GSList *l;
 
     if (status) {
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
         resp_error(err_COMM_ERR); // Todo: status
         return;
     }
@@ -596,6 +600,8 @@ static void included_cb(uint8_t status, GSList *includes, void *user_data)
     GSList *l;
 
     if (status) {
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
         resp_error(err_COMM_ERR); // Todo: status
         return;
     }
@@ -616,6 +622,8 @@ static void char_cb(uint8_t status, GSList *characteristics, void *user_data)
     GSList *l;
 
     if (status) {
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
         resp_error(err_COMM_ERR); // Todo: status
         return;
     }
@@ -636,6 +644,8 @@ static void char_desc_cb(uint8_t status, GSList *descriptors, void *user_data)
     GSList *l;
 
     if (status != 0) {
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
         resp_error(err_COMM_ERR); // Todo: status
         return;
     }
@@ -656,12 +666,16 @@ static void char_read_cb(guint8 status, const guint8 *pdu, guint16 plen,
     ssize_t vlen;
 
     if (status != 0) {
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
         resp_error(err_COMM_ERR); // Todo: status
         return;
     }
 
     vlen = dec_read_resp(pdu, plen, value, sizeof(value));
     if (vlen < 0) {
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
         resp_error(err_COMM_ERR);
         return;
     }
@@ -686,6 +700,8 @@ static void char_read_by_uuid_cb(guint8 status, const guint8 *pdu,
     }
 
     if (status != 0) {
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
         resp_error(err_COMM_ERR); // Todo: status
         goto done;
     }
@@ -983,6 +999,8 @@ static void char_write_req_cb(guint8 status, const guint8 *pdu, guint16 plen,
                             gpointer user_data)
 {
     if (status != 0) {
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
         resp_error(err_COMM_ERR); // Todo: status
         return;
     }
@@ -1098,6 +1116,8 @@ static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
     uint16_t mtu;
 
     if (status != 0) {
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
         resp_error(err_COMM_ERR); // Todo: status
         return;
     }
@@ -1117,6 +1137,8 @@ static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
     else
     {
         printf("# Error exchanging MTU\n");
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
         resp_error(err_COMM_ERR);
     }
 }
