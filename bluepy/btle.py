@@ -278,7 +278,7 @@ class BluepyHelper:
     @staticmethod
     def parseResp(line):
         resp = {}
-        for item in line.rstrip().split(' '):
+        for item in line.rstrip().split('\x1e'):
             (tag, tval) = item.split('=')
             if len(tval)==0:
                 val = None
