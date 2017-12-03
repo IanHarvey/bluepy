@@ -34,7 +34,7 @@
 
 
 #include "lib/bluetooth.h"
-#include "lib/bluetooth/sdp.h"
+#include "lib/sdp.h"
 #include "lib/uuid.h"
 #include "lib/mgmt.h"
 #include "src/shared/mgmt.h"
@@ -103,9 +103,11 @@ static enum state {
 } conn_state;
 
 
-static const char 
+static const char
   *tag_RESPONSE  = "rsp",
   *tag_ERRCODE   = "code",
+  *tag_ERRSTAT   = "estat",
+  *tag_ERRMSG    = "emsg",
   *tag_HANDLE    = "hnd",
   *tag_UUID      = "uuid",
   *tag_DATA      = "d",
@@ -146,11 +148,14 @@ static const char
   *err_NO_MGMT   = "nomgmt",
   *err_SUCCESS   = "success";
 
-static const char 
+static const char
   *st_DISCONNECTED = "disc",
   *st_CONNECTING   = "tryconn",
   *st_CONNECTED    = "conn",
   *st_SCANNING    = "scan";
+
+// delimits fields in response message
+#define RESP_DELIM "\x1e"
 
 static void resp_begin(const char *rsptype)
 {
@@ -159,23 +164,22 @@ static void resp_begin(const char *rsptype)
 
 static void send_sym(const char *tag, const char *val)
 {
-  printf(" %s=$%s", tag, val);
+  printf(RESP_DELIM "%s=$%s", tag, val);
 }
 
 static void send_uint(const char *tag, unsigned int val)
 {
-  printf(" %s=h%X", tag, val);
+  printf(RESP_DELIM "%s=h%X", tag, val);
 }
 
 static void send_str(const char *tag, const char *val)
 {
-  //!!FIXME
-  printf(" %s='%s", tag, val);
+  printf(RESP_DELIM "%s='%s", tag, val);
 }
 
 static void send_data(const unsigned char *val, size_t len)
 {
-  printf(" %s=b", tag_DATA);
+  printf(RESP_DELIM "%s=b", tag_DATA);
   while ( len-- > 0 )
     printf("%02X", *val++);
 }
@@ -183,7 +187,7 @@ static void send_data(const unsigned char *val, size_t len)
 static void send_addr(const struct mgmt_addr_info *addr)
 {
     const uint8_t *val = addr->bdaddr.b;
-    printf(" %s=b", tag_ADDR);
+    printf(RESP_DELIM "%s=b", tag_ADDR);
     int len = 6;
     /* Human-readable byte order is reverse of bdaddr.b */
     while ( len-- > 0 )
@@ -205,10 +209,28 @@ static void resp_error(const char *errcode)
   resp_end();
 }
 
+static void resp_errstat(const char *errcode, uint8_t status)
+{
+  resp_begin(rsp_ERROR);
+  send_sym(tag_ERRCODE, errcode);
+  send_uint(tag_ERRSTAT, status);
+  send_str(tag_ERRMSG, att_ecode2str(status));
+  resp_end();
+}
+
 static void resp_mgmt(const char *errcode)
 {
   resp_begin(rsp_MGMT);
   send_sym(tag_ERRCODE, errcode);
+  resp_end();
+}
+
+static void resp_mgmtstat(const char *errcode, uint8_t status)
+{
+  resp_begin(rsp_MGMT);
+  send_sym(tag_ERRCODE, errcode);
+  send_uint(tag_ERRSTAT, status);
+  send_str(tag_ERRMSG, mgmt_errstr(status));
   resp_end();
 }
 
@@ -503,7 +525,7 @@ static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
     else if (cid == ATT_CID)
         mtu = ATT_DEFAULT_LE_MTU;
 
-    attrib = g_attrib_new(iochannel, mtu);
+    attrib = g_attrib_new(iochannel, mtu, false);
 
     g_attrib_register(attrib, ATT_OP_HANDLE_NOTIFY, GATTRIB_ALL_HANDLES,
                         events_handler, attrib, NULL);
@@ -558,7 +580,9 @@ static void primary_all_cb(uint8_t status, GSList *services, void *user_data)
     GSList *l;
 
     if (status) {
-        resp_error(err_COMM_ERR); // Todo: status
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
@@ -578,7 +602,9 @@ static void primary_by_uuid_cb(uint8_t status, GSList *ranges, void *user_data)
     GSList *l;
 
     if (status) {
-        resp_error(err_COMM_ERR); // Todo: status
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
@@ -596,7 +622,9 @@ static void included_cb(uint8_t status, GSList *includes, void *user_data)
     GSList *l;
 
     if (status) {
-        resp_error(err_COMM_ERR); // Todo: status
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
@@ -616,7 +644,9 @@ static void char_cb(uint8_t status, GSList *characteristics, void *user_data)
     GSList *l;
 
     if (status) {
-        resp_error(err_COMM_ERR); // Todo: status
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
@@ -636,7 +666,9 @@ static void char_desc_cb(uint8_t status, GSList *descriptors, void *user_data)
     GSList *l;
 
     if (status != 0) {
-        resp_error(err_COMM_ERR); // Todo: status
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
@@ -656,13 +688,17 @@ static void char_read_cb(guint8 status, const guint8 *pdu, guint16 plen,
     ssize_t vlen;
 
     if (status != 0) {
-        resp_error(err_COMM_ERR); // Todo: status
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
     vlen = dec_read_resp(pdu, plen, value, sizeof(value));
     if (vlen < 0) {
-        resp_error(err_COMM_ERR);
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
+        resp_errstat(err_COMM_ERR,status);
         return;
     }
 
@@ -686,7 +722,9 @@ static void char_read_by_uuid_cb(guint8 status, const guint8 *pdu,
     }
 
     if (status != 0) {
-        resp_error(err_COMM_ERR); // Todo: status
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
+        resp_errstat(err_COMM_ERR, status);
         goto done;
     }
 
@@ -983,12 +1021,14 @@ static void char_write_req_cb(guint8 status, const guint8 *pdu, guint16 plen,
                             gpointer user_data)
 {
     if (status != 0) {
-        resp_error(err_COMM_ERR); // Todo: status
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
     if (!dec_write_resp(pdu, plen) && !dec_exec_write_resp(pdu, plen)) {
-        resp_error(err_PROTO_ERR);
+        resp_errstat(err_PROTO_ERR, status);
         return;
     }
 
@@ -1086,7 +1126,7 @@ static void cmd_sec_level(int argcp, char **argvp)
         g_error_free(gerr);
     }
     else {
-        /* Tell bluepy the security level 
+        /* Tell bluepy the security level
          * has been changed successfuly */
         cmd_status(0, NULL);
     }
@@ -1098,12 +1138,14 @@ static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
     uint16_t mtu;
 
     if (status != 0) {
-        resp_error(err_COMM_ERR); // Todo: status
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
     if (!dec_mtu_resp(pdu, plen, &mtu)) {
-        resp_error(err_PROTO_ERR);
+        resp_errstat(err_PROTO_ERR, status);
         return;
     }
 
@@ -1117,7 +1159,9 @@ static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
     else
     {
         printf("# Error exchanging MTU\n");
-        resp_error(err_COMM_ERR);
+        DBG("status returned error : %s (0x%02x)",
+            att_ecode2str(status), status);
+        resp_errstat(err_COMM_ERR, status);
     }
 }
 
@@ -1157,7 +1201,7 @@ static void set_mode_complete(uint8_t status, uint16_t length,
     if (status != MGMT_STATUS_SUCCESS) {
         DBG("status returned error : %s (0x%02x)",
             mgmt_errstr(status), status);
-        resp_mgmt(err_PROTO_ERR);
+        resp_mgmtstat(err_PROTO_ERR, status);
         return;
     }
 
@@ -1224,7 +1268,7 @@ static void pair_device_complete(uint8_t status, uint16_t length,
     if (status != MGMT_STATUS_SUCCESS) {
         DBG("status returned error : %s (0x%02x)",
                 mgmt_errstr(status), status);
-        resp_mgmt(err_PROTO_ERR);
+        resp_mgmtstat(err_PROTO_ERR, status);
         return;
     }
 
@@ -1278,7 +1322,7 @@ static void unpair_device_complete(uint8_t status, uint16_t length,
     if (status != MGMT_STATUS_SUCCESS) {
         DBG("status returned error : %s (0x%02x)",
                 mgmt_errstr(status), status);
-        resp_mgmt(err_PROTO_ERR);
+        resp_mgmtstat(err_PROTO_ERR, status);
         return;
     }
 
@@ -1325,7 +1369,7 @@ static void scan_cb(uint8_t status, uint16_t length, const void *param, void *us
 {
     if (status != MGMT_STATUS_SUCCESS) {
         DBG("Scan error: %s (0x%02x)", mgmt_errstr(status), status);
-        resp_mgmt(status == MGMT_STATUS_BUSY? err_BUSY : err_PROTO_ERR);
+        resp_mgmtstat(status == MGMT_STATUS_BUSY? err_BUSY : err_PROTO_ERR, status);
         return;
     }
 
@@ -1454,8 +1498,8 @@ static gboolean hci_monitor_cb(GIOChannel *chan, GIOCondition cond, gpointer use
                             struct mgmt_addr_info addr;
                             addr.type= ev->bdaddr_type;
                             addr.bdaddr= ev->bdaddr;
-                            // DBG("Device found: %02X:%02X:%02X:%02X:%02X:%02X type=%X length=%d data[0]=0x%02x rssi=0x%02x", 
-                            //     val[5], val[4], val[3], val[2], val[1], val[0], 
+                            // DBG("Device found: %02X:%02X:%02X:%02X:%02X:%02X type=%X length=%d data[0]=0x%02x rssi=0x%02x",
+                            //     val[5], val[4], val[3], val[2], val[1], val[0],
                             //     ev->bdaddr_type, ev->length, ev->data[0], ev->data[ev->length]);
                             if (0) {
                                 int i=0;
@@ -1823,7 +1867,7 @@ int main(int argc, char *argv[])
     if (argc > 1) {
         int index;
 
-        if (sscanf (argv[1], "%i", &index)!=1) { 
+        if (sscanf (argv[1], "%i", &index)!=1) {
             DBG("error converting argument: %s  to device index integer",argv[1]);
         } else {
             mgmt_setup(index);
