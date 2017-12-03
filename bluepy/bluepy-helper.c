@@ -106,6 +106,8 @@ static enum state {
 static const char 
   *tag_RESPONSE  = "rsp",
   *tag_ERRCODE   = "code",
+  *tag_ERRSTAT   = "estat",
+  *tag_ERRMSG    = "emsg",
   *tag_HANDLE    = "hnd",
   *tag_UUID      = "uuid",
   *tag_DATA      = "d",
@@ -205,10 +207,28 @@ static void resp_error(const char *errcode)
   resp_end();
 }
 
+static void resp_errstat(const char *errcode, uint8_t status)
+{
+  resp_begin(rsp_ERROR);
+  send_sym(tag_ERRCODE, errcode);
+  send_uint(tag_ERRSTAT, status);
+  send_str(tag_ERRMSG, att_ecode2str(status));
+  resp_end();
+}
+
 static void resp_mgmt(const char *errcode)
 {
   resp_begin(rsp_MGMT);
   send_sym(tag_ERRCODE, errcode);
+  resp_end();
+}
+
+static void resp_mgmtstat(const char *errcode, uint8_t status)
+{
+  resp_begin(rsp_MGMT);
+  send_sym(tag_ERRCODE, errcode);
+  send_uint(tag_ERRSTAT, status);
+  send_str(tag_ERRMSG, mgmt_errstr(status));
   resp_end();
 }
 
@@ -560,7 +580,7 @@ static void primary_all_cb(uint8_t status, GSList *services, void *user_data)
     if (status) {
         DBG("status returned error : %s (0x%02x)",
             att_ecode2str(status), status);
-        resp_error(err_COMM_ERR); // Todo: status
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
@@ -582,7 +602,7 @@ static void primary_by_uuid_cb(uint8_t status, GSList *ranges, void *user_data)
     if (status) {
         DBG("status returned error : %s (0x%02x)",
             att_ecode2str(status), status);
-        resp_error(err_COMM_ERR); // Todo: status
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
@@ -602,7 +622,7 @@ static void included_cb(uint8_t status, GSList *includes, void *user_data)
     if (status) {
         DBG("status returned error : %s (0x%02x)",
             att_ecode2str(status), status);
-        resp_error(err_COMM_ERR); // Todo: status
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
@@ -624,7 +644,7 @@ static void char_cb(uint8_t status, GSList *characteristics, void *user_data)
     if (status) {
         DBG("status returned error : %s (0x%02x)",
             att_ecode2str(status), status);
-        resp_error(err_COMM_ERR); // Todo: status
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
@@ -646,7 +666,7 @@ static void char_desc_cb(uint8_t status, GSList *descriptors, void *user_data)
     if (status != 0) {
         DBG("status returned error : %s (0x%02x)",
             att_ecode2str(status), status);
-        resp_error(err_COMM_ERR); // Todo: status
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
@@ -668,7 +688,7 @@ static void char_read_cb(guint8 status, const guint8 *pdu, guint16 plen,
     if (status != 0) {
         DBG("status returned error : %s (0x%02x)",
             att_ecode2str(status), status);
-        resp_error(err_COMM_ERR); // Todo: status
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
@@ -676,7 +696,7 @@ static void char_read_cb(guint8 status, const guint8 *pdu, guint16 plen,
     if (vlen < 0) {
         DBG("status returned error : %s (0x%02x)",
             att_ecode2str(status), status);
-        resp_error(err_COMM_ERR);
+        resp_errstat(err_COMM_ERR,status);
         return;
     }
 
@@ -702,7 +722,7 @@ static void char_read_by_uuid_cb(guint8 status, const guint8 *pdu,
     if (status != 0) {
         DBG("status returned error : %s (0x%02x)",
             att_ecode2str(status), status);
-        resp_error(err_COMM_ERR); // Todo: status
+        resp_errstat(err_COMM_ERR, status);
         goto done;
     }
 
@@ -1001,12 +1021,12 @@ static void char_write_req_cb(guint8 status, const guint8 *pdu, guint16 plen,
     if (status != 0) {
         DBG("status returned error : %s (0x%02x)",
             att_ecode2str(status), status);
-        resp_error(err_COMM_ERR); // Todo: status
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
     if (!dec_write_resp(pdu, plen) && !dec_exec_write_resp(pdu, plen)) {
-        resp_error(err_PROTO_ERR);
+        resp_errstat(err_PROTO_ERR, status);
         return;
     }
 
@@ -1118,12 +1138,12 @@ static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
     if (status != 0) {
         DBG("status returned error : %s (0x%02x)",
             att_ecode2str(status), status);
-        resp_error(err_COMM_ERR); // Todo: status
+        resp_errstat(err_COMM_ERR, status);
         return;
     }
 
     if (!dec_mtu_resp(pdu, plen, &mtu)) {
-        resp_error(err_PROTO_ERR);
+        resp_errstat(err_PROTO_ERR, status);
         return;
     }
 
@@ -1139,7 +1159,7 @@ static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
         printf("# Error exchanging MTU\n");
         DBG("status returned error : %s (0x%02x)",
             att_ecode2str(status), status);
-        resp_error(err_COMM_ERR);
+        resp_errstat(err_COMM_ERR, status);
     }
 }
 
@@ -1179,7 +1199,7 @@ static void set_mode_complete(uint8_t status, uint16_t length,
     if (status != MGMT_STATUS_SUCCESS) {
         DBG("status returned error : %s (0x%02x)",
             mgmt_errstr(status), status);
-        resp_mgmt(err_PROTO_ERR);
+        resp_mgmtstat(err_PROTO_ERR, status);
         return;
     }
 
@@ -1246,7 +1266,7 @@ static void pair_device_complete(uint8_t status, uint16_t length,
     if (status != MGMT_STATUS_SUCCESS) {
         DBG("status returned error : %s (0x%02x)",
                 mgmt_errstr(status), status);
-        resp_mgmt(err_PROTO_ERR);
+        resp_mgmtstat(err_PROTO_ERR, status);
         return;
     }
 
@@ -1300,7 +1320,7 @@ static void unpair_device_complete(uint8_t status, uint16_t length,
     if (status != MGMT_STATUS_SUCCESS) {
         DBG("status returned error : %s (0x%02x)",
                 mgmt_errstr(status), status);
-        resp_mgmt(err_PROTO_ERR);
+        resp_mgmtstat(err_PROTO_ERR, status);
         return;
     }
 
@@ -1347,7 +1367,7 @@ static void scan_cb(uint8_t status, uint16_t length, const void *param, void *us
 {
     if (status != MGMT_STATUS_SUCCESS) {
         DBG("Scan error: %s (0x%02x)", mgmt_errstr(status), status);
-        resp_mgmt(status == MGMT_STATUS_BUSY? err_BUSY : err_PROTO_ERR);
+        resp_mgmtstat(status == MGMT_STATUS_BUSY? err_BUSY : err_PROTO_ERR, status);
         return;
     }
 
