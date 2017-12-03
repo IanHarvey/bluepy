@@ -154,6 +154,9 @@ static const char
   *st_CONNECTED    = "conn",
   *st_SCANNING    = "scan";
 
+// delimits fields in response message
+#define RESP_DELIM "\x1e"
+
 static void resp_begin(const char *rsptype)
 {
   printf("%s=$%s", tag_RESPONSE, rsptype);
@@ -161,23 +164,22 @@ static void resp_begin(const char *rsptype)
 
 static void send_sym(const char *tag, const char *val)
 {
-  printf(" %s=$%s", tag, val);
+  printf(RESP_DELIM "%s=$%s", tag, val);
 }
 
 static void send_uint(const char *tag, unsigned int val)
 {
-  printf(" %s=h%X", tag, val);
+  printf(RESP_DELIM "%s=h%X", tag, val);
 }
 
 static void send_str(const char *tag, const char *val)
 {
-  //!!FIXME
-  printf(" %s='%s", tag, val);
+  printf(RESP_DELIM "%s='%s", tag, val);
 }
 
 static void send_data(const unsigned char *val, size_t len)
 {
-  printf(" %s=b", tag_DATA);
+  printf(RESP_DELIM "%s=b", tag_DATA);
   while ( len-- > 0 )
     printf("%02X", *val++);
 }
@@ -185,7 +187,7 @@ static void send_data(const unsigned char *val, size_t len)
 static void send_addr(const struct mgmt_addr_info *addr)
 {
     const uint8_t *val = addr->bdaddr.b;
-    printf(" %s=b", tag_ADDR);
+    printf(RESP_DELIM "%s=b", tag_ADDR);
     int len = 6;
     /* Human-readable byte order is reverse of bdaddr.b */
     while ( len-- > 0 )
