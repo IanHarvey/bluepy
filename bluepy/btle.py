@@ -524,28 +524,50 @@ class ScanEntry:
                   2 : ADDR_TYPE_RANDOM
                 }
 
+    FLAGS                     = 0x01
+    INCOMPLETE_16B_SERVICES   = 0x02
+    COMPLETE_16B_SERVICES     = 0x03
+    INCOMPLETE_32B_SERVICES   = 0x04
+    COMPLETE_32B_SERVICES     = 0x05
+    INCOMPLETE_128B_SERVICES  = 0x06
+    COMPLETE_128B_SERVICES    = 0x07
+    SHORT_LOCAL_NAME          = 0x08
+    COMPLETE_LOCAL_NAME       = 0x09
+    TX_POWER                  = 0x0A
+    SERVICE_SOLICITATION_16B  = 0x14
+    SERVICE_SOLICITATION_32B  = 0x1F
+    SERVICE_SOLICITATION_128B = 0x15
+    SERVICE_DATA_16B          = 0x16
+    SERVICE_DATA_32B          = 0x20
+    SERVICE_DATA_128B         = 0x21
+    PUBLIC_TARGET_ADDRESS     = 0x17
+    RANDOM_TARGET_ADDRESS     = 0x18
+    APPEARANCE                = 0x19
+    ADVERTISING_INTERVAL      = 0x1A
+    MANUFACTURER              = 0xFF
+
     dataTags = {
-        1 : 'Flags',
-        2 : 'Incomplete 16b Services',
-        3 : 'Complete 16b Services',
-        4 : 'Incomplete 32b Services',
-        5 : 'Complete 32b Services',
-        6 : 'Incomplete 128b Services',
-        7 : 'Complete 128b Services',
-        8 : 'Short Local Name',
-        9 : 'Complete Local Name',
-        0xA : 'Tx Power',
-        0x14 : '16b Service Solicitation',
-        0x1F : '32b Service Solicitation',
-        0x15 : '128b Service Solicitation',
-        0x16 : '16b Service Data',
-        0x20 : '32b Service Data',
-        0x21 : '128b Service Data',
-        0x17 : 'Public Target Address',
-        0x18 : 'Random Target Address',
-        0x19 : 'Appearance',
-        0x1A : 'Advertising Interval',
-        0xFF : 'Manufacturer',
+        FLAGS                     : 'Flags',
+        INCOMPLETE_16B_SERVICES   : 'Incomplete 16b Services',
+        COMPLETE_16B_SERVICES     : 'Complete 16b Services',
+        INCOMPLETE_32B_SERVICES   : 'Incomplete 32b Services',
+        COMPLETE_32B_SERVICES     : 'Complete 32b Services',
+        INCOMPLETE_128B_SERVICES  : 'Incomplete 128b Services',
+        COMPLETE_128B_SERVICES    : 'Complete 128b Services',
+        SHORT_LOCAL_NAME          : 'Short Local Name',
+        COMPLETE_LOCAL_NAME       : 'Complete Local Name',
+        TX_POWER                  : 'Tx Power',
+        SERVICE_SOLICITATION_16B  : '16b Service Solicitation',
+        SERVICE_SOLICITATION_32B  : '32b Service Solicitation',
+        SERVICE_SOLICITATION_128B : '128b Service Solicitation',
+        SERVICE_DATA_16B          : '16b Service Data',
+        SERVICE_DATA_32B          : '32b Service Data',
+        SERVICE_DATA_128B         : '128b Service Data',
+        PUBLIC_TARGET_ADDRESS     : 'Public Target Address',
+        RANDOM_TARGET_ADDRESS     : 'Random Target Address',
+        APPEARANCE                : 'Appearance',
+        ADVERTISING_INTERVAL      : 'Advertising Interval',
+        MANUFACTURER              : 'Manufacturer',
     }
 
     def __init__(self, addr, iface):
