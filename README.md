@@ -25,19 +25,14 @@ To install the current released version, on most Debian-based systems:
 
     $ sudo apt-get install python-pip libglib2.0-dev
     $ sudo pip install bluepy
-    
-If you find `bluepy-helper` isn't being built, please try:
 
-    $ sudo pip install --no-binary :all: bluepy
-
-before reporting any issues.
 
 For Python 3, you may need to use `pip3`:
 
     $ sudo apt-get install python3-pip libglib2.0-dev
     $ sudo pip3 install bluepy
 
-To install the source and build locally:
+*If this fails* you should install from source.
 
     $ sudo apt-get install git build-essential libglib2.0-dev
     $ git clone https://github.com/IanHarvey/bluepy.git
@@ -66,7 +61,12 @@ The Python files are released into the public domain by their author, Ian Harvey
 Release Notes
 -------------
 
-Release 1.1.2:
+Release 1.1.4:
+- Further attempts to fix #158. setup.py rewritten.
+
+*There was no release 1.1.3 made*
+
+Release 1.1.2: *now deleted*
 - Re #158: Try to make PyPI installation more robust
 - Merge #214: add passive scan support
 - Merge #213: Add Thingy:52 support
