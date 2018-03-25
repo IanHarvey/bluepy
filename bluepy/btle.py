@@ -321,9 +321,10 @@ class BluepyHelper:
             respType = resp['rsp'][0]
             if respType in wantType:
                 return resp
-            elif respType == 'stat' and resp['state'][0] == 'disc':
-                self._stopHelper()
-                raise BTLEException(BTLEException.DISCONNECTED, "Device disconnected")
+            elif respType == 'stat':
+                if 'state' in resp and len(resp['state']) > 0 and resp['state'][0] == 'disc':
+                    self._stopHelper()
+                    raise BTLEException(BTLEException.DISCONNECTED, "Device disconnected")
             elif respType == 'err':
                 errcode=resp['code'][0]
                 if errcode=='nomgmt':
