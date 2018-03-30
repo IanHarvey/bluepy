@@ -10,6 +10,12 @@ import subprocess
 import binascii
 import select
 import struct
+import signal
+
+def preexec_function():
+    # Ignore the SIGINT signal by setting the handler to the standard
+    # signal handler SIG_IGN.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 Debugging = False
 script_path = os.path.join(os.path.abspath(os.path.dirname(__file__)))
@@ -243,7 +249,8 @@ class BluepyHelper:
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
                                             stderr=self._stderr,
-                                            universal_newlines=True)
+                                            universal_newlines=True,
+                                            preexec_fn = preexec_function)
             self._poller = select.poll()
             self._poller.register(self._helper.stdout, select.POLLIN)
 
