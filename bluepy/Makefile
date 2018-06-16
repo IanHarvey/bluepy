@@ -9,10 +9,10 @@ BLUEZ_SRCS += src/shared/io-glib.c src/shared/timeout-glib.c
 IMPORT_SRCS = $(addprefix $(BLUEZ_PATH)/, $(BLUEZ_SRCS))
 LOCAL_SRCS  = bluepy-helper.c
 
-CC = gcc
-CFLAGS = -Os -g -Wall # -Werror
+CC ?= gcc
+CFLAGS += -Os -g -Wall # -Werror
 
-CPPFLAGS = -DHAVE_CONFIG_H
+CPPFLAGS += -DHAVE_CONFIG_H
 ifneq ($(DEBUGGING),)
 CFLAGS += -DBLUEPY_DEBUG=1
 endif
