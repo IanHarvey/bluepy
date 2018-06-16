@@ -1452,7 +1452,11 @@ static gboolean hci_monitor_cb(GIOChannel *chan, GIOCondition cond, gpointer use
                             // const uint8_t *val= ev->bdaddr.b;
                             const uint8_t rssi= ev->data[ev->length];
                             struct mgmt_addr_info addr;
-                            addr.type= ev->bdaddr_type;
+                            switch (ev->bdaddr_type) {
+                                case LE_PUBLIC_ADDRESS: addr.type= BDADDR_LE_PUBLIC; break;
+                                case LE_RANDOM_ADDRESS: addr.type= BDADDR_LE_RANDOM; break;
+                                default: addr.type= 0;
+                            }
                             addr.bdaddr= ev->bdaddr;
                             // DBG("Device found: %02X:%02X:%02X:%02X:%02X:%02X type=%X length=%d data[0]=0x%02x rssi=0x%02x",
                             //     val[5], val[4], val[3], val[2], val[1], val[0],
