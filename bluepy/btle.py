@@ -621,7 +621,13 @@ class ScanEntry:
         if val is None:
             return None
         if (sdid==8) or (sdid==9):
-            return val.decode('utf-8')
+            try:
+                return val.decode('utf-8')
+            except UnicodeDecodeError:
+                try:
+                    return val.decode('ISO-8859-1')
+                except UnicodeDecodeError:
+                    return "broken encoding"
         else:
             return binascii.b2a_hex(val).decode('utf-8')
 
