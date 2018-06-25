@@ -17,7 +17,7 @@ ifneq ($(DEBUGGING),)
 CFLAGS += -DBLUEPY_DEBUG=1
 endif
 
-CPPFLAGS += -I$(BLUEZ_PATH)/attrib -I$(BLUEZ_PATH) -I$(BLUEZ_PATH)/lib -I$(BLUEZ_PATH)/src -I$(BLUEZ_PATH)/gdbus -I$(BLUEZ_PATH)/btio
+CPPFLAGS += -I$(BLUEZ_PATH)/attrib -I$(BLUEZ_PATH) -I$(BLUEZ_PATH)/lib -I$(BLUEZ_PATH)/src -I$(BLUEZ_PATH)/gdbus -I$(BLUEZ_PATH)/btio -I$(BLUEZ_PATH)/sys
 
 CPPFLAGS += $(shell pkg-config glib-2.0 --cflags)
 LDLIBS += $(shell pkg-config glib-2.0 --libs)
