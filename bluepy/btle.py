@@ -612,15 +612,24 @@ class ScanEntry:
 
         self.updateCount += 1
         return isNewData
-        
+     
+    def _decodeUUID(self, val, nbytes):
+        if len(val) < nbytes:
+            return None
+        rs=""
+        # Bytes are little-endian; convert to big-endian string
+        for i in range(nbytes):
+            rs = ("%02X" % val[i]) + rs
+        return UUID(rs)
+    
     def getDescription(self, sdid):
         return self.dataTags.get(sdid, hex(sdid))
 
-    def getValueText(self, sdid):
+    def getValue(self, sdid):
         val = self.scanData.get(sdid, None)
         if val is None:
             return None
-        if (sdid==8) or (sdid==9):
+        if sdid in [ScanEntry.SHORT_LOCAL_NAME, ScanEntry.COMPLETE_LOCAL_NAME]:
             try:
                 return val.decode('utf-8')
             except UnicodeDecodeError:
@@ -628,9 +637,18 @@ class ScanEntry:
                     return val.decode('ISO-8859-1')
                 except UnicodeDecodeError:
                     return "broken encoding"
+        elif sdid in [ScanEntry.INCOMPLETE_16B_SERVICES, ScanEntry.COMPLETE_16B_SERVICES]:
+            return self._decodeUUID(val,2)
+        elif sdid in [ScanEntry.INCOMPLETE_32B_SERVICES, ScanEntry.COMPLETE_32B_SERVICES]:
+            return self._decodeUUID(val,4)
+        elif sdid in [ScanEntry.INCOMPLETE_128B_SERVICES, ScanEntry.COMPLETE_128B_SERVICES]:
+            return self._decodeUUID(val,16)
         else:
             return binascii.b2a_hex(val).decode('utf-8')
 
+    def getValueText(self, sdid):
+        return str(self.getValue(sdid))
+    
     def getScanData(self):
         '''Returns list of tuples [(tag, description, value)]'''
         return [ (sdid, self.getDescription(sdid), self.getValueText(sdid))
