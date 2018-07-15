@@ -616,10 +616,11 @@ class ScanEntry:
     def _decodeUUID(self, val, nbytes):
         if len(val) < nbytes:
             return None
+        bval=bytearray(val)
         rs=""
         # Bytes are little-endian; convert to big-endian string
         for i in range(nbytes):
-            rs = ("%02X" % val[i]) + rs
+            rs = ("%02X" % bval[i]) + rs
         return UUID(rs)
     
     def getDescription(self, sdid):
