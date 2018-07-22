@@ -1410,7 +1410,6 @@ static gboolean hci_monitor_cb(GIOChannel *chan, GIOCondition cond, gpointer use
                         DBG("Start of passive scan.");
                     } else {
                         if (conn_state == STATE_SCANNING) {
-                            resp_mgmt(err_SUCCESS);
                             set_state(STATE_DISCONNECTED);
                         }
                         DBG("End of passive scan - removing watch.");
@@ -1562,6 +1561,8 @@ static void discover(bool start)
         resp_mgmt(err_SUCCESS);
         set_state(STATE_SCANNING);
     } else {
+        const char* errcode = err_SUCCESS;
+
         // set filter to receive no events
         DBG(" stop pasv scan -----------------------------------");
         setsockopt(hci_dd, SOL_HCI, HCI_FILTER, &of, sizeof(of));
@@ -1569,12 +1570,12 @@ static void discover(bool start)
         err = hci_le_set_scan_enable(hci_dd, 0x00, filter_dup, 10000);
         if (err < 0) {
             DBG("Disable scan failed");
-            exit(1);
+            errcode = err_BAD_STATE;
         }
         hci_close_dev(hci_dd);
         hci_dd= -1;
         hci_io= NULL;
-        resp_mgmt(err_SUCCESS);
+        resp_mgmt(errcode);
         set_state(STATE_DISCONNECTED);
     }
 }
