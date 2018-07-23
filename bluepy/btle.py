@@ -708,7 +708,7 @@ class Scanner(BluepyHelper):
             if respType == 'stat':
                 # if scan ended, restart it
                 if resp['state'][0] == 'disc':
-                    self._mgmtCmd("scan")
+                    self._mgmtCmd(self._cmd())
 
             elif respType == 'scan':
                 # device found

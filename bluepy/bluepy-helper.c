@@ -1410,7 +1410,6 @@ static gboolean hci_monitor_cb(GIOChannel *chan, GIOCondition cond, gpointer use
                         DBG("Start of passive scan.");
                     } else {
                         if (conn_state == STATE_SCANNING) {
-                            resp_mgmt(err_SUCCESS);
                             set_state(STATE_DISCONNECTED);
                         }
                         DBG("End of passive scan - removing watch.");
@@ -1525,6 +1524,7 @@ static void discover(bool start)
                                              own_type, filter_policy, 10000);
         if (err < 0) {
             DBG("Set scan parameters failed");
+            resp_mgmt(err_BAD_STATE);
             return;
         }
         hci_io = g_io_channel_unix_new(hci_dd);
@@ -1537,6 +1537,7 @@ static void discover(bool start)
         olen = sizeof(of);
         if (getsockopt(hci_dd, SOL_HCI, HCI_FILTER, &of, &olen) < 0) {
             printf("Could not get socket options\n");
+            resp_mgmt(err_BAD_STATE);
             return;
         }
         hci_filter_clear(&nf);
@@ -1548,6 +1549,7 @@ static void discover(bool start)
 
         if (setsockopt(hci_dd, SOL_HCI, HCI_FILTER, &nf, sizeof(nf)) < 0) {
             printf("Could not set socket options\n");
+            resp_mgmt(err_BAD_STATE);
             return;
         }
 
@@ -1556,12 +1558,15 @@ static void discover(bool start)
         if (err < 0) {
             //andy: signal error
             DBG("Enable scan failed");
+            resp_mgmt(err_BAD_STATE);
             return;
         }
 
         resp_mgmt(err_SUCCESS);
         set_state(STATE_SCANNING);
     } else {
+        const char* errcode = err_SUCCESS;
+
         // set filter to receive no events
         DBG(" stop pasv scan -----------------------------------");
         setsockopt(hci_dd, SOL_HCI, HCI_FILTER, &of, sizeof(of));
@@ -1569,12 +1574,12 @@ static void discover(bool start)
         err = hci_le_set_scan_enable(hci_dd, 0x00, filter_dup, 10000);
         if (err < 0) {
             DBG("Disable scan failed");
-            exit(1);
+            errcode = err_BAD_STATE;
         }
         hci_close_dev(hci_dd);
         hci_dd= -1;
         hci_io= NULL;
-        resp_mgmt(err_SUCCESS);
+        resp_mgmt(errcode);
         set_state(STATE_DISCONNECTED);
     }
 }
