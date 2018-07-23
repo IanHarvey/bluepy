@@ -64,6 +64,15 @@ The Python files are released into the public domain by their author, Ian Harvey
 Release Notes
 -------------
 
+Release 1.2.0
+- Merge #245: Update underlying Bluez version to 5.47
+- Merge #284: Readme updated with Fedora install instructions
+- Merge #283: Fixes for passive scan interruption
+- Merge #275, fix #259: non-ASCII device names now don't break decoding
+- Fix #263, #278: return UUID in scan results
+- Merge #262: Return correct address type in passive scan
+ 
+
 Release 1.1.4:
 - Further attempts to fix #158. setup.py rewritten.
 
