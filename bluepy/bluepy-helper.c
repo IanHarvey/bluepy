@@ -1524,6 +1524,7 @@ static void discover(bool start)
                                              own_type, filter_policy, 10000);
         if (err < 0) {
             DBG("Set scan parameters failed");
+            resp_mgmt(err_BAD_STATE);
             return;
         }
         hci_io = g_io_channel_unix_new(hci_dd);
@@ -1536,6 +1537,7 @@ static void discover(bool start)
         olen = sizeof(of);
         if (getsockopt(hci_dd, SOL_HCI, HCI_FILTER, &of, &olen) < 0) {
             printf("Could not get socket options\n");
+            resp_mgmt(err_BAD_STATE);
             return;
         }
         hci_filter_clear(&nf);
@@ -1547,6 +1549,7 @@ static void discover(bool start)
 
         if (setsockopt(hci_dd, SOL_HCI, HCI_FILTER, &nf, sizeof(nf)) < 0) {
             printf("Could not set socket options\n");
+            resp_mgmt(err_BAD_STATE);
             return;
         }
 
@@ -1555,6 +1558,7 @@ static void discover(bool start)
         if (err < 0) {
             //andy: signal error
             DBG("Enable scan failed");
+            resp_mgmt(err_BAD_STATE);
             return;
         }
 
