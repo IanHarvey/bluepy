@@ -622,6 +622,13 @@ class ScanEntry:
         for i in range(nbytes):
             rs = ("%02X" % bval[i]) + rs
         return UUID(rs)
+
+    def _decodeUUIDlist(self, val, nbytes):
+        result = []
+        for i in range(0, len(val), nbytes):
+            if len(val) >= (i+nbytes):
+                result.append(self._decodeUUID(val[i:i+nbytes],nbytes))
+        return result
     
     def getDescription(self, sdid):
         return self.dataTags.get(sdid, hex(sdid))
@@ -639,16 +646,19 @@ class ScanEntry:
                 except UnicodeDecodeError:
                     return "broken encoding"
         elif sdid in [ScanEntry.INCOMPLETE_16B_SERVICES, ScanEntry.COMPLETE_16B_SERVICES]:
-            return self._decodeUUID(val,2)
+            return self._decodeUUIDlist(val,2)
         elif sdid in [ScanEntry.INCOMPLETE_32B_SERVICES, ScanEntry.COMPLETE_32B_SERVICES]:
-            return self._decodeUUID(val,4)
+            return self._decodeUUIDlist(val,4)
         elif sdid in [ScanEntry.INCOMPLETE_128B_SERVICES, ScanEntry.COMPLETE_128B_SERVICES]:
-            return self._decodeUUID(val,16)
+            return self._decodeUUIDlist(val,16)
         else:
             return binascii.b2a_hex(val).decode('utf-8')
 
     def getValueText(self, sdid):
-        return str(self.getValue(sdid))
+        val = self.getValue(sdid)
+        if isinstance(val, list):
+            return ','.join(str(v) for v in val)
+        return str(val)
     
     def getScanData(self):
         '''Returns list of tuples [(tag, description, value)]'''
