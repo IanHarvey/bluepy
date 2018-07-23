@@ -26,6 +26,9 @@ To install the current released version, on most Debian-based systems:
     $ sudo apt-get install python-pip libglib2.0-dev
     $ sudo pip install bluepy
 
+On Fedora do:
+
+    $ sudo dnf install python-pip glib2-devel
 
 For Python 3, you may need to use `pip3`:
 
