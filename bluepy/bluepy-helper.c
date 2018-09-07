@@ -1837,6 +1837,9 @@ int main(int argc, char *argv[])
         } else {
             mgmt_setup(index);
         }
+    } else {
+        // If no argument given, use index 0
+        mgmt_setup(0);
     }
 
     event_loop = g_main_loop_new(NULL, FALSE);
