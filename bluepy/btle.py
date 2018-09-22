@@ -656,6 +656,8 @@ class ScanEntry:
 
     def getValueText(self, sdid):
         val = self.getValue(sdid)
+        if val is None:
+            return None
         if isinstance(val, list):
             return ','.join(str(v) for v in val)
         return str(val)
