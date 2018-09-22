@@ -125,7 +125,7 @@ def main():
         print (ANSI_RED + "Discovering services..." + ANSI_OFF)
 
         for d in devices:
-            if not d.connectable:
+            if not d.connectable or d.rssi < arg.sensitivity:
 
                 continue
 
