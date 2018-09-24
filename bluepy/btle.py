@@ -641,7 +641,7 @@ class ScanEntry:
             try:
                 # Beware! Vol 3 Part C 18.3 doesn't give an encoding. Other references
                 # to 'local name' (e.g. vol 3 E, 6.23) suggest it's UTF-8 but in practice
-                # this appears to throw exceptions.
+                # devices sometimes have garbage here. See #259, #275, #292.
                 return val.decode('utf-8')
             except UnicodeDecodeError:
                 bbval = bytearray(val)
