@@ -639,12 +639,13 @@ class ScanEntry:
             return None
         if sdid in [ScanEntry.SHORT_LOCAL_NAME, ScanEntry.COMPLETE_LOCAL_NAME]:
             try:
+                # Beware! Vol 3 Part C 18.3 doesn't give an encoding. Other references
+                # to 'local name' (e.g. vol 3 E, 6.23) suggest it's UTF-8 but in practice
+                # this appears to throw exceptions.
                 return val.decode('utf-8')
             except UnicodeDecodeError:
-                try:
-                    return val.decode('ISO-8859-1')
-                except UnicodeDecodeError:
-                    return "broken encoding"
+                bbval = bytearray(val)
+                return ''.join( [ (chr(x) if (x>=32 and x<=127) else '?') for x in bbval ] )
         elif sdid in [ScanEntry.INCOMPLETE_16B_SERVICES, ScanEntry.COMPLETE_16B_SERVICES]:
             return self._decodeUUIDlist(val,2)
         elif sdid in [ScanEntry.INCOMPLETE_32B_SERVICES, ScanEntry.COMPLETE_32B_SERVICES]:
@@ -652,15 +653,18 @@ class ScanEntry:
         elif sdid in [ScanEntry.INCOMPLETE_128B_SERVICES, ScanEntry.COMPLETE_128B_SERVICES]:
             return self._decodeUUIDlist(val,16)
         else:
-            return binascii.b2a_hex(val).decode('utf-8')
+            return val
 
     def getValueText(self, sdid):
         val = self.getValue(sdid)
         if val is None:
             return None
-        if isinstance(val, list):
+        if sdid in [ScanEntry.SHORT_LOCAL_NAME, ScanEntry.COMPLETE_LOCAL_NAME]:
+            return val
+        elif isinstance(val, list):
             return ','.join(str(v) for v in val)
-        return str(val)
+        else:
+            return binascii.b2a_hex(val).decode('ascii')
     
     def getScanData(self):
         '''Returns list of tuples [(tag, description, value)]'''
