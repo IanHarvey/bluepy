@@ -70,6 +70,7 @@ static void try_open(void) {
 #endif
 
 #define BLUEPY_URL "https://github.com/IanHarvey/bluepy"
+extern const char* bluepy_helper_version; /* defined in version.c */
 
 static GIOChannel *iochannel = NULL;
 static GAttrib *attrib = NULL;
@@ -1896,8 +1897,8 @@ Options:\n\
 
 static void show_version()
 {
-  puts("bluepy-helper version 1.2.0\n\
-See: " BLUEPY_URL);
+  printf("bluepy-helper version %s\n", bluepy_helper_version);
+  puts("See: " BLUEPY_URL);
   exit(EXIT_SUCCESS);
 }
 

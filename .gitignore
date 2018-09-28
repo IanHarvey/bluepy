@@ -2,6 +2,7 @@
 *.pyc
 __pycache__
 bluepy/*.o
+bluepy/version.?
 #bluepy/bluepy-helper
 # eclipse project related files
 .settings/
