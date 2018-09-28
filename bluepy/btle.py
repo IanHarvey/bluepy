@@ -516,6 +516,9 @@ class Peripheral(BluepyHelper):
     def unpair(self, address):
         self._mgmtCmd("unpair %s" % (address))
 
+    def pair(self):
+        self._mgmtCmd("pair %s" % (self.addr))
+
     def setMTU(self, mtu):
         self._writeCmd("mtu %x\n" % mtu)
         return self._getResp('stat')
@@ -558,12 +561,37 @@ class Peripheral(BluepyHelper):
         resp = self._getResp('oob')
         if resp is not None:
             data = resp.get('d', [''])[0]
-            if data is not None and len(data) == 64:
-                return {'C_192' : ''.join(["%02X" % ord(c) for c in data[:16]]),
-                        'R_192' : ''.join(["%02X" % ord(c) for c in data[16:32]]),
-                        'C_256' : ''.join(["%02X" % ord(c) for c in data[32:48]]),
-                        'R_256' : ''.join(["%02X" % ord(c) for c in data[48:64]])
-                       }
+            if data is None:
+                raise BTLEException(BTLEException.MGMT_ERROR,
+                                "Failed to get local OOB data.")
+            if ord(data[0]) != 8 or ord(data[1]) != 0x1b:
+                raise BTLEException(BTLEException.MGMT_ERROR,
+                                "Malformed local OOB data (address).")
+            address = data[2:8]
+            address_type = data[8:9]
+            if ord(data[9]) != 2 or ord(data[10]) != 0x1c:
+                raise BTLEException(BTLEException.MGMT_ERROR,
+                                "Malformed local OOB data (role).")
+            role = data[11:12]
+            if ord(data[12]) != 17 or ord(data[13]) != 0x22:
+                raise BTLEException(BTLEException.MGMT_ERROR,
+                                "Malformed local OOB data (confirm).")
+            confirm = data[14:30]
+            if ord(data[30]) != 17 or ord(data[31]) != 0x23:
+                raise BTLEException(BTLEException.MGMT_ERROR,
+                                "Malformed local OOB data (random).")
+            random = data[32:48]
+            if ord(data[48]) != 2 or ord(data[49]) != 0x1:
+                raise BTLEException(BTLEException.MGMT_ERROR,
+                                "Malformed local OOB data (flags).")
+            flags = data[50:51]
+            return {'Address' : ''.join(["%02X" % ord(c) for c in address]),
+                    'Type' : ''.join(["%02X" % ord(c) for c in address_type]),
+                    'Role' : ''.join(["%02X" % ord(c) for c in role]),
+                    'C_256' : ''.join(["%02X" % ord(c) for c in confirm]),
+                    'R_256' : ''.join(["%02X" % ord(c) for c in random]),
+                    'Flags' : ''.join(["%02X" % ord(c) for c in flags]),
+                    }
 
     def __del__(self):
         self.disconnect()

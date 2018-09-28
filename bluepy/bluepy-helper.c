@@ -1340,8 +1340,8 @@ static void cmd_add_oob(int argcp, char **argvp)
 static void read_local_oob_data_complete(uint8_t status, uint16_t len,
                     const void *param, void *user_data)
 {
-    const struct mgmt_rp_read_local_oob_data *rp = param;
-    uint8_t oob[64];
+    const struct mgmt_rp_read_local_oob_ext_data *rp = param;
+    uint32_t eir_len = rp->eir_len;
     unsigned int i;
 
     if (status) {
@@ -1350,40 +1350,26 @@ static void read_local_oob_data_complete(uint8_t status, uint16_t len,
         resp_mgmt(err_PROTO_ERR);
         return;
     }
-    memcpy(oob, &rp->hash192, 16);
-    memcpy(&oob[16], &rp->rand192, 16);
-    memcpy(&oob[32], &rp->hash256, 16);
-    memcpy(&oob[48], &rp->rand256, 16);
-
+    DBG("received local OOB ext with eir_len = %d",eir_len);
+    for (i = 0; i<eir_len; i++)
+        DBG("0x%02x ", rp->eir[i]);
+    
     resp_begin(rsp_OOB);
-    send_data(oob, 64);
+    send_data(rp->eir, eir_len);
     resp_end();
-
-    if (0) {
-        DBG("Local OOB data : ");
-        DBG("  C_192:");
-        for (i=0; i<16; i++)
-            DBG("    0x%02x", oob[i]);
-        DBG("  R_192:\n");
-        for (i=16; i<32; i++)
-            DBG("    0x%02x", oob[i]);
-        DBG("  C_256:\n");
-        for (i=32; i<48; i++)
-            DBG("    0x%02x", oob[i]);
-        DBG("  R_256:\n");
-        for (i=48; i<64; i++)
-            DBG("    0x%02x", oob[i]);
-    }
 }
 
 static bool read_local_oob_data(uint16_t index)
 {
+    struct mgmt_cp_read_local_oob_ext_data cp;
+
     if (!mgmt_master) {
         resp_error(err_NO_MGMT);
         return true;
     }
-
-    if (mgmt_send(mgmt_master, MGMT_OP_READ_LOCAL_OOB_DATA, mgmt_ind, 0, NULL,
+    /* For now we only handle BLE OOB */
+    cp.type = 6;
+    if (mgmt_send(mgmt_master, MGMT_OP_READ_LOCAL_OOB_EXT_DATA, mgmt_ind, sizeof(cp), &cp,
                         read_local_oob_data_complete,
                         NULL, NULL) == 0) {
         resp_error(err_PROTO_ERR);
