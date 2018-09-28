@@ -1919,7 +1919,10 @@ static void parse_line(char *line_read)
     if (*line_read == '\0')
         goto done;
 
-    g_shell_parse_argv(line_read, &argcp, &argvp, NULL);
+    if (!g_shell_parse_argv(line_read, &argcp, &argvp, NULL)) {
+        resp_error(err_BAD_CMD);
+        goto done;
+    }
 
     for (i = 0; commands[i].cmd; i++)
         if (strcasecmp(commands[i].cmd, argvp[0]) == 0)
