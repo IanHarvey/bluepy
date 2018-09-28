@@ -44,29 +44,44 @@ class BTLEException(Exception):
     GATT_ERROR = 4
     MGMT_ERROR = 5
 
-    def __init__(self, code, message, estat=None):
+    ERROR_STR = {
+            DISCONNECTED : "Disconnect Error",
+            COMM_ERROR : "Communication Error",
+            INTERNAL_ERROR : "Internal Error",
+            GATT_ERROR : "GATT Error",
+            MGMT_ERROR : "MGMT Error"
+            }
+
+    def __init__(self, code, message, resp_dict=None):
         self.code = code
         self.message = message
-        self.estat = estat
+
+        # optional messages from bluepy-helper
+        self.estat = None
+        self.emsg = None
+        if resp_dict:
+            self.estat = resp_dict.get('estat',None)
+            if isinstance(self.estat,list):
+                self.estat = self.estat[0]
+            self.emsg = resp_dict.get('emsg',None)
+            if isinstance(self.emsg,list):
+                self.emsg = self.emsg[0]
+
 
     def __str__(self):
-        return self.message
+        msg = self.ERROR_STR.get(self.code,"UNKNOWN Error (code: %s)" % (self.code))
+        msg = msg + ": " + self.message
+        if self.estat or self.emsg:
+            msg = msg + " ("
+            if self.estat:
+                msg = msg + "estat: %s" % self.estat
+            if self.estat and self.emsg:
+                msg = msg + " "
+            if self.emsg:
+                msg = msg + "emsg: %s" % self.emsg
+            msg = msg + ")"
 
-
-class BTLEPermissionError(BTLEException):  # Python 3 only: PermissionError
-    def __init__(self, message):
-        super().__init__(BTLEException.DISCONNECTED, message + ': Permission Denied')
-
-
-class BTLEInterfaceSupportError(BTLEException):
-    def __init__(self, message):
-        super().__init__(BTLEException.DISCONNECTED, message + ': Interface not supported')
-
-
-class BTLEInterfaceInvalidError(BTLEException):
-    def __init__(self, message):
-        super().__init__(BTLEException.DISCONNECTED, message + ': Invalid interface')
-
+        return msg
 
 class UUID:
     def __init__(self, val, commonName=None):
@@ -295,15 +310,8 @@ class BluepyHelper:
         rsp = self._waitResp('mgmt')
         if rsp['code'][0] != 'success':
             self._stopHelper()
-            error_msg = "Failed to execute mgmt cmd '%s'" % (cmd)
-            if rsp['estat'][0] == 0x14:     # permission denied
-                raise BTLEPermissionError(error_msg)
-            elif rsp['estat'][0] == 0x0c:   # not supported
-                raise BTLEInterfaceSupportError(error_msg)
-            elif rsp['estat'][0] == 0x11:   # invalid index
-                raise BTLEInterfaceInvalidError(error_msg)
-            else:
-                raise BTLEException(BTLEException.DISCONNECTED, error_msg)
+            raise BTLEException(BTLEException.DISCONNECTED,
+                                "Failed to execute mgmt cmd '%s'" % (cmd), rsp)
 
     @staticmethod
     def parseResp(line):
@@ -354,7 +362,7 @@ class BluepyHelper:
             elif respType == 'stat':
                 if 'state' in resp and len(resp['state']) > 0 and resp['state'][0] == 'disc':
                     self._stopHelper()
-                    raise BTLEException(BTLEException.DISCONNECTED, "Device disconnected")
+                    raise BTLEException(BTLEException.DISCONNECTED, "Device disconnected", resp)
             elif respType == 'err':
                 errcode=resp['code'][0]
                 estat = None
@@ -363,9 +371,9 @@ class BluepyHelper:
                     if isinstance(estat_list, list):
                         estat = resp['estat'][0]
                 if errcode=='nomgmt':
-                    raise BTLEException(BTLEException.MGMT_ERROR, "Management not available (permissions problem?)")
+                    raise BTLEException(BTLEException.MGMT_ERROR, "Management not available (permissions problem?)", resp)
                 else:
-                    raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode, estat)
+                    raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode, resp)
             elif respType == 'scan':
                 # Scan response when we weren't interested. Ignore it
                 continue
@@ -435,7 +443,7 @@ class Peripheral(BluepyHelper):
         if rsp['state'][0] != 'conn':
             self._stopHelper()
             raise BTLEException(BTLEException.DISCONNECTED,
-                                "Failed to connect to peripheral %s, addr type: %s" % (addr, addrType))
+                                "Failed to connect to peripheral %s, addr type: %s" % (addr, addrType), rsp)
 
     def connect(self, addr, addrType=ADDR_TYPE_PUBLIC, iface=None):
         if isinstance(addr, ScanEntry):
@@ -482,7 +490,7 @@ class Peripheral(BluepyHelper):
         self._writeCmd("svcs %s\n" % uuid)
         rsp = self._getResp('find')
         if 'hstart' not in rsp:
-            raise BTLEException(BTLEException.GATT_ERROR, "Service %s not found" % (uuid.getCommonName()))
+            raise BTLEException(BTLEException.GATT_ERROR, "Service %s not found" % (uuid.getCommonName()), rsp)
         svc = Service(self, uuid, rsp['hstart'][0], rsp['hend'][0])
         
         if self._serviceMap is None:
