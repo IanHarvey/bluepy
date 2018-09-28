@@ -9,6 +9,9 @@ BLUEZ_SRCS += src/shared/io-glib.c src/shared/timeout-glib.c
 IMPORT_SRCS = $(addprefix $(BLUEZ_PATH)/, $(BLUEZ_SRCS))
 LOCAL_SRCS  = bluepy-helper.c
 
+IMPORT_OBJS = $(IMPORT_SRCS:.c=.o)
+LOCAL_OBJS  = $(LOCAL_SRCS:.c=.o)
+
 CC ?= gcc
 CFLAGS += -Os -g -Wall # -Werror
 
@@ -24,8 +27,12 @@ LDLIBS += $(shell pkg-config glib-2.0 --libs)
 
 all: bluepy-helper
 
-bluepy-helper: $(LOCAL_SRCS) $(IMPORT_SRCS)
-	$(CC) -L. $(CFLAGS) $(CPPFLAGS) -o $@ $(LOCAL_SRCS) $(IMPORT_SRCS) $(LDLIBS)
+bluepy-helper: $(LOCAL_OBJS) $(IMPORT_OBJS)
+	$(CC) -L. -o $@ $(LOCAL_OBJS) $(IMPORT_OBJS) $(LDLIBS)
+
+# NOTE:
+# make's built-in rule for compiling C to obj files is sufficient
+# to build the objects, no need for explicit rule.
 
 $(IMPORT_SRCS): bluez-src.tgz
 	tar xzf $<
@@ -45,7 +52,7 @@ TAGS: *.c $(BLUEZ_PATH)/attrib/*.[ch] $(BLUEZ_PATH)/btio/*.[ch]
 	etags $^
 
 clean:
-	rm -rf *.o bluepy-helper TAGS $(BLUEZ_PATH)
+	rm -rf $(LOCAL_OBJS) $(IMPORT_OBJS) bluepy-helper TAGS $(BLUEZ_PATH)
 
 
 
