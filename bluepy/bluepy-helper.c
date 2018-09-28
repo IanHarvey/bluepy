@@ -30,6 +30,8 @@
 #include <errno.h>
 #include <stdio.h>
 #include <assert.h>
+#include <unistd.h>
+#include <err.h>
 #include <glib.h>
 
 
@@ -66,6 +68,9 @@ static void try_open(void) {
 #define DBG(fmt, ...)
 #endif
 #endif
+
+#define BLUEPY_URL "https://github.com/IanHarvey/bluepy"
+extern const char* bluepy_helper_version; /* defined in version.c */
 
 static GIOChannel *iochannel = NULL;
 static GAttrib *attrib = NULL;
@@ -154,8 +159,11 @@ static const char
   *st_CONNECTED    = "conn",
   *st_SCANNING    = "scan";
 
-// delimits fields in response message
-#define RESP_DELIM "\x1e"
+/* field delimiter response messages.
+   Using RECORD SEPARATOR (ASCII \x1e) as delimiter makes it easier to
+   accomodate strings with spaces without escaping them.
+   Using SPACE (ascii \x20) is easier for manual debugging. */
+static gchar resp_delim = '\x1e';
 
 static void resp_begin(const char *rsptype)
 {
@@ -164,22 +172,26 @@ static void resp_begin(const char *rsptype)
 
 static void send_sym(const char *tag, const char *val)
 {
-  printf(RESP_DELIM "%s=$%s", tag, val);
+  putchar(resp_delim);
+  printf("%s=$%s", tag, val);
 }
 
 static void send_uint(const char *tag, unsigned int val)
 {
-  printf(RESP_DELIM "%s=h%X", tag, val);
+  putchar(resp_delim);
+  printf("%s=h%X", tag, val);
 }
 
 static void send_str(const char *tag, const char *val)
 {
-  printf(RESP_DELIM "%s='%s", tag, val);
+  putchar(resp_delim);
+  printf("%s='%s", tag, val);
 }
 
 static void send_data(const unsigned char *val, size_t len)
 {
-  printf(RESP_DELIM "%s=b", tag_DATA);
+  putchar(resp_delim);
+  printf("%s=b", tag_DATA);
   while ( len-- > 0 )
     printf("%02X", *val++);
 }
@@ -187,7 +199,8 @@ static void send_data(const unsigned char *val, size_t len)
 static void send_addr(const struct mgmt_addr_info *addr)
 {
     const uint8_t *val = addr->bdaddr.b;
-    printf(RESP_DELIM "%s=b", tag_ADDR);
+    putchar(resp_delim);
+    printf("%s=b", tag_ADDR);
     int len = 6;
     /* Human-readable byte order is reverse of bdaddr.b */
     while ( len-- > 0 )
@@ -1722,7 +1735,10 @@ static void parse_line(char *line_read)
     if (*line_read == '\0')
         goto done;
 
-    g_shell_parse_argv(line_read, &argcp, &argvp, NULL);
+    if (!g_shell_parse_argv(line_read, &argcp, &argvp, NULL)) {
+        resp_error(err_BAD_CMD);
+        goto done;
+    }
 
     for (i = 0; commands[i].cmd; i++)
         if (strcasecmp(commands[i].cmd, argvp[0]) == 0)
@@ -1860,10 +1876,40 @@ static void mgmt_setup(unsigned int idx)
     }
 }
 
+static void show_help(const char* progname)
+{
+  printf("usage: %s [-hvs] [index]\n", progname);
+  puts("\n\
+bluepy-helper is a BlueZ-based bluetooth low-level interface.\n\
+It is used by the Bluepy python package.\n\
+See: " BLUEPY_URL "\n\
+\n\
+Options:\n\
+   index - an integer specifing the bluetooth hci interface\n\
+           number (0 = hci0). Optional if connecting to an already-paired\n\
+	   device, but required for explicit pair/unpair commands.\n\
+\n\
+   -h      Show this help screen.\n\
+   -v      Show version and exit.\n\
+   -s      Use SPACE character as field delimiter (instead of the default\n\
+           FIELD SEPARATOR (ascii \\x1E). Useful for manual debugging.\n\
+");
+
+  exit(EXIT_SUCCESS);
+}
+
+static void show_version()
+{
+  printf("bluepy-helper version %s\n", bluepy_helper_version);
+  puts("See: " BLUEPY_URL);
+  exit(EXIT_SUCCESS);
+}
+
 int main(int argc, char *argv[])
 {
     GIOChannel *pchan;
     gint events;
+    int opt;
 
     opt_sec_level = g_strdup("low");
 
@@ -1873,11 +1919,32 @@ int main(int argc, char *argv[])
 
     DBG(__FILE__ " built at " __TIME__ " on " __DATE__);
 
-    if (argc > 1) {
+
+    while ((opt = getopt(argc, argv, "shv")) != -1) {
+        switch (opt)
+        {
+        case 'h':
+            show_help(argv[0]); /* does not return */
+
+        case 'v':
+            show_version(); /* does not return */
+
+        case 's':
+            /* use SPACE for field delimiter in response strings */
+            resp_delim = ' ';
+            break;
+
+        default: /* '?' */
+            errx(EXIT_FAILURE, "Use -h for help");
+        }
+    }
+
+    if (argc > optind) {
         int index;
 
-        if (sscanf (argv[1], "%i", &index)!=1) {
-            DBG("error converting argument: %s  to device index integer",argv[1]);
+        if (sscanf (argv[optind], "%i", &index)!=1) {
+            warnx("invalid device index '%s'", argv[optind]);
+            DBG("error converting argument: %s  to device index integer",argv[optind]);
         } else {
             mgmt_setup(index);
         }
