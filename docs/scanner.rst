@@ -135,8 +135,8 @@ For continuous scanning, follow this example::
 
 
 NOTES   
-* LE scanning must be run as root.
-* The continuous scanning code never completes, so you'll need to do useful things in the handleDiscovery() method of your delegate.
+* LE scanning must be run as root.  
+* The continuous scanning code never completes, so you'll need to do useful things in the handleDiscovery() method of your delegate.  
 
 See the documentation for ``ScanEntry`` for the information available via the *dev*
 parameter passed to the delegate.
