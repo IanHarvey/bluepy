@@ -70,24 +70,33 @@ Sample code
 -----------
 
 Basic code to run a LE device scan follows this example::
-
+    
+    # import the necessary parts of the bluepy library
     from bluepy.btle import Scanner, DefaultDelegate
 
+    # create a delegate to receive the BLE broadcast packets 
     class ScanDelegate(DefaultDelegate):
         def __init__(self):
             DefaultDelegate.__init__(self)
 
+        # when this python script discovers a BLE broadcast packet, print a message with the device's MAC address
+        # dev is MAC address of the device  
         def handleDiscovery(self, dev, isNewDev, isNewData):
             if isNewDev:
                 print "Discovered device", dev.addr
             elif isNewData:
                 print "Received new data from", dev.addr
-    
+
+    # create a scanner object that sends BLE broadcast packets to the ScanDelegate
     scanner = Scanner().withDelegate(ScanDelegate())
+    # create a list of unique devices that the scanner discovered in 10 seconds
     devices = scanner.scan(10.0)
 
+    # for each device (dev) in the list of devices 
     for dev in devices:
+        # print print the device's MAC address, its address type, and relative signal strength  
         print "Device %s (%s), RSSI=%d dB" % (dev.addr, dev.addrType, dev.rssi)
+        # for each address type XXXX?????
         for (adtype, desc, value) in dev.getScanData():
             print "  %s = %s" % (desc, value)
 
