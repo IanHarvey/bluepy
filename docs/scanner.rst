@@ -134,9 +134,7 @@ For continuous scanning, follow this example::
         scanner.process()
 
 
-NOTES   
-* LE scanning must be run as root.  
-* The continuous scanning code never completes, so you'll need to do useful things in the handleDiscovery() method of your delegate.  
+NOTE that (1) LE scanning must be run as root and (2) the continuous scanning code never completes, so you'll need to do useful things in the `handleDiscovery()` method of your delegate.  
 
 See the documentation for ``ScanEntry`` for the information available via the *dev*
 parameter passed to the delegate.
