@@ -92,7 +92,7 @@ Basic code to run a LE device scan follows this example::
     # create a list of unique devices that the scanner discovered during a 10-second scan
     devices = scanner.scan(10.0)
 
-    # for each device (dev) in the list of devices 
+    # for each device  in the list of devices 
     for dev in devices:
         # print print the device's MAC address, its address type, 
         # and Received Signal Strength Indication that shows how strong the signal was when it was received.   
