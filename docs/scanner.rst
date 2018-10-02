@@ -94,13 +94,14 @@ Basic code to run a LE device scan follows this example::
 
     # for each device  in the list of devices 
     for dev in devices:
-        # print print the device's MAC address, its address type, 
-        # and Received Signal Strength Indication that shows how strong the signal was when it was received.   
+        # print  the device's MAC address, its address type, 
+        # and Received Signal Strength Indication that shows how strong the signal was when the script received the broadcast.   
         print "Device %s (%s), RSSI=%d dB" % (dev.addr, dev.addrType, dev.rssi)
 
-        # For all available advertising data items, print a description of the data type and value of the data itself 
+        # For each of the device's advertising data items, print a description of the data type and value of the data itself 
         # getScanData returns a list of tupples: adtype, desc, value
-        # where AD Type means “advertising data type,” that is encoded by Bluetooth convention: https://www.bluetooth.com/specifications/assigned-numbers/generic-access-profile 
+        # where AD Type means “advertising data type,” as defined by Bluetooth convention:
+        # https://www.bluetooth.com/specifications/assigned-numbers/generic-access-profile 
         # desc is a human-readable description of the data type and value is the data itself  
         for (adtype, desc, value) in dev.getScanData():
             print "  %s = %s" % (desc, value)
