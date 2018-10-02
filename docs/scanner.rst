@@ -74,7 +74,7 @@ Basic code to run a LE device scan follows this example::
     # import the necessary parts of the bluepy library
     from bluepy.btle import Scanner, DefaultDelegate
 
-    # create a delegate to receive the BLE broadcast packets 
+    # create a delegate class to receive the BLE broadcast packets 
     class ScanDelegate(DefaultDelegate):
         def __init__(self):
             DefaultDelegate.__init__(self)
