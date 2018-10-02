@@ -80,7 +80,6 @@ Basic code to run a LE device scan follows this example::
             DefaultDelegate.__init__(self)
 
         # when this python script discovers a BLE broadcast packet, print a message with the device's MAC address
-        # dev is MAC address of the device  
         def handleDiscovery(self, dev, isNewDev, isNewData):
             if isNewDev:
                 print "Discovered device", dev.addr
@@ -94,9 +93,14 @@ Basic code to run a LE device scan follows this example::
 
     # for each device (dev) in the list of devices 
     for dev in devices:
-        # print print the device's MAC address, its address type, and relative signal strength  
+        # print print the device's MAC address, its address type, 
+        # and Received Signal Strength Indication that shows how strong the signal was when it was received.   
         print "Device %s (%s), RSSI=%d dB" % (dev.addr, dev.addrType, dev.rssi)
-        # for each address type XXXX?????
+
+        # For all available advertising data items, print a description of the data type and value of the data itself 
+        # getScanData returns a list of tupples: adtype, desc, value
+        # where AD Type means “advertising data type,” that is encoded by Bluetooth convention: https://www.bluetooth.com/specifications/assigned-numbers/generic-access-profile 
+        # desc is a human-readable description of the data type and value is the data itself  
         for (adtype, desc, value) in dev.getScanData():
             print "  %s = %s" % (desc, value)
 
