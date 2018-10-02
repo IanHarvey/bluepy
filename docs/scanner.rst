@@ -69,7 +69,7 @@ Instance Methods
 Sample code
 -----------
 
-Basic code to run a LE device scan follows this example::
+Basic code to run a LE device scan for 10 seconds follows this example::
     
     # import the necessary parts of the bluepy library
     from bluepy.btle import Scanner, DefaultDelegate
@@ -106,7 +106,37 @@ Basic code to run a LE device scan follows this example::
         for (adtype, desc, value) in dev.getScanData():
             print "  %s = %s" % (desc, value)
 
-NOTE that LE scanning must be run as root.
+
+For continuous scanning, follow this example::
+    
+    # import the necessary parts of the bluepy library
+    from bluepy.btle import Scanner, DefaultDelegate
+
+    # create a delegate class to receive the BLE broadcast packets 
+    class ScanDelegate(DefaultDelegate):
+        def __init__(self):
+            DefaultDelegate.__init__(self)
+
+        # when this python script discovers a BLE broadcast packet, print a message with the device's MAC address
+        def handleDiscovery(self, dev, isNewDev, isNewData):
+            if isNewDev:
+                print "Discovered device", dev.addr
+            elif isNewData:
+                print "Received new data from", dev.addr
+
+    # create a scanner object that sends BLE broadcast packets to the ScanDelegate
+    scanner = Scanner().withDelegate(ScanDelegate())
+    
+    # start the scanner and keep the process running 
+    scanner.start()
+    while True:
+        print "Still running..."
+        scanner.process()
+
+
+NOTES   
+* LE scanning must be run as root.
+* The continuous scanning code never completes, so you'll need to do useful things in the handleDiscovery() method of your delegate.
 
 See the documentation for ``ScanEntry`` for the information available via the *dev*
 parameter passed to the delegate.
