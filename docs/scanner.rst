@@ -88,6 +88,7 @@ Basic code to run a LE device scan follows this example::
 
     # create a scanner object that sends BLE broadcast packets to the ScanDelegate
     scanner = Scanner().withDelegate(ScanDelegate())
+    
     # create a list of unique devices that the scanner discovered in 10 seconds
     devices = scanner.scan(10.0)
 
