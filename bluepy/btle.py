@@ -63,7 +63,7 @@ class BTLEInterfaceSupportError(BTLEException, PermissionError):
 
 
 class BTLEInterfaceInvalidError(BTLEException):
-    def __init__(self):
+    def __init__(self, message):
         super().__init__(BTLEException.DISCONNECTED, message + ': Invalid interface')
 
 
