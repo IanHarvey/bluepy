@@ -54,12 +54,17 @@ class BTLEException(Exception):
 
 class BTLEPermissionError(BTLEException, PermissionError):
     def __init__(self, message):
-        super().__init__(BTLEException.MGMT_ERROR, message + ': Permission Denied')
+        super().__init__(BTLEException.DISCONNECTED, message + ': Permission Denied')
 
 
 class BTLEInterfaceSupportError(BTLEException, PermissionError):
     def __init__(self, message):
-        super().__init__(BTLEException.MGMT_ERROR, message + ': Interface not supported')
+        super().__init__(BTLEException.DISCONNECTED, message + ': Interface not supported')
+
+
+class BTLEInterfaceInvalidError(BTLEException):
+    def __init__(self):
+        super().__init__(BTLEException.DISCONNECTED, message + ': Invalid interface')
 
 
 class UUID:
@@ -290,10 +295,12 @@ class BluepyHelper:
         if rsp['code'][0] != 'success':
             self._stopHelper()
             error_msg = "Failed to execute mgmt cmd '%s'" % (cmd)
-            if rsp['estat'][0] == 0x14:
+            if rsp['estat'][0] == 0x14:     # permission denied
                 raise BTLEPermissionError(error_msg)
-            elif rsp['estat'][0] == 0x0c:
+            elif rsp['estat'][0] == 0x0c:   # not supported
                 raise BTLEInterfaceSupportError(error_msg)
+            elif rsp['estat'][0] == 0x11:   # invalid index
+                raise BTLEInterfaceInvalidError(error_msg)
             else:
                 raise BTLEException(BTLEException.DISCONNECTED, error_msg)
 
