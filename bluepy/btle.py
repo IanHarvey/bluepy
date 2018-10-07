@@ -52,6 +52,16 @@ class BTLEException(Exception):
         return self.message
 
 
+class BTLEPermissionError(BTLEException, PermissionError):
+    def __init__(self, message):
+        super().__init__(BTLEException.MGMT_ERROR, message + ': Permission Denied')
+
+
+class BTLEInterfaceSupportError(BTLEException, PermissionError):
+    def __init__(self, message):
+        super().__init__(BTLEException.MGMT_ERROR, message + ': Interface not supported')
+
+
 class UUID:
     def __init__(self, val, commonName=None):
         '''We accept: 32-digit hex strings, with and without '-' characters,
@@ -279,8 +289,13 @@ class BluepyHelper:
         rsp = self._waitResp('mgmt')
         if rsp['code'][0] != 'success':
             self._stopHelper()
-            raise BTLEException(BTLEException.DISCONNECTED,
-                                "Failed to execute mgmt cmd '%s'" % (cmd))
+            error_msg = "Failed to execute mgmt cmd '%s'" % (cmd)
+            if rsp['estat'][0] == 0x14:
+                raise BTLEPermissionError(error_msg)
+            elif rsp['estat'][0] == 0x0c:
+                raise BTLEInterfaceSupportError(error_msg)
+            else:
+                raise BTLEException(BTLEException.DISCONNECTED, error_msg)
 
     @staticmethod
     def parseResp(line):
