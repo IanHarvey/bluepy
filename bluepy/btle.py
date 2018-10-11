@@ -162,8 +162,9 @@ class Characteristic:
         self.uuid = UUID(uuidVal)
         self.descs = None
 
-    def read(self):
-        return self.peripheral.readCharacteristic(self.valHandle)
+    def read(self, timeout=None):
+        return self.peripheral.readCharacteristic(self.valHandle,
+                                                  timeout=timeout)
 
     def write(self, val, withResponse=False):
         return self.peripheral.writeCharacteristic(self.valHandle, val, withResponse)
@@ -415,14 +416,14 @@ class Peripheral(BluepyHelper):
         elif addr is not None:
             self._connect(addr, addrType, iface)
 
-    def disconnect(self):
+    def disconnect(self, timeout=1):
         if self._helper is None:
             return
         # Unregister the delegate first
         self.setDelegate(None)
 
         self._writeCmd("disc\n")
-        self._getResp('stat')
+        self._getResp('stat', timeout=timeout)
         self._stopHelper()
 
     def discoverServices(self):
@@ -467,12 +468,13 @@ class Peripheral(BluepyHelper):
         self._writeCmd("incl %X %X\n" % (startHnd, endHnd))
         return self._getResp('find')
 
-    def getCharacteristics(self, startHnd=1, endHnd=0xFFFF, uuid=None):
+    def getCharacteristics(self, startHnd=1, endHnd=0xFFFF, uuid=None,
+                           timeout=5):
         cmd = 'char %X %X' % (startHnd, endHnd)
         if uuid:
             cmd += ' %s' % UUID(uuid)
         self._writeCmd(cmd + "\n")
-        rsp = self._getResp('find')
+        rsp = self._getResp('find', timeout=timeout)
         nChars = len(rsp['hnd'])
         return [Characteristic(self, rsp['uuid'][i], rsp['hnd'][i],
                                rsp['props'][i], rsp['vhnd'][i])
@@ -492,9 +494,12 @@ class Peripheral(BluepyHelper):
         ndesc = len(resp['hnd'])
         return [Descriptor(self, resp['uuid'][i], resp['hnd'][i]) for i in range(ndesc)]
 
-    def readCharacteristic(self, handle):
+    def readCharacteristic(self, handle, timeout=None):
         self._writeCmd("rd %X\n" % handle)
-        resp = self._getResp('rd')
+        resp = self._getResp('rd', timeout=timeout)
+        if resp is None:
+            return resp
+        else:
         return resp['d'][0]
 
     def _readCharacteristicByUUID(self, uuid, startHnd, endHnd):
