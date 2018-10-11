@@ -262,6 +262,7 @@ class BluepyHelper:
             self._helper.stdin.write("quit\n")
             self._helper.stdin.flush()
             self._helper.wait()
+            time.sleep(0.1)
             self._helper = None
         if self._stderr is not None:
             self._stderr.close()
