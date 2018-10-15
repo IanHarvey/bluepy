@@ -513,8 +513,11 @@ class Peripheral(BluepyHelper):
         self._writeCmd("secu %s\n" % level)
         return self._getResp('stat')
 
-    def unpair(self, address):
-        self._mgmtCmd("unpair %s" % (address))
+    def unpair(self, addr, iface = None):
+        self._startHelper(iface)
+        self.addr = addr
+        self.iface = iface
+        self._mgmtCmd("unpair %s" % addr)
 
     def pair(self):
         self._mgmtCmd("pair %s" % (self.addr))
