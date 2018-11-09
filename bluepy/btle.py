@@ -44,9 +44,10 @@ class BTLEException(Exception):
     GATT_ERROR = 4
     MGMT_ERROR = 5
 
-    def __init__(self, code, message):
+    def __init__(self, code, message, estat=None):
         self.code = code
         self.message = message
+        self.estat = estat
 
     def __str__(self):
         return self.message
@@ -334,10 +335,15 @@ class BluepyHelper:
                     raise BTLEException(BTLEException.DISCONNECTED, "Device disconnected")
             elif respType == 'err':
                 errcode=resp['code'][0]
+                estat = None
+                if resp.__contains__('estat'):
+                    estat_list = resp['estat']
+                    if isinstance(estat_list, list):
+                        estat = resp['estat'][0]
                 if errcode=='nomgmt':
                     raise BTLEException(BTLEException.MGMT_ERROR, "Management not available (permissions problem?)")
                 else:
-                    raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode)
+                    raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode, estat)
             elif respType == 'scan':
                 # Scan response when we weren't interested. Ignore it
                 continue
