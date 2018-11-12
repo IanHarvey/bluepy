@@ -1040,7 +1040,7 @@ static void char_write_req_cb(guint8 status, const guint8 *pdu, guint16 plen,
 
 static void cmd_char_write_common(int argcp, char **argvp, int with_response)
 {
-    uint8_t *value;
+    uint8_t *value = NULL;
     size_t plen;
     int handle;
 
@@ -1049,7 +1049,7 @@ static void cmd_char_write_common(int argcp, char **argvp, int with_response)
         return;
     }
 
-    if (argcp < 3) {
+    if (argcp < 2) {
         resp_error(err_BAD_PARAM);
         return;
     }
@@ -1060,10 +1060,14 @@ static void cmd_char_write_common(int argcp, char **argvp, int with_response)
         return;
     }
 
-    plen = gatt_attr_data_from_string(argvp[2], &value);
-    if (plen == 0) {
-        resp_error(err_BAD_PARAM);
-        return;
+    if (argcp >= 3) {
+      plen = gatt_attr_data_from_string(argvp[2], &value);
+      if (plen == 0) {
+          resp_error(err_BAD_PARAM);
+          return;
+      }
+    } else {
+      plen = 0;
     }
 
     if (with_response)
@@ -1853,9 +1857,9 @@ static struct {
         "Characteristics Value/Descriptor Read by handle" },
     { "rdu",        cmd_read_uuid,  "<UUID> [start hnd] [end hnd]",
         "Characteristics Value/Descriptor Read by UUID" },
-    { "wrr",        cmd_char_write_rsp, "<handle> <new value>",
+    { "wrr",        cmd_char_write_rsp, "<handle> [<new value>]",
         "Characteristic Value Write (Write Request)" },
-    { "wr",         cmd_char_write, "<handle> <new value>",
+    { "wr",         cmd_char_write, "<handle> [<new value>]",
         "Characteristic Value Write (No response)" },
     { "secu",       cmd_sec_level,  "[low | medium | high]",
         "Set security level. Default: low" },
