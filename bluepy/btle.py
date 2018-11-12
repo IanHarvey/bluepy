@@ -53,12 +53,12 @@ class BTLEException(Exception):
         return self.message
 
 
-class BTLEPermissionError(BTLEException, PermissionError):
+class BTLEPermissionError(BTLEException):  # Python 3 only: PermissionError
     def __init__(self, message):
         super().__init__(BTLEException.DISCONNECTED, message + ': Permission Denied')
 
 
-class BTLEInterfaceSupportError(BTLEException, PermissionError):
+class BTLEInterfaceSupportError(BTLEException):
     def __init__(self, message):
         super().__init__(BTLEException.DISCONNECTED, message + ': Interface not supported')
 
