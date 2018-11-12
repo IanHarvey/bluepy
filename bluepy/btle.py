@@ -35,25 +35,8 @@ def DBG(*args):
 
 
 class BTLEException(Exception):
-
-    """BTLE Exception."""
-
-    DISCONNECTED = 1
-    COMM_ERROR = 2
-    INTERNAL_ERROR = 3
-    GATT_ERROR = 4
-    MGMT_ERROR = 5
-
-    ERROR_STR = {
-            DISCONNECTED : "Disconnect Error",
-            COMM_ERROR : "Communication Error",
-            INTERNAL_ERROR : "Internal Error",
-            GATT_ERROR : "GATT Error",
-            MGMT_ERROR : "MGMT Error"
-            }
-
-    def __init__(self, code, message, resp_dict=None):
-        self.code = code
+    """Base class for all Bluepy exceptions"""
+    def __init__(self, message, resp_dict=None):
         self.message = message
 
         # optional messages from bluepy-helper
@@ -69,8 +52,7 @@ class BTLEException(Exception):
 
 
     def __str__(self):
-        msg = self.ERROR_STR.get(self.code,"UNKNOWN Error (code: %s)" % (self.code))
-        msg = msg + ": " + self.message
+        msg = self.message
         if self.estat or self.emsg:
             msg = msg + " ("
             if self.estat:
@@ -82,6 +64,24 @@ class BTLEException(Exception):
             msg = msg + ")"
 
         return msg
+
+class BTLEInternalError(BTLEException):
+    def __init__(self, message, rsp=None):
+        BTLEException.__init__(self, "Internal Error: " + message, rsp)
+
+class BTLEDisconnectError(BTLEException):
+    def __init__(self, message, rsp=None):
+        BTLEException.__init__(self, "Disconnect Error: " + message, rsp)
+
+class BTLEManagementError(BTLEException):
+    def __init__(self, message, rsp=None):
+        BTLEException.__init__(self, "Management Error: " + message, rsp)
+
+class BTLEGattError(BTLEException):
+    def __init__(self, message, rsp=None):
+        BTLEException.__init__(self, "GATT Error: " + message, rsp)
+
+
 
 class UUID:
     def __init__(self, val, commonName=None):
@@ -299,8 +299,7 @@ class BluepyHelper:
 
     def _writeCmd(self, cmd):
         if self._helper is None:
-            raise BTLEException(BTLEException.INTERNAL_ERROR,
-                                "Helper not started (did you call connect()?)")
+            raise BTLEInternalError("Helper not started (did you call connect()?)")
         DBG("Sent: ", cmd)
         self._helper.stdin.write(cmd)
         self._helper.stdin.flush()
@@ -310,8 +309,7 @@ class BluepyHelper:
         rsp = self._waitResp('mgmt')
         if rsp['code'][0] != 'success':
             self._stopHelper()
-            raise BTLEException(BTLEException.DISCONNECTED,
-                                "Failed to execute mgmt cmd '%s'" % (cmd), rsp)
+            raise BTLEManagementError("Failed to execute mgmt cmd '%s'" % (cmd), rsp)
 
     @staticmethod
     def parseResp(line):
@@ -328,8 +326,7 @@ class BluepyHelper:
             elif tval[0]=='b':
                 val = binascii.a2b_hex(tval[1:].encode('utf-8'))
             else:
-                raise BTLEException(BTLEException.INTERNAL_ERROR,
-                             "Cannot understand response value %s" % repr(tval))
+                raise BTLEInternalError("Cannot understand response value %s" % repr(tval))
             if tag not in resp:
                 resp[tag] = [val]
             else:
@@ -339,7 +336,7 @@ class BluepyHelper:
     def _waitResp(self, wantType, timeout=None):
         while True:
             if self._helper.poll() is not None:
-                raise BTLEException(BTLEException.INTERNAL_ERROR, "Helper exited")
+                raise BTLEInternalError("Helper exited")
 
             if timeout:
                 fds = self._poller.poll(timeout*1000)
@@ -354,7 +351,7 @@ class BluepyHelper:
 
             resp = BluepyHelper.parseResp(rv)
             if 'rsp' not in resp:
-                raise BTLEException(BTLEException.INTERNAL_ERROR, "No response type indicator")
+                raise BTLEInternalError("No response type indicator", resp)
 
             respType = resp['rsp'][0]
             if respType in wantType:
@@ -362,23 +359,20 @@ class BluepyHelper:
             elif respType == 'stat':
                 if 'state' in resp and len(resp['state']) > 0 and resp['state'][0] == 'disc':
                     self._stopHelper()
-                    raise BTLEException(BTLEException.DISCONNECTED, "Device disconnected", resp)
+                    raise BTLEDisconnectError("Device disconnected", resp)
             elif respType == 'err':
                 errcode=resp['code'][0]
-                estat = None
-                if resp.__contains__('estat'):
-                    estat_list = resp['estat']
-                    if isinstance(estat_list, list):
-                        estat = resp['estat'][0]
                 if errcode=='nomgmt':
-                    raise BTLEException(BTLEException.MGMT_ERROR, "Management not available (permissions problem?)", resp)
+                    raise BTLEManagementError("Management not available (permissions problem?)", resp)
+                elif errcode=='atterr':
+                    raise BTLEGattError("Bluetooth command failed", resp)
                 else:
-                    raise BTLEException(BTLEException.COMM_ERROR, "Error from Bluetooth stack (%s)" % errcode, resp)
+                    raise BTLEException("Error from bluepy-helper (%s)" % errcode, resp)
             elif respType == 'scan':
                 # Scan response when we weren't interested. Ignore it
                 continue
             else:
-                raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response (%s)" % respType)
+                raise BTLEInternalError("Unexpected response (%s)" % respType, resp)
 
     def status(self):
         self._writeCmd("stat\n")
@@ -442,8 +436,7 @@ class Peripheral(BluepyHelper):
             rsp = self._getResp('stat')
         if rsp['state'][0] != 'conn':
             self._stopHelper()
-            raise BTLEException(BTLEException.DISCONNECTED,
-                                "Failed to connect to peripheral %s, addr type: %s" % (addr, addrType), rsp)
+            raise BTLEDisconnectError("Failed to connect to peripheral %s, addr type: %s" % (addr, addrType), rsp)
 
     def connect(self, addr, addrType=ADDR_TYPE_PUBLIC, iface=None):
         if isinstance(addr, ScanEntry):
@@ -490,7 +483,7 @@ class Peripheral(BluepyHelper):
         self._writeCmd("svcs %s\n" % uuid)
         rsp = self._getResp('find')
         if 'hstart' not in rsp:
-            raise BTLEException(BTLEException.GATT_ERROR, "Service %s not found" % (uuid.getCommonName()), rsp)
+            raise BTLEGattError("Service %s not found" % (uuid.getCommonName()), rsp)
         svc = Service(self, uuid, rsp['hstart'][0], rsp['hend'][0])
         
         if self._serviceMap is None:
@@ -601,27 +594,27 @@ class Peripheral(BluepyHelper):
         if resp is not None:
             data = resp.get('d', [''])[0]
             if data is None:
-                raise BTLEException(BTLEException.MGMT_ERROR,
+                raise BTLEManagementError(
                                 "Failed to get local OOB data.")
             if ord(data[0]) != 8 or ord(data[1]) != 0x1b:
-                raise BTLEException(BTLEException.MGMT_ERROR,
+                raise BTLEManagementError(
                                 "Malformed local OOB data (address).")
             address = data[2:8]
             address_type = data[8:9]
             if ord(data[9]) != 2 or ord(data[10]) != 0x1c:
-                raise BTLEException(BTLEException.MGMT_ERROR,
+                raise BTLEManagementError(
                                 "Malformed local OOB data (role).")
             role = data[11:12]
             if ord(data[12]) != 17 or ord(data[13]) != 0x22:
-                raise BTLEException(BTLEException.MGMT_ERROR,
+                raise BTLEManagementError(
                                 "Malformed local OOB data (confirm).")
             confirm = data[14:30]
             if ord(data[30]) != 17 or ord(data[31]) != 0x23:
-                raise BTLEException(BTLEException.MGMT_ERROR,
+                raise BTLEManagementError(
                                 "Malformed local OOB data (random).")
             random = data[32:48]
             if ord(data[48]) != 2 or ord(data[49]) != 0x1:
-                raise BTLEException(BTLEException.MGMT_ERROR,
+                raise BTLEManagementError(
                                 "Malformed local OOB data (flags).")
             flags = data[50:51]
             return {'Address' : ''.join(["%02X" % ord(c) for c in address]),
@@ -699,7 +692,7 @@ class ScanEntry:
     def _update(self, resp):
         addrType = self.addrTypes.get(resp['type'][0], None)
         if (self.addrType is not None) and (addrType != self.addrType):
-            raise BTLEException(BTLEException.INTERNAL_ERROR, "Address type changed during scan, for address %s" % self.addr)
+            raise BTLEInternalError("Address type changed during scan, for address %s" % self.addr)
         self.addrType = addrType
         self.rssi = -resp['rssi'][0]
         self.connectable = ((resp['flag'][0] & 0x4) == 0)
@@ -814,7 +807,7 @@ class Scanner(BluepyHelper):
 
     def process(self, timeout=10.0):
         if self._helper is None:
-            raise BTLEException(BTLEException.INTERNAL_ERROR,
+            raise BTLEInternalError(
                                 "Helper not started (did you call start()?)")
         start = time.time()
         while True:
@@ -848,7 +841,7 @@ class Scanner(BluepyHelper):
                     self.delegate.handleDiscovery(dev, (dev.updateCount <= 1), isNewData)
                  
             else:
-                raise BTLEException(BTLEException.INTERNAL_ERROR, "Unexpected response: " + respType)
+                raise BTLEInternalError("Unexpected response: " + respType, resp)
 
     def getDevices(self):
         return self.scanned.values()
