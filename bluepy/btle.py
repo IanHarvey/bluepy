@@ -541,8 +541,14 @@ class Peripheral(BluepyHelper):
         self._writeCmd("secu %s\n" % level)
         return self._getResp('stat')
 
-    def unpair(self, address):
-        self._mgmtCmd("unpair %s" % (address))
+    def unpair(self, addr, iface = None):
+        self._startHelper(iface)
+        self.addr = addr
+        self.iface = iface
+        self._mgmtCmd("unpair %s" % addr)
+
+    def pair(self):
+        self._mgmtCmd("pair %s" % (self.addr))
 
     def setMTU(self, mtu):
         self._writeCmd("mtu %x\n" % mtu)
@@ -551,6 +557,72 @@ class Peripheral(BluepyHelper):
     def waitForNotifications(self, timeout):
          resp = self._getResp(['ntfy','ind'], timeout)
          return (resp != None)
+    def _setRemoteOOB(self, address, address_type, oob_data, iface=None):
+        if self._helper is None:
+            self._startHelper(iface)
+        self.addr = address
+        self.addrType = address_type
+        self.iface = iface
+        cmd = "remote_oob " + address + " " + address_type
+        if oob_data['C_192'] is not None and oob_data['R_192'] is not None:
+            cmd += " C_192 " + oob_data['C_192'] + " R_192 " + oob_data['R_192']
+        if oob_data['C_256'] is not None and oob_data['R_256'] is not None:
+            cmd += " C_256 " + oob_data['C_256'] + " R_256 " + oob_data['R_256']
+        if iface is not None:
+            cmd += " hci"+str(iface)
+        self._writeCmd(cmd)
+
+    def setRemoteOOB(self, address, address_type, oob_data, iface=None):
+        if len(address.split(":")) != 6:
+            raise ValueError("Expected MAC address, got %s" % repr(address))
+        if address_type not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
+            raise ValueError("Expected address type public or random, got {}".format(address_type))
+        if isinstance(address, ScanEntry):
+            return self._setOOB(address.addr, address.addrType, oob_data, address.iface)
+        elif address is not None:
+            return self._setRemoteOOB(address, address_type, oob_data, iface)
+
+    def getLocalOOB(self, iface=None):
+        if self._helper is None:
+            self._startHelper(iface)
+        self.iface = iface
+        self._writeCmd("local_oob\n")
+        if iface is not None:
+            cmd += " hci"+str(iface)
+        resp = self._getResp('oob')
+        if resp is not None:
+            data = resp.get('d', [''])[0]
+            if data is None:
+                raise BTLEException(BTLEException.MGMT_ERROR,
+                                "Failed to get local OOB data.")
+            if ord(data[0]) != 8 or ord(data[1]) != 0x1b:
+                raise BTLEException(BTLEException.MGMT_ERROR,
+                                "Malformed local OOB data (address).")
+            address = data[2:8]
+            address_type = data[8:9]
+            if ord(data[9]) != 2 or ord(data[10]) != 0x1c:
+                raise BTLEException(BTLEException.MGMT_ERROR,
+                                "Malformed local OOB data (role).")
+            role = data[11:12]
+            if ord(data[12]) != 17 or ord(data[13]) != 0x22:
+                raise BTLEException(BTLEException.MGMT_ERROR,
+                                "Malformed local OOB data (confirm).")
+            confirm = data[14:30]
+            if ord(data[30]) != 17 or ord(data[31]) != 0x23:
+                raise BTLEException(BTLEException.MGMT_ERROR,
+                                "Malformed local OOB data (random).")
+            random = data[32:48]
+            if ord(data[48]) != 2 or ord(data[49]) != 0x1:
+                raise BTLEException(BTLEException.MGMT_ERROR,
+                                "Malformed local OOB data (flags).")
+            flags = data[50:51]
+            return {'Address' : ''.join(["%02X" % ord(c) for c in address]),
+                    'Type' : ''.join(["%02X" % ord(c) for c in address_type]),
+                    'Role' : ''.join(["%02X" % ord(c) for c in role]),
+                    'C_256' : ''.join(["%02X" % ord(c) for c in confirm]),
+                    'R_256' : ''.join(["%02X" % ord(c) for c in random]),
+                    'Flags' : ''.join(["%02X" % ord(c) for c in flags]),
+                    }
 
     def __del__(self):
         self.disconnect()

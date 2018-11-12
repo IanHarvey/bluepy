@@ -134,7 +134,8 @@ static const char
   *rsp_READ      = "rd",
   *rsp_WRITE     = "wr",
   *rsp_MGMT      = "mgmt",
-  *rsp_SCAN      = "scan";
+  *rsp_SCAN      = "scan",
+  *rsp_OOB       = "oob";
 
 static const char
   *err_CONN_FAIL = "connfail",
@@ -1250,6 +1251,184 @@ static void cmd_le(int argcp, char **argvp)
     }
 }
 
+static void add_remote_oob_data_complete(uint8_t status, uint16_t len,
+                    const void *param, void *user_data)
+{
+    const struct mgmt_addr_info *rp = param;
+    char str[18];
+    if (status) {
+        DBG("status returned error : %s (0x%02x)",
+            mgmt_errstr(status), status);
+        resp_mgmt(err_PROTO_ERR);
+        return;
+    }
+    ba2str(&rp->bdaddr, str);
+    DBG("  Remote data added for : %s\n", str);
+}
+static bool add_remote_oob_data(uint16_t index, const bdaddr_t *bdaddr,
+                const uint8_t addr_type,
+                const char *hash192, const char *rand192,
+                const char *hash256, const char *rand256)
+{
+    struct mgmt_cp_add_remote_oob_data cp;
+    uint8_t *oob;
+    size_t len;
+
+    if (!mgmt_master) {
+        resp_error(err_NO_MGMT);
+        return true;
+    }
+
+    memset(&cp, 0, sizeof(cp));
+    bacpy(&cp.addr.bdaddr, bdaddr);
+    cp.addr.type = addr_type;
+    if (hash192 && rand192) {
+        len = gatt_attr_data_from_string(hash192, &oob);
+        if (len == 0) {
+            resp_error(err_BAD_PARAM);
+            g_free(oob);
+            return false;
+        }
+        memcpy(cp.hash192, oob, 16);
+        g_free(oob);
+        len = gatt_attr_data_from_string(rand192, &oob);
+        if (len == 0) {
+            resp_error(err_BAD_PARAM);
+            memset(cp.hash192, 0, 16);
+            g_free(oob);
+            return false;
+        }
+        memcpy(cp.rand192, rand192, 16);
+        g_free(oob);
+    } else {
+        memset(cp.hash192, 0, 16);
+        memset(cp.rand192, 0, 16);
+    }
+    if (hash256 && rand256) {
+        len = gatt_attr_data_from_string(hash256, &oob);
+        if (len == 0) {
+            resp_error(err_BAD_PARAM);
+            memset(cp.hash192, 0, 16);
+            memset(cp.rand192, 0, 16);
+            g_free(oob);
+            return false;
+        }
+        memcpy(cp.hash256, oob, 16);
+        g_free(oob);
+        len = gatt_attr_data_from_string(rand256, &oob);
+        if (len == 0) {
+            resp_error(err_BAD_PARAM);
+            memset(cp.hash192, 0, 16);
+            memset(cp.rand192, 0, 16);
+            memset(cp.hash256, 0, 16);
+            g_free(oob);
+            return false;
+        }
+        memcpy(cp.rand256, rand256, 16);
+        g_free(oob);
+    } else {
+        memset(cp.hash256, 0, 16);
+        memset(cp.rand256, 0, 16);
+    }
+    if (mgmt_send(mgmt_master, MGMT_OP_ADD_REMOTE_OOB_DATA, mgmt_ind, sizeof(cp), &cp,
+                        add_remote_oob_data_complete,
+                        NULL, NULL) == 0) {
+        resp_error(err_PROTO_ERR);
+        g_free(oob);
+        return false;
+    }
+    g_free(oob);
+    return true;
+}
+
+static void cmd_add_oob(int argcp, char **argvp)
+{
+    bdaddr_t bdaddr;
+    char *C192 = NULL;
+    char *R192 = NULL;
+    char *C256 = NULL;
+    char *R256 = NULL;
+    uint8_t addr_type = BDADDR_LE_RANDOM;
+
+    if (argcp < 7) {
+        resp_mgmt(err_BAD_PARAM);
+        return;
+    }
+
+    if (str2ba(argvp[1], &bdaddr)) {
+        resp_mgmt(err_NOT_FOUND);
+        return;
+    }
+
+    if (!memcmp(argvp[2], "public", 6)) {
+        addr_type = BDADDR_LE_PUBLIC;
+    }
+
+    if ((!memcmp(argvp[3], "C_192", 5)) && (!memcmp(argvp[5], "R_192", 5))) {
+        C192 = argvp[4];
+        R192 = argvp[6];
+        if ((argcp > 8) && !memcmp(argvp[5], "C_256", 5) && (!memcmp(argvp[7], "R_256", 5))) {
+            C256 = argvp[6];
+            R256 = argvp[8];
+        }
+    } else if ((!memcmp(argvp[3], "C_256", 5)) && (!memcmp(argvp[5], "R_256", 5))) {
+        C256 = argvp[4];
+        R256 = argvp[6];
+    }
+
+    if (!add_remote_oob_data(0, &bdaddr, addr_type, C192, R192, C256, R256)) {
+        DBG("Failed to add remote oob data");
+    }
+}
+
+static void read_local_oob_data_complete(uint8_t status, uint16_t len,
+                    const void *param, void *user_data)
+{
+    const struct mgmt_rp_read_local_oob_ext_data *rp = param;
+    uint32_t eir_len = rp->eir_len;
+    unsigned int i;
+
+    if (status) {
+        DBG("status returned error : %s (0x%02x)",
+            mgmt_errstr(status), status);
+        resp_mgmt(err_PROTO_ERR);
+        return;
+    }
+    DBG("received local OOB ext with eir_len = %d",eir_len);
+    for (i = 0; i<eir_len; i++)
+        DBG("0x%02x ", rp->eir[i]);
+    
+    resp_begin(rsp_OOB);
+    send_data(rp->eir, eir_len);
+    resp_end();
+}
+
+static bool read_local_oob_data(uint16_t index)
+{
+    struct mgmt_cp_read_local_oob_ext_data cp;
+
+    if (!mgmt_master) {
+        resp_error(err_NO_MGMT);
+        return true;
+    }
+    /* For now we only handle BLE OOB */
+    cp.type = 6;
+    if (mgmt_send(mgmt_master, MGMT_OP_READ_LOCAL_OOB_EXT_DATA, mgmt_ind, sizeof(cp), &cp,
+                        read_local_oob_data_complete,
+                        NULL, NULL) == 0) {
+        resp_error(err_PROTO_ERR);
+        return false;
+    }
+    return true;
+}
+
+static void cmd_read_oob(int argcp, char **argvp)
+{
+    if (!read_local_oob_data(0)) {
+        DBG("Failed to read local oob data");
+    }
+}
+
 static void cmd_pairable(int argcp, char **argvp)
 {
     if (argcp < 2) {
@@ -1684,6 +1863,10 @@ static struct {
         "Exchange MTU for GATT/ATT" },
     { "le",      cmd_le,  "[on | off]",
         "Control LE feature on the controller" },
+    { "remote_oob",      cmd_add_oob,  "address [[C_192 c192] [R_192 r192]] [[C_256 c256] [R_256 r256]]",
+        "Add OOB data for remote address" },
+    { "local_oob",      cmd_read_oob,  "",
+        "Read local OOB data" },
     { "pairable",   cmd_pairable,  "[on | off]",
         "Control PAIRABLE feature on the controller" },
     { "pair",      cmd_pair,  "",
@@ -1881,6 +2064,9 @@ int main(int argc, char *argv[])
         } else {
             mgmt_setup(index);
         }
+    } else {
+        // If no argument given, use index 0
+        mgmt_setup(0);
     }
 
     event_loop = g_main_loop_new(NULL, FALSE);
