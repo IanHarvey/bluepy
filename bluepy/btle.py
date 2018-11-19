@@ -56,30 +56,30 @@ class BTLEException(Exception):
         if self.estat or self.emsg:
             msg = msg + " ("
             if self.estat:
-                msg = msg + "estat: %s" % self.estat
+                msg = msg + "code: %s" % self.estat
             if self.estat and self.emsg:
-                msg = msg + " "
+                msg = msg + ", "
             if self.emsg:
-                msg = msg + "emsg: %s" % self.emsg
+                msg = msg + "error: %s" % self.emsg
             msg = msg + ")"
 
         return msg
 
 class BTLEInternalError(BTLEException):
     def __init__(self, message, rsp=None):
-        BTLEException.__init__(self, "Internal Error: " + message, rsp)
+        BTLEException.__init__(self, message, rsp)
 
 class BTLEDisconnectError(BTLEException):
     def __init__(self, message, rsp=None):
-        BTLEException.__init__(self, "Disconnect Error: " + message, rsp)
+        BTLEException.__init__(self, message, rsp)
 
 class BTLEManagementError(BTLEException):
     def __init__(self, message, rsp=None):
-        BTLEException.__init__(self, "Management Error: " + message, rsp)
+        BTLEException.__init__(self, message, rsp)
 
 class BTLEGattError(BTLEException):
     def __init__(self, message, rsp=None):
-        BTLEException.__init__(self, "GATT Error: " + message, rsp)
+        BTLEException.__init__(self, message, rsp)
 
 
 
@@ -309,7 +309,7 @@ class BluepyHelper:
         rsp = self._waitResp('mgmt')
         if rsp['code'][0] != 'success':
             self._stopHelper()
-            raise BTLEManagementError("Failed to execute mgmt cmd '%s'" % (cmd), rsp)
+            raise BTLEManagementError("Failed to execute management command '%s'" % (cmd), rsp)
 
     @staticmethod
     def parseResp(line):
