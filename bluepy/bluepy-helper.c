@@ -44,6 +44,7 @@
 #include "gattrib.h"
 #include "gatt.h"
 #include "gatttool.h"
+#include "version.h"
 
 #define IO_CAPABILITY_NOINPUTNOOUTPUT   0x03
 
@@ -2071,13 +2072,14 @@ int main(int argc, char *argv[])
     opt_dst = NULL;
     opt_dst_type = g_strdup("public");
 
-    DBG(__FILE__ " built at " __TIME__ " on " __DATE__);
+    printf("# " __FILE__ " version " VERSION_STRING " built at " __TIME__ " on " __DATE__ "\n");
 
     if (argc > 1) {
         int index;
 
         if (sscanf (argv[1], "%i", &index)!=1) {
-            DBG("error converting argument: %s  to device index integer",argv[1]);
+            printf("# ERROR: cannot convert '%s' to device index integer\n",argv[1]);
+            exit(1);
         } else {
             mgmt_setup(index);
         }
