@@ -542,14 +542,11 @@ class Peripheral(BluepyHelper):
         self._writeCmd("secu %s\n" % level)
         return self._getResp('stat')
 
-    def unpair(self, addr, iface = None):
-        self._startHelper(iface)
-        self.addr = addr
-        self.iface = iface
-        self._mgmtCmd("unpair %s" % addr)
+    def unpair(self):
+        self._mgmtCmd("unpair")
 
     def pair(self):
-        self._mgmtCmd("pair %s" % (self.addr))
+        self._mgmtCmd("pair")
 
     def setMTU(self, mtu):
         self._writeCmd("mtu %x\n" % mtu)
