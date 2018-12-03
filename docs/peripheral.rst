@@ -48,6 +48,11 @@ Instance Methods
     rely on this happening at any particular time. Therefore, always explicitly call
     ``disconnect()`` if you have finished communicating with a device.
 
+.. function:: getState()
+
+    Returns a string indicating device state. Possible states are: "conn" - connected,
+    "disc" - disconnected, "scan" scanning and "tryconn" - connecting.
+
 .. function:: getServices()
 
     Returns a list of ``Service`` objects representing the services offered by the peripheral.

@@ -467,6 +467,10 @@ class Peripheral(BluepyHelper):
             self._serviceMap[UUID(uuids[i])] = Service(self, uuids[i], starts[i], ends[i])
         return self._serviceMap
 
+    def getState(self):
+        status = self.status()
+        return status['state'][0]
+
     @property
     def services(self):
         if self._serviceMap is None:
