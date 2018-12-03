@@ -64,6 +64,24 @@ The Python files are released into the public domain by their author, Ian Harvey
 Release Notes
 -------------
 
+Release 1.3.0
+
+- New getState() method for Peripheral class
+- New exception structure / error reporting (#311, #317, #326)
+  BTLEException now has subclasses BLTEDisconnectError, BTLEManagementError, etc.
+  which report an error code and error message passed up from the lower layers, where
+  appropriate.
+- Partial merge #311: aids to debugging; bluepy-helper reports version; fix crash
+- Partial merge #311 and #302: pair() and unpair() now supported
+- Fix #169: 0-byte characteristic writes are now supported
+- Merge #302: OOB data now supported
+- Merge #312: better comments on sample code in docs, better scanner example
+- Fix #292: Unicode string decoding errors in scan data
+- Merge #308: don't ignore sensitivity option during discovery
+- Merge #301: fix Peripheral documentation
+- Fix #286: return list of services from Scan entry
+
+
 Release 1.2.0
 - Merge #245: Update underlying Bluez version to 5.47
 - Merge #284: Readme updated with Fedora install instructions
