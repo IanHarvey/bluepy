@@ -597,33 +597,33 @@ class Peripheral(BluepyHelper):
             if data is None:
                 raise BTLEManagementError(
                                 "Failed to get local OOB data.")
-            if ord(data[0]) != 8 or ord(data[1]) != 0x1b:
+            if struct.unpack_from('<B',data,0)[0] != 8 or struct.unpack_from('<B',data,1)[0] != 0x1b:
                 raise BTLEManagementError(
                                 "Malformed local OOB data (address).")
             address = data[2:8]
             address_type = data[8:9]
-            if ord(data[9]) != 2 or ord(data[10]) != 0x1c:
+            if struct.unpack_from('<B',data,9)[0] != 2 or struct.unpack_from('<B',data,10)[0] != 0x1c:
                 raise BTLEManagementError(
                                 "Malformed local OOB data (role).")
             role = data[11:12]
-            if ord(data[12]) != 17 or ord(data[13]) != 0x22:
+            if struct.unpack_from('<B',data,12)[0] != 17 or struct.unpack_from('<B',data,13)[0] != 0x22:
                 raise BTLEManagementError(
                                 "Malformed local OOB data (confirm).")
             confirm = data[14:30]
-            if ord(data[30]) != 17 or ord(data[31]) != 0x23:
+            if struct.unpack_from('<B',data,30)[0] != 17 or struct.unpack_from('<B',data,31)[0] != 0x23:
                 raise BTLEManagementError(
                                 "Malformed local OOB data (random).")
             random = data[32:48]
-            if ord(data[48]) != 2 or ord(data[49]) != 0x1:
+            if struct.unpack_from('<B',data,48)[0] != 2 or struct.unpack_from('<B',data,49)[0] != 0x1:
                 raise BTLEManagementError(
                                 "Malformed local OOB data (flags).")
             flags = data[50:51]
-            return {'Address' : ''.join(["%02X" % ord(c) for c in address]),
-                    'Type' : ''.join(["%02X" % ord(c) for c in address_type]),
-                    'Role' : ''.join(["%02X" % ord(c) for c in role]),
-                    'C_256' : ''.join(["%02X" % ord(c) for c in confirm]),
-                    'R_256' : ''.join(["%02X" % ord(c) for c in random]),
-                    'Flags' : ''.join(["%02X" % ord(c) for c in flags]),
+            return {'Address' : ''.join(["%02X" % struct.unpack('<B',c)[0] for c in address]),
+                    'Type' : ''.join(["%02X" % struct.unpack('<B',c)[0] for c in address_type]),
+                    'Role' : ''.join(["%02X" % struct.unpack('<B',c)[0] for c in role]),
+                    'C_256' : ''.join(["%02X" % struct.unpack('<B',c)[0] for c in confirm]),
+                    'R_256' : ''.join(["%02X" % struct.unpack('<B',c)[0] for c in random]),
+                    'Flags' : ''.join(["%02X" % struct.unpack('<B',c)[0] for c in flags]),
                     }
 
     def __del__(self):
