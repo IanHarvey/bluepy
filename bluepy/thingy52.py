@@ -670,8 +670,8 @@ class MyDelegate(DefaultDelegate):
     def _extract_gas_data(self, data):
         """ Extract gas data from data string. """
         teptep = binascii.b2a_hex(data)
-        eco2 = int(teptep[:2]) + (int(teptep[2:4]) << 8)
-        tvoc = int(teptep[4:6]) + (int(teptep[6:8]) << 8)
+        eco2 = int(teptep[:2], 16) + (int(teptep[2:4], 16) << 8)
+        tvoc = int(teptep[4:6], 16) + (int(teptep[6:8], 16) << 8)
         return eco2, tvoc
 
     def _extract_tap_data(self, data):
