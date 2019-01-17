@@ -13,9 +13,9 @@ advertising data but may not accept connections).
 Constructor
 -----------
 
-.. function:: Scanner( [index=0] )
+.. function:: Scanner( [iface=0] )
 
-    Creates and initialises a new scanner object. *index* identifies the
+    Creates and initialises a new scanner object. *iface* identifies the
     Bluetooth interface to use (where 0 is **/dev/hci0** etc). Scanning
     does not start until the *start()* or *scan()* methods are called -
     see below for details.
