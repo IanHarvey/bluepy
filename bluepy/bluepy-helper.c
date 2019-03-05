@@ -1999,7 +1999,7 @@ static void mgmt_scanning(uint16_t index, uint16_t length,
 
     DBG("Scanning (0x%x): %s", ev->type, ev->discovering? "started" : "ended");
 
-    set_state(ev->discovering? STATE_SCANNING : STATE_DISCONNECTED);
+    set_state(ev->discovering? STATE_SCANNING : STATE_CONNECTED);
 }
 
 static void mgmt_device_found(uint16_t index, uint16_t length,
