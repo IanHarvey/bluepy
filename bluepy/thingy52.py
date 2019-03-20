@@ -490,6 +490,7 @@ class MotionService():
         self.set_orient_notification(False)
         self.set_quaternion_notification(False)
         self.set_stepcnt_notification(False)
+        self.set_rawdata_notification(False)
         self.set_euler_notification(False)
         self.set_rotation_notification(False)
         self.set_heading_notification(False)
