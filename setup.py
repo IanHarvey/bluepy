@@ -7,11 +7,14 @@ import shlex
 import sys
 import os
 
+VERSION='1.3.0'
 
 def pre_install():
     """Do the custom compiling of the bluepy-helper executable from the makefile"""
     try:
         print("Working dir is " + os.getcwd())
+        with open("bluepy/version.h","w") as verfile:
+            verfile.write('#define VERSION_STRING "%s"\n' % VERSION)
         for cmd in [ "make -C ./bluepy clean", "make -C bluepy -j1" ]:
             print("execute " + cmd)
             msgs = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
@@ -49,12 +52,12 @@ except ImportError:
 
 setup (
     name='bluepy',
-    version='1.2.0',
+    version=VERSION,
     description='Python module for interfacing with BLE devices through Bluez',
     author='Ian Harvey',
     author_email='website-contact@fenditton.org',
     url='https://github.com/IanHarvey/bluepy',
-    download_url='https://github.com/IanHarvey/bluepy/tarball/v/1.2.0',
+    download_url='https://github.com/IanHarvey/bluepy/tarball/v/%s' % VERSION,
     keywords=[ 'Bluetooth', 'Bluetooth Smart', 'BLE', 'Bluetooth Low Energy' ],
     classifiers=[
         'Programming Language :: Python :: 2.7',
@@ -64,7 +67,7 @@ setup (
     packages=['bluepy'],
     
     package_data={
-        'bluepy': ['bluepy-helper', '*.json', 'bluez-src.tgz', 'bluepy-helper.c', 'Makefile']
+        'bluepy': ['bluepy-helper', '*.json', 'bluez-src.tgz', 'bluepy-helper.c', 'version.h', 'Makefile']
     },
     cmdclass=setup_cmdclass,
     entry_points={

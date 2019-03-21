@@ -10,11 +10,13 @@ IMPORT_SRCS = $(addprefix $(BLUEZ_PATH)/, $(BLUEZ_SRCS))
 LOCAL_SRCS  = bluepy-helper.c
 
 CC ?= gcc
-CFLAGS += -Os -g -Wall # -Werror
+CFLAGS += -g -Wall # -Werror
 
 CPPFLAGS += -DHAVE_CONFIG_H
 ifneq ($(DEBUGGING),)
-CFLAGS += -DBLUEPY_DEBUG=1
+CFLAGS += -DBLUEPY_DEBUG=1 -O0
+else
+CFLAGS += -Os
 endif
 
 CPPFLAGS += -I$(BLUEZ_PATH)/attrib -I$(BLUEZ_PATH) -I$(BLUEZ_PATH)/lib -I$(BLUEZ_PATH)/src -I$(BLUEZ_PATH)/gdbus -I$(BLUEZ_PATH)/btio -I$(BLUEZ_PATH)/sys
