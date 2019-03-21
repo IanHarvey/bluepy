@@ -534,7 +534,7 @@ class Peripheral(BluepyHelper):
         if resp is None:
             return resp
         else:
-        return resp['d'][0]
+            return resp['d'][0]
 
     def _readCharacteristicByUUID(self, uuid, startHnd, endHnd):
         # Not used at present
