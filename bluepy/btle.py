@@ -11,6 +11,8 @@ import binascii
 import select
 import struct
 import signal
+from queue import Queue, Empty
+from threading import Thread
 
 def preexec_function():
     # Ignore the SIGINT signal by setting the handler to the standard
@@ -262,7 +264,7 @@ class DefaultDelegate:
 class BluepyHelper:
     def __init__(self):
         self._helper = None
-        self._poller = None
+        self._lineq = None
         self._stderr = None
         self.delegate = DefaultDelegate()
 
@@ -273,6 +275,7 @@ class BluepyHelper:
     def _startHelper(self,iface=None):
         if self._helper is None:
             DBG("Running ", helperExe)
+            self._lineq = Queue()
             self._stderr = open(os.devnull, "w")
             args=[helperExe]
             if iface is not None: args.append(str(iface))
@@ -282,13 +285,21 @@ class BluepyHelper:
                                             stderr=self._stderr,
                                             universal_newlines=True,
                                             preexec_fn = preexec_function)
-            self._poller = select.poll()
-            self._poller.register(self._helper.stdout, select.POLLIN)
+            t = Thread(target=self._readToQueue)
+            t.daemon = True               # don't wait for it to exit
+            t.start()
+
+    def _readToQueue(self):
+        """Thread to read lines from stdout and insert in queue."""
+        while self._helper:
+            line = self._helper.stdout.readline()
+            if not line:                  # EOF
+                break
+            self._lineq.put(line)
 
     def _stopHelper(self):
         if self._helper is not None:
             DBG("Stopping ", helperExe)
-            self._poller.unregister(self._helper.stdout)
             self._helper.stdin.write("quit\n")
             self._helper.stdin.flush()
             self._helper.wait()
@@ -338,13 +349,12 @@ class BluepyHelper:
             if self._helper.poll() is not None:
                 raise BTLEInternalError("Helper exited")
 
-            if timeout:
-                fds = self._poller.poll(timeout*1000)
-                if len(fds) == 0:
-                    DBG("Select timeout")
-                    return None
+            try:
+                rv = self._lineq.get(timeout=timeout)
+            except Empty:
+                DBG("Select timeout")
+                return None
 
-            rv = self._helper.stdout.readline()
             DBG("Got:", repr(rv))
             if rv.startswith('#') or rv == '\n' or len(rv)==0:
                 continue
@@ -559,6 +569,7 @@ class Peripheral(BluepyHelper):
     def waitForNotifications(self, timeout):
          resp = self._getResp(['ntfy','ind'], timeout)
          return (resp != None)
+
     def _setRemoteOOB(self, address, address_type, oob_data, iface=None):
         if self._helper is None:
             self._startHelper(iface)
