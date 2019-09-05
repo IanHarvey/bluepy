@@ -8,7 +8,7 @@ Bluepy's ``Peripheral`` class encapsulates a connection to a Bluetooth LE periph
 Constructor
 -----------
 
-.. function:: Peripheral([deviceAddr=None, [addrType=ADDR_TYPE_PUBLIC [, iface=None]]])
+.. function:: Peripheral([deviceAddr=None, [addrType=ADDR_TYPE_PUBLIC [, iface=None [, timeout=None]]]])
 
    If *deviceAddr* is not ``None``, creates a ``Peripheral`` object and makes a connection
    to the device indicated by *deviceAddr*. *deviceAddr* should be a string comprising six hex
@@ -24,6 +24,8 @@ Constructor
    The *iface* parameter allows the Bluetooth interface on which to make the connection to be set.
    On Linux, 0 means */dev/hci0*, 1 means */dev/hci1* and so on.
 
+   The *timeout* parameter (in seconds) can be used to limit the hang time for trying to connect to device.
+
    *deviceAddr* may also be a ``ScanEntry`` object. In this case the device address,
    address type, and interface number are all taken from the ``ScanEntry`` values, and
    the *addrType* and *iface* parameters are ignored.
@@ -33,10 +35,10 @@ Constructor
 Instance Methods
 ----------------
 
-.. function:: connect(addr, [addrType=ADDR_TYPE_PUBLIC [, iface=None]])
+.. function:: connect(addr, [addrType=ADDR_TYPE_PUBLIC [, iface=None [, timeout=None]]])
 
     Makes a connection to the device indicated by *addr*, with address type
-    *addrType* and interface number *iface* (see the ``Peripheral`` constructor for details).
+    *addrType* and interface number *iface* and a timeout parameter *timeout* (see the ``Peripheral`` constructor for details).
     You should only call
     this method if the ``Peripheral`` is un-connected (i.e. you did not pass a *addr*
     to the constructor); a given peripheral object cannot be re-connected once connected.

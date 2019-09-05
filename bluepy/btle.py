@@ -380,15 +380,15 @@ class BluepyHelper:
 
 
 class Peripheral(BluepyHelper):
-    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC, iface=None):
+    def __init__(self, deviceAddr=None, addrType=ADDR_TYPE_PUBLIC, iface=None, timeout=None):
         BluepyHelper.__init__(self)
         self._serviceMap = None # Indexed by UUID
         (self.deviceAddr, self.addrType, self.iface) = (None, None, None)
 
         if isinstance(deviceAddr, ScanEntry):
-            self._connect(deviceAddr.addr, deviceAddr.addrType, deviceAddr.iface)
+            self._connect(deviceAddr.addr, deviceAddr.addrType, deviceAddr.iface, timeout)
         elif deviceAddr is not None:
-            self._connect(deviceAddr, addrType, iface)
+            self._connect(deviceAddr, addrType, iface, timeout)
 
     def setDelegate(self, delegate_): # same as withDelegate(), deprecated
         return self.withDelegate(delegate_)
@@ -418,7 +418,7 @@ class Peripheral(BluepyHelper):
                     continue
             return resp
 
-    def _connect(self, addr, addrType=ADDR_TYPE_PUBLIC, iface=None):
+    def _connect(self, addr, addrType=ADDR_TYPE_PUBLIC, iface=None, timeout=None):
         if len(addr.split(":")) != 6:
             raise ValueError("Expected MAC address, got %s" % repr(addr))
         if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
@@ -431,18 +431,21 @@ class Peripheral(BluepyHelper):
             self._writeCmd("conn %s %s %s\n" % (addr, addrType, "hci"+str(iface)))
         else:
             self._writeCmd("conn %s %s\n" % (addr, addrType))
-        rsp = self._getResp('stat')
+        rsp = self._getResp('stat', timeout)
+        if rsp is None:
+            raise BTLEDisconnectError("Timed out while trying to connect to peripheral %s, addr type: %s" %
+                                      (addr, addrType), rsp)
         while rsp['state'][0] == 'tryconn':
-            rsp = self._getResp('stat')
+            rsp = self._getResp('stat', timeout)
         if rsp['state'][0] != 'conn':
             self._stopHelper()
             raise BTLEDisconnectError("Failed to connect to peripheral %s, addr type: %s" % (addr, addrType), rsp)
 
-    def connect(self, addr, addrType=ADDR_TYPE_PUBLIC, iface=None):
+    def connect(self, addr, addrType=ADDR_TYPE_PUBLIC, iface=None, timeout=None):
         if isinstance(addr, ScanEntry):
-            self._connect(addr.addr, addr.addrType, addr.iface)
+            self._connect(addr.addr, addr.addrType, addr.iface, timeout)
         elif addr is not None:
-            self._connect(addr, addrType, iface)
+            self._connect(addr, addrType, iface, timeout)
 
     def disconnect(self):
         if self._helper is None:
