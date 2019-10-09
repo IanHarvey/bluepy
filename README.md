@@ -198,6 +198,4 @@ TO DO list
 The following are still missing from the current release:
 - Unit test 
 - Peripheral role support
-
-
-hello how 
+sorry just was trying to see how pull request work
