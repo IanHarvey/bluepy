@@ -578,7 +578,7 @@ class MyDelegate(DefaultDelegate):
         #Debug print repr(data)
         if (hnd == e_temperature_handle):
             teptep = binascii.b2a_hex(data)
-            print('Notification: Temp received:  {}.{} degCelcius'.format(
+            print('Notification: Temp received:  {}.{} degCelsius'.format(
                         self._str_to_int(teptep[:-2]), int(teptep[-2:], 16)))
             
         elif (hnd == e_pressure_handle):
