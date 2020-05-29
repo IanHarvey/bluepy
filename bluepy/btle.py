@@ -563,7 +563,7 @@ class Peripheral(BluepyHelper):
         self._mgmtCmd("pair")
 
     def getMTU(self):
-        return self._mtu;
+        return self._mtu
 
     def setMTU(self, mtu):
         self._writeCmd("mtu %x\n" % mtu)
