@@ -512,6 +512,44 @@ static void gatts_exec_write_req(const uint8_t *pdu, uint16_t len, gpointer user
         g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
 }
 
+static void gatts_mtu_req(const uint8_t *pdu, uint16_t len, gpointer user_data)
+{
+    uint8_t *opdu;
+    uint8_t opcode;
+    uint16_t mtu, olen;
+    size_t plen;
+
+    assert( len >= 3 );
+    opcode = pdu[0];
+
+    if (!dec_mtu_req(pdu, len, &mtu)) {
+        resp_error(err_DECODING);
+        return;
+    }
+
+    opdu = g_attrib_get_buffer(attrib, &plen);
+
+    // According to the Bluetooth specification, we're supposed to send the response
+    // before applying the new MTU value:
+    //   This ATT_MTU value shall be applied in the server after this response has
+    //   been sent and before any other Attribute protocol PDU is sent.
+    // But if we do it in that order, what happens if setting the MTU fails?
+
+    // set new value for MTU
+    if (g_attrib_set_mtu(attrib, mtu))
+    {
+        opt_mtu = mtu;
+        olen = enc_mtu_resp(mtu, opdu, plen);
+        cmd_status(0, NULL);
+    }
+    else {
+        // send NOT SUPPORTED
+        olen = enc_error_resp(opcode, mtu, ATT_ECODE_REQ_NOT_SUPP, opdu, plen);
+    }
+    if (olen > 0)
+        g_attrib_send(attrib, 0, opdu, olen, NULL, NULL, NULL);
+}
+
 static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
 {
     uint16_t mtu;
@@ -567,6 +605,8 @@ static void connect_cb(GIOChannel *io, GError *err, gpointer user_data)
                       gatts_prep_write_req, attrib, NULL);
     g_attrib_register(attrib, ATT_OP_EXEC_WRITE_REQ, GATTRIB_ALL_HANDLES,
                       gatts_exec_write_req, attrib, NULL);
+    g_attrib_register(attrib, ATT_OP_MTU_REQ, GATTRIB_ALL_HANDLES,
+                      gatts_mtu_req, attrib, NULL);
 
     set_state(STATE_CONNECTED);
 }
