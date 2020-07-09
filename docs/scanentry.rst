@@ -23,7 +23,7 @@ Instance Methods
     Returns a human-readable description of the advertising data 'type'
     code *adtype*. For instance, an *adtype* value of 9 would return the
     string ``"Complete Local Name"``. See the Generic Access Profile 
-    assigned numbers at https://www.bluetooth.org/en-us/specification/assigned-numbers/generic-access-profile
+    assigned numbers at https://www.bluetooth.com/specifications/assigned-numbers/generic-access-profile/
     for a complete list.
     
 .. py:method:: getValueText(adtype)
