@@ -266,6 +266,7 @@ class BluepyHelper:
         self._helper = None
         self._lineq = None
         self._stderr = None
+        self._mtu = 0
         self.delegate = DefaultDelegate()
 
     def withDelegate(self, delegate_):
@@ -276,6 +277,7 @@ class BluepyHelper:
         if self._helper is None:
             DBG("Running ", helperExe)
             self._lineq = Queue()
+            self._mtu = 0
             self._stderr = open(os.devnull, "w")
             args=[helperExe]
             if iface is not None: args.append(str(iface))
@@ -364,6 +366,14 @@ class BluepyHelper:
                 raise BTLEInternalError("No response type indicator", resp)
 
             respType = resp['rsp'][0]
+
+            # always check for MTU updates
+            if 'mtu' in resp and len(resp['mtu']) > 0:
+                new_mtu = int(resp['mtu'][0])
+                if self._mtu != new_mtu:
+                    self._mtu = new_mtu
+                    DBG("Updated MTU: " + str(self._mtu))
+
             if respType in wantType:
                 return resp
             elif respType == 'stat':
@@ -561,6 +571,9 @@ class Peripheral(BluepyHelper):
 
     def pair(self):
         self._mgmtCmd("pair")
+
+    def getMTU(self):
+        return self._mtu
 
     def setMTU(self, mtu):
         self._writeCmd("mtu %x\n" % mtu)

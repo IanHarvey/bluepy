@@ -1,7 +1,6 @@
 from bluepy.btle import UUID, Peripheral, ADDR_TYPE_RANDOM, DefaultDelegate
 import argparse
 import time
-import struct
 import binascii
 
 def write_uint16(data, value, index):
@@ -233,11 +232,11 @@ class EnvironmentService():
             self.config_char.write(binascii.a2b_hex(new_config), True)
 
     def disable(self):
-        set_temperature_notification(False)
-        set_pressure_notification(False)
-        set_humidity_notification(False)
-        set_gas_notification(False)
-        set_color_notification(False)
+        self.set_temperature_notification(False)
+        self.set_pressure_notification(False)
+        self.set_humidity_notification(False)
+        self.set_gas_notification(False)
+        self.set_color_notification(False)
 
 
 class UserInterfaceService():
@@ -305,7 +304,7 @@ class UserInterfaceService():
                 self.btn_char_cccd.write(b"\x00\x00", True)
 
     def disable(self):
-        set_btn_notification(False)
+        self.set_btn_notification(False)
 
 
 class MotionService():
@@ -487,15 +486,15 @@ class MotionService():
             self.config_char.write(binascii.a2b_hex(new_config), True)
 
     def disable(self):
-        set_tap_notification(False)
-        set_orient_notification(False)
-        set_quaternion_notification(False)
-        set_stepcnt_notification(False)
-        set_rawdat_notification(False)
-        set_euler_notification(False)
-        set_rotation_notification(False)
-        set_heading_notification(False)
-        set_gravity_notification(False)
+        self.set_tap_notification(False)
+        self.set_orient_notification(False)
+        self.set_quaternion_notification(False)
+        self.set_stepcnt_notification(False)
+        self.set_rawdata_notification(False)
+        self.set_euler_notification(False)
+        self.set_rotation_notification(False)
+        self.set_heading_notification(False)
+        self.set_gravity_notification(False)
 
 
 class SoundService():
@@ -568,8 +567,8 @@ class SoundService():
             self.config_char.write(binascii.a2b_hex(new_config), True)
 
     def disable(self):
-        set_speaker_status_notification(False)
-        set_microphone_notification(False)
+        self.set_speaker_status_notification(False)
+        self.set_microphone_notification(False)
 
 
 class MyDelegate(DefaultDelegate):
@@ -578,7 +577,7 @@ class MyDelegate(DefaultDelegate):
         #Debug print repr(data)
         if (hnd == e_temperature_handle):
             teptep = binascii.b2a_hex(data)
-            print('Notification: Temp received:  {}.{} degCelcius'.format(
+            print('Notification: Temp received:  {}.{} degCelsius'.format(
                         self._str_to_int(teptep[:-2]), int(teptep[-2:], 16)))
             
         elif (hnd == e_pressure_handle):
@@ -670,8 +669,8 @@ class MyDelegate(DefaultDelegate):
     def _extract_gas_data(self, data):
         """ Extract gas data from data string. """
         teptep = binascii.b2a_hex(data)
-        eco2 = int(teptep[:2]) + (int(teptep[2:4]) << 8)
-        tvoc = int(teptep[4:6]) + (int(teptep[6:8]) << 8)
+        eco2 = int(teptep[:2], 16) + (int(teptep[2:4], 16) << 8)
+        tvoc = int(teptep[4:6], 16) + (int(teptep[6:8], 16) << 8)
         return eco2, tvoc
 
     def _extract_tap_data(self, data):
