@@ -1,7 +1,6 @@
 from bluepy.btle import UUID, Peripheral, ADDR_TYPE_RANDOM, DefaultDelegate
 import argparse
 import time
-import struct
 import binascii
 
 def write_uint16(data, value, index):
