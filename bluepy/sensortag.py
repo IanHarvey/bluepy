@@ -3,6 +3,7 @@ import struct
 import math
 import signal
 import sys
+import threading
    
 def _TI_UUID(val):
     return UUID("%08X-0451-4000-b000-000000000000" % (0xF0000000+val))
@@ -585,6 +586,7 @@ class SensorDelegate(DefaultDelegate):
         self.rnd.render ( "Key pressed: ", self._button_desc[but] + " HOLD",'')
 
 class render:
+    lock = threading.Lock()
     
     def __init__(self, isRaw):
          self.current_pos = 0
@@ -593,30 +595,39 @@ class render:
          self.dict = {}
          
     def moveCursor(self, line):
-        #print(self.current_pos, line)
         if self.current_pos < line:
             cycle = line - self.current_pos
-            strs='\033['+ str(cycle-1) + 'E'
-            print(strs, flush=True)
+            strs='\033['+ str(cycle) + 'E'  # move cursor down
+            print(strs, end='', flush=True)
         
         if self.current_pos > line:
             cycle = self.current_pos - line
-            strs='\033['+ str(cycle+1) + 'F'
-            print(strs, flush=True)
+            strs='\033['+ str(cycle) + 'F'  # move cursor up
+            print(strs, end='', flush=True)
         
         self.current_pos = line
                     
     def getLine(self, label):
+        saved_pos = self.current_pos
         if label not in self.dict:
-            self.last_pos = self.last_pos + 1       #assign a new line
+            self.last_pos = self.last_pos + 1       # assign a new line
             self.dict[label] = self.last_pos
+            if self.last_pos > 0 :                       # go to end of the screen
+                self.moveCursor (self.last_pos)
+            print()                                 # print a new line to scroll the screenand return to previous line
+            print('\033[F', end='', flush=True)
+            if self.last_pos > 0 :                  # go back to original position
+                self.moveCursor (saved_pos)
+            print()             
         
         return self.dict[label]
         
     def printDashboard(self, label, data, unit):
+        self.lock.acquire()
         self.moveCursor(self.getLine(label))
-        print('\033[K', end="\r", flush=True)  # empty the line
-        print(label, data, unit, end="\r", flush=True) 
+        print('\033[K', end='', flush=True)  # empty the line
+        print(label, data, unit, end='\r', flush=True)
+        self.lock.release() 
       
     def render(self, label, data, unit):
         if self.isRaw:
