@@ -405,10 +405,7 @@ class Peripheral(BluepyHelper):
         self._serviceMap = None # Indexed by UUID
         (self.deviceAddr, self.addrType, self.iface) = (None, None, None)
 
-        if isinstance(deviceAddr, ScanEntry):
-            self._connect(deviceAddr.addr, deviceAddr.addrType, deviceAddr.iface)
-        elif deviceAddr is not None:
-            self._connect(deviceAddr, addrType, iface)
+        self.connect(deviceAddr, addrType=addrType, iface=iface)
 
     def setDelegate(self, delegate_): # same as withDelegate(), deprecated
         return self.withDelegate(delegate_)
