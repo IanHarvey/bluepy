@@ -2,8 +2,10 @@
 Test the UUID class in `btle.py`
 """
 
-import unittest
 import binascii
+import sys
+import unittest
+import warnings
 
 from bluepy.btle import UUID
 
@@ -31,6 +33,7 @@ class TestUUID(unittest.TestCase):
         self.assertIsInstance(UUID("00000000"), UUID)
         self.assertIsInstance(UUID(0x00000000), UUID)
         self.assertIsInstance(UUID("F"), UUID)
+        self.assertIsInstance(UUID("f"), UUID)
         self.assertIsInstance(UUID(0xF), UUID)
         self.assertIsInstance(UUID("FFFF"), UUID)
         self.assertIsInstance(UUID(0xFFFF), UUID)
@@ -51,6 +54,57 @@ class TestUUID(unittest.TestCase):
         self.assertRaises(binascii.Error, UUID, "0x0")
         self.assertRaises(binascii.Error, UUID, "0xFFFFFFFFA")
         self.assertRaises(binascii.Error, UUID, "0xFFFFFFFFBB")
+
+    def test_str(self):
+        self.assertEqual(UUID(0), "00000000-0000-1000-8000-00805f9b34fb")
+        self.assertEqual(UUID("0"), "00000000-0000-1000-8000-00805f9b34fb")
+        self.assertEqual(UUID(0x0), "00000000-0000-1000-8000-00805f9b34fb")
+        self.assertEqual(UUID(0000), "00000000-0000-1000-8000-00805f9b34fb")
+        self.assertEqual(UUID("0000"), "00000000-0000-1000-8000-00805f9b34fb")
+        self.assertEqual(UUID(0x0000), "00000000-0000-1000-8000-00805f9b34fb")
+        self.assertEqual(UUID("F"), "0000000f-0000-1000-8000-00805f9b34fb")
+        self.assertEqual(UUID("f"), "0000000f-0000-1000-8000-00805f9b34fb")
+        self.assertEqual(UUID("FFFF"), "0000ffff-0000-1000-8000-00805f9b34fb")
+        self.assertEqual(UUID("ABCD"), "0000abcd-0000-1000-8000-00805f9b34fb")
+        self.assertEqual(UUID(0xFFFFFFFF), "ffffffff-0000-1000-8000-00805f9b34fb")
+        self.assertEqual(UUID(0xffffffff), "ffffffff-0000-1000-8000-00805f9b34fb")
+        self.assertEqual(UUID("00000000-0000-1000-8000-00805f9b34fb"), "00000000-0000-1000-8000-00805f9b34fb")
+        self.assertEqual(UUID("0000000000001000800000805f9b34fb"), "00000000-0000-1000-8000-00805f9b34fb")
+
+    def test_eq(self):
+        self.assertTrue(UUID(0) == "00000000-0000-1000-8000-00805f9b34fb")
+        self.assertTrue(UUID("0") == "00000000-0000-1000-8000-00805f9b34fb")
+        self.assertTrue(UUID(0x0) == "00000000-0000-1000-8000-00805f9b34fb")
+        self.assertTrue(UUID(0000) == "00000000-0000-1000-8000-00805f9b34fb")
+        self.assertTrue(UUID("0000") == "00000000-0000-1000-8000-00805f9b34fb")
+        self.assertTrue(UUID("F") == "0000000f-0000-1000-8000-00805f9b34fb")
+        self.assertTrue(UUID("f") == "0000000f-0000-1000-8000-00805f9b34fb")
+        self.assertTrue(UUID("FFFF") == "0000ffff-0000-1000-8000-00805f9b34fb")
+        self.assertTrue(UUID("ABCD") == "0000abcd-0000-1000-8000-00805f9b34fb")
+        self.assertTrue(UUID(0xFFFFFFFF) == "ffffffff-0000-1000-8000-00805f9b34fb")
+        self.assertTrue(UUID(0xabcdef12) == "abcdef12-0000-1000-8000-00805f9b34fb")
+        self.assertTrue(UUID("00000000-0000-1000-8000-00805f9b34fb") == "00000000-0000-1000-8000-00805f9b34fb")
+        self.assertTrue(UUID("0000000000001000800000805f9b34fb") == "00000000-0000-1000-8000-00805f9b34fb")
+
+    def test_cmp(self):
+        '''Note that cmp() does not exist in Python 3, only Python 2'''
+        if sys.version_info[0] == 3:
+            version_warning_msg = "Method UUID.__cmp__() is not supported in Python 3. Skipping test_cmp()"
+            warnings.warn(version_warning_msg, UserWarning, stacklevel=2)
+        else:
+            self.assertTrue(cmp(UUID(0), "00000000-0000-1000-8000-00805f9b34fb"))
+            self.assertTrue(cmp(UUID("0"), "00000000-0000-1000-8000-00805f9b34fb"))
+            self.assertTrue(cmp(UUID(0x0), "00000000-0000-1000-8000-00805f9b34fb"))
+            self.assertTrue(cmp(UUID(0000), "00000000-0000-1000-8000-00805f9b34fb"))
+            self.assertTrue(cmp(UUID("0000"), "00000000-0000-1000-8000-00805f9b34fb"))
+            self.assertTrue(cmp(UUID("F"), "0000000f-0000-1000-8000-00805f9b34fb"))
+            self.assertTrue(cmp(UUID("f"), "0000000f-0000-1000-8000-00805f9b34fb"))
+            self.assertTrue(cmp(UUID("FFFF"), "0000ffff-0000-1000-8000-00805f9b34fb"))
+            self.assertTrue(cmp(UUID("ABCD"), "0000abcd-0000-1000-8000-00805f9b34fb"))
+            self.assertTrue(cmp(UUID(0xFFFFFFFF), "ffffffff-0000-1000-8000-00805f9b34fb"))
+            self.assertTrue(cmp(UUID(0xabcdef12), "abcdef12-0000-1000-8000-00805f9b34fb"))
+            self.assertTrue(cmp(UUID("00000000-0000-1000-8000-00805f9b34fb"), "00000000-0000-1000-8000-00805f9b34fb"))
+            self.assertTrue(cmp(UUID("0000000000001000800000805f9b34fb"), "00000000-0000-1000-8000-00805f9b34fb"))
 
 
 if __name__ == "__main__":
