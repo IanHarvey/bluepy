@@ -1,5 +1,8 @@
 """
 Test the UUID class in `btle.py`
+
+Run with:
+    $ python -m unittest this_file.py
 """
 
 import binascii
