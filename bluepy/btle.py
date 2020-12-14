@@ -195,8 +195,9 @@ class Characteristic:
         self.uuid = UUID(uuidVal)
         self.descs = None
 
-    def read(self):
-        return self.peripheral.readCharacteristic(self.valHandle)
+    def read(self, timeout=None):
+        return self.peripheral.readCharacteristic(self.valHandle,
+                                                  timeout=timeout)
 
     def write(self, val, withResponse=False):
         return self.peripheral.writeCharacteristic(self.valHandle, val, withResponse)
@@ -305,6 +306,7 @@ class BluepyHelper:
             self._helper.stdin.write("quit\n")
             self._helper.stdin.flush()
             self._helper.wait()
+            time.sleep(0.1)
             self._helper = None
         if self._stderr is not None:
             self._stderr.close()
@@ -464,14 +466,14 @@ class Peripheral(BluepyHelper):
         elif addr is not None:
             self._connect(addr, addrType, iface)
 
-    def disconnect(self):
+    def disconnect(self, timeout=1):
         if self._helper is None:
             return
         # Unregister the delegate first
         self.setDelegate(None)
 
         self._writeCmd("disc\n")
-        self._getResp('stat')
+        self._getResp('stat', timeout=timeout)
         self._stopHelper()
 
     def discoverServices(self):
@@ -520,12 +522,13 @@ class Peripheral(BluepyHelper):
         self._writeCmd("incl %X %X\n" % (startHnd, endHnd))
         return self._getResp('find')
 
-    def getCharacteristics(self, startHnd=1, endHnd=0xFFFF, uuid=None):
+    def getCharacteristics(self, startHnd=1, endHnd=0xFFFF, uuid=None,
+                           timeout=5):
         cmd = 'char %X %X' % (startHnd, endHnd)
         if uuid:
             cmd += ' %s' % UUID(uuid)
         self._writeCmd(cmd + "\n")
-        rsp = self._getResp('find')
+        rsp = self._getResp('find', timeout=timeout)
         nChars = len(rsp['hnd'])
         return [Characteristic(self, rsp['uuid'][i], rsp['hnd'][i],
                                rsp['props'][i], rsp['vhnd'][i])
@@ -545,22 +548,27 @@ class Peripheral(BluepyHelper):
         ndesc = len(resp['hnd'])
         return [Descriptor(self, resp['uuid'][i], resp['hnd'][i]) for i in range(ndesc)]
 
-    def readCharacteristic(self, handle):
+    def readCharacteristic(self, handle, timeout=None):
         self._writeCmd("rd %X\n" % handle)
-        resp = self._getResp('rd')
-        return resp['d'][0]
+        resp = self._getResp('rd', timeout=timeout)
+        if resp is None:
+            return resp
+        else:
+            return resp['d'][0]
 
     def _readCharacteristicByUUID(self, uuid, startHnd, endHnd):
         # Not used at present
         self._writeCmd("rdu %s %X %X\n" % (UUID(uuid), startHnd, endHnd))
         return self._getResp('rd')
 
-    def writeCharacteristic(self, handle, val, withResponse=False):
+    def writeCharacteristic(self, handle, val, withResponse=False,
+                            timeout=None):
         # Without response, a value too long for one packet will be truncated,
         # but with response, it will be sent as a queued write
         cmd = "wrr" if withResponse else "wr"
-        self._writeCmd("%s %X %s\n" % (cmd, handle, binascii.b2a_hex(val).decode('utf-8')))
-        return self._getResp('wr')
+        self._writeCmd(
+            "%s %X %s\n" % (cmd, handle, binascii.b2a_hex(val).decode('utf-8')))
+        return self._getResp('wr', timeout=timeout)
 
     def setSecurityLevel(self, level):
         self._writeCmd("secu %s\n" % level)
