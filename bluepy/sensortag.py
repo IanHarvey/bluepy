@@ -4,7 +4,9 @@ import math
 import signal
 import sys
 import threading
-   
+import json
+from http.server import BaseHTTPRequestHandler, HTTPServer
+       
 def _TI_UUID(val):
     return UUID("%08X-0451-4000-b000-000000000000" % (0xF0000000+val))
 
@@ -13,6 +15,36 @@ AUTODETECT = "-"
 SENSORTAG_V1 = "v1"
 SENSORTAG_2650 = "CC2650"
 SENSORTAG_1352R = "CC1352R"
+
+WEBSERVER_ADDR = '127.0.0.1'
+WEBSERVER_PORT = 30000
+
+sensors={}
+
+# Sensor data globals
+
+
+class httpServer_RequestHandler(BaseHTTPRequestHandler):
+    global sensors
+    # Implementiamo il metodo che risponde alle richieste GET
+    def do_GET(self):
+        # Specifichiamo il codice di risposta
+        self.send_response(200)
+        # Specifichiamo uno o più header
+        self.send_header('Content-type','text/html')
+        self.end_headers()
+        # Specifichiamo il messaggio che costituirà il corpo della risposta
+        message = json.dumps(sensors)
+        #message = '{ \t"Temp": "25.6",\n\t"Humidity": "47.9"\n}'
+        self.wfile.write(bytes(message, "utf8"))
+        return
+    
+def run_webserver():
+    print('Webserver startup...')
+    server_address = (WEBSERVER_ADDR, WEBSERVER_PORT)
+    httpd = HTTPServer(server_address, httpServer_RequestHandler)
+    print('Webserver running...')
+    httpd.serve_forever()
 
 class SensorBase:
     # Derived classes should set: svcUUID, ctrlUUID, dataUUID
@@ -588,10 +620,11 @@ class SensorDelegate(DefaultDelegate):
 class render:
     lock = threading.Lock()
     
-    def __init__(self, isRaw):
+    def __init__(self, isRaw, isWebServer):
          self.current_pos = 0
          self.last_pos = -1
          self.isRaw = isRaw  
+         self.isWebServer = isWebServer
          self.dict = {}
          
     def moveCursor(self, line):
@@ -630,10 +663,14 @@ class render:
         self.lock.release() 
       
     def render(self, label, data, unit):
+        str_label = label + ': '
         if self.isRaw:
-            print(label, data)
+            print(str_label, data)
         else:
-            self.printDashboard(label,data,unit)
+            self.printDashboard(str_label,data,unit)
+        if self.isWebServer:
+            sensors[label] = data
+                
     
 def enable_tag (tag_name, tagI):
     if tagI == None:
@@ -651,6 +688,7 @@ def main():
     parser.add_argument('-n', action='store', dest='count', default=0,
             type=int, help="number of times to loop data")
     parser.add_argument('-t',action='store',type=float, default=5.0, help='time between polling')
+    parser.add_argument('-w','--webserver', action='store_true', default=False,  help='start the web server')
     parser.add_argument('-r','--rawdata', action='store_true', default=False,  help='disable dashboard view and print raw data')
     parser.add_argument('-d','--debug', action='store_true', default=False,  help='debug mode')
     parser.add_argument('-T','--temperature', action="store_true",default=False)
@@ -669,8 +707,13 @@ def main():
     
     arg = parser.parse_args(sys.argv[1:])
     
+    # start webserver if requested
+    if arg.webserver:
+        t = threading.Thread(target=run_webserver, args=())
+        t.start()
+    
     # render class
-    rnd = render(arg.rawdata)
+    rnd = render(arg.rawdata,arg.webserver)
         
     # traceback and exceptions when --debug only
     def exception_handler(exception_type, exception, traceback):
@@ -722,21 +765,21 @@ def main():
     
     while True:
        if (arg.temperature or arg.all) and tag.IRtemperature is not None:
-           rnd.render('Temp: ', tag.IRtemperature.read(), '°C')
+           rnd.render('Temp', tag.IRtemperature.read(), '°C')
        if (arg.humidity or arg.all) and tag.humidity is not None:
-           rnd.render("Humidity: ", tag.humidity.read(),'%')
+           rnd.render("Humidity", tag.humidity.read(),'%')
        if (arg.barometer or arg.all) and tag.barometer is not None:
-           rnd.render("Barometer: ", tag.barometer.read(),'')
+           rnd.render("Barometer", tag.barometer.read(),'')
        if (arg.accelerometer or arg.all) and tag.accelerometer is not None and tag.version != SENSORTAG_1352R:
-           rnd.render("Accelerometer: ", tag.accelerometer.read(),'')
+           rnd.render("Accelerometer", tag.accelerometer.read(),'')
        if (arg.magnetometer or arg.all) and tag.magnetometer is not None:
-           rnd.render("Magnetometer: ", tag.magnetometer.read(),'')
+           rnd.render("Magnetometer", tag.magnetometer.read(),'')
        if (arg.gyroscope or arg.all) and tag.gyroscope is not None:
-           rnd.render("Gyroscope: ", tag.gyroscope.read(),'')
+           rnd.render("Gyroscope", tag.gyroscope.read(),'')
        if (arg.light or arg.all) and tag.lightmeter is not None:
-           rnd.render("Light: ", tag.lightmeter.read(),'lux')
+           rnd.render("Light", tag.lightmeter.read(),'lux')
        if (arg.battery or arg.all) and tag.battery is not None:
-           rnd.render("Battery: ", tag.battery.read(),'%')
+           rnd.render("Battery", tag.battery.read(),'%')
        if counter >= arg.count and arg.count != 0:
            break
        
