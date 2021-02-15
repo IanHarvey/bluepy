@@ -392,7 +392,8 @@ class BluepyHelper:
                 # Scan response when we weren't interested. Ignore it
                 continue
             else:
-                raise BTLEInternalError("Unexpected response (%s)" % respType, resp)
+                # Probably for another thread - put it back on the queue
+                self._lineq.put(rv)
 
     def status(self):
         self._writeCmd("stat\n")
