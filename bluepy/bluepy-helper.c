@@ -857,7 +857,7 @@ static void cmd_connect(int argcp, char **argvp)
         g_error_free(gerr);
         }
     else
-        g_io_add_watch(iochannel, G_IO_HUP, channel_watcher, NULL);
+        g_io_add_watch(iochannel, G_IO_HUP | G_IO_NVAL, channel_watcher, NULL);
 }
 
 static void cmd_disconnect(int argcp, char **argvp)
