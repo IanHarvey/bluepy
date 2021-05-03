@@ -243,7 +243,7 @@ class Descriptor:
 
     def __str__(self):
         return "Descriptor <%s>" % self.uuid.getCommonName()
-        
+
 
     def read(self):
         return self.peripheral.readCharacteristic(self.handle)
@@ -452,14 +452,20 @@ class Peripheral(BluepyHelper):
         else:
             self._writeCmd("conn %s %s\n" % (addr, addrType))
         rsp = self._getResp('stat', timeout)
+        timeout_exception = BTLEDisconnectError(
+            "Timed out while trying to connect to peripheral %s, addr type: %s" %
+            (addr, addrType), rsp)
         if rsp is None:
-            raise BTLEDisconnectError("Timed out while trying to connect to peripheral %s, addr type: %s" %
-                                      (addr, addrType), rsp)
-        while rsp['state'][0] == 'tryconn':
+            raise timeout_exception
+        while rsp and rsp['state'][0] == 'tryconn':
             rsp = self._getResp('stat', timeout)
-        if rsp['state'][0] != 'conn':
+        if rsp is None or rsp['state'][0] != 'conn':
             self._stopHelper()
-            raise BTLEDisconnectError("Failed to connect to peripheral %s, addr type: %s" % (addr, addrType), rsp)
+            if rsp is None:
+                raise timeout_exception
+            else:
+                raise BTLEDisconnectError("Failed to connect to peripheral %s, addr type: %s"
+                                          % (addr, addrType), rsp)
 
     def connect(self, addr, addrType=ADDR_TYPE_PUBLIC, iface=None, timeout=None):
         if isinstance(addr, ScanEntry):
@@ -512,7 +518,7 @@ class Peripheral(BluepyHelper):
         if 'hstart' not in rsp:
             raise BTLEGattError("Service %s not found" % (uuid.getCommonName()), rsp)
         svc = Service(self, uuid, rsp['hstart'][0], rsp['hend'][0])
-        
+
         if self._serviceMap is None:
             self._serviceMap = {}
         self._serviceMap[uuid] = svc
@@ -726,7 +732,7 @@ class ScanEntry:
         self.connectable = ((resp['flag'][0] & 0x4) == 0)
         data = resp.get('d', [''])[0]
         self.rawData = data
-        
+
         # Note: bluez is notifying devices twice: once with advertisement data,
         # then with scan response data. Also, the device may update the
         # advertisement or scan data
@@ -741,7 +747,7 @@ class ScanEntry:
 
         self.updateCount += 1
         return isNewData
-     
+
     def _decodeUUID(self, val, nbytes):
         if len(val) < nbytes:
             return None
@@ -758,7 +764,7 @@ class ScanEntry:
             if len(val) >= (i+nbytes):
                 result.append(self._decodeUUID(val[i:i+nbytes],nbytes))
         return result
-    
+
     def getDescription(self, sdid):
         return self.dataTags.get(sdid, hex(sdid))
 
@@ -794,20 +800,20 @@ class ScanEntry:
             return ','.join(str(v) for v in val)
         else:
             return binascii.b2a_hex(val).decode('ascii')
-    
+
     def getScanData(self):
         '''Returns list of tuples [(tag, description, value)]'''
         return [ (sdid, self.getDescription(sdid), self.getValueText(sdid))
                     for sdid in self.scanData.keys() ]
-         
- 
+
+
 class Scanner(BluepyHelper):
     def __init__(self,iface=0):
         BluepyHelper.__init__(self)
         self.scanned = {}
         self.iface=iface
         self.passive=False
-    
+
     def _cmd(self):
         return "pasv" if self.passive else "scan"
 
@@ -841,7 +847,7 @@ class Scanner(BluepyHelper):
         while True:
             if timeout:
                 remain = start + timeout - time.time()
-                if remain <= 0.0: 
+                if remain <= 0.0:
                     break
             else:
                 remain = None
@@ -867,7 +873,7 @@ class Scanner(BluepyHelper):
                 isNewData = dev._update(resp)
                 if self.delegate is not None:
                     self.delegate.handleDiscovery(dev, (dev.updateCount <= 1), isNewData)
-                 
+
             else:
                 raise BTLEInternalError("Unexpected response: " + respType, resp)
 
