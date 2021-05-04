@@ -1,7 +1,12 @@
 from bluepy.btle import UUID, Peripheral, DefaultDelegate, AssignedNumbers
 import struct
 import math
-
+import signal
+import sys
+import threading
+import json
+from http.server import BaseHTTPRequestHandler, HTTPServer
+       
 def _TI_UUID(val):
     return UUID("%08X-0451-4000-b000-000000000000" % (0xF0000000+val))
 
@@ -9,6 +14,37 @@ def _TI_UUID(val):
 AUTODETECT = "-"
 SENSORTAG_V1 = "v1"
 SENSORTAG_2650 = "CC2650"
+SENSORTAG_1352R = "CC1352R"
+
+WEBSERVER_ADDR = '127.0.0.1'
+WEBSERVER_PORT = 30000
+
+sensors={}
+
+# Sensor data globals
+
+
+class httpServer_RequestHandler(BaseHTTPRequestHandler):
+    global sensors
+    # Implementiamo il metodo che risponde alle richieste GET
+    def do_GET(self):
+        # Specifichiamo il codice di risposta
+        self.send_response(200)
+        # Specifichiamo uno o più header
+        self.send_header('Content-type','text/html')
+        self.end_headers()
+        # Specifichiamo il messaggio che costituirà il corpo della risposta
+        message = json.dumps(sensors)
+        #message = '{ \t"Temp": "25.6",\n\t"Humidity": "47.9"\n}'
+        self.wfile.write(bytes(message, "utf8"))
+        return
+    
+def run_webserver():
+    print('Webserver startup...')
+    server_address = (WEBSERVER_ADDR, WEBSERVER_PORT)
+    httpd = HTTPServer(server_address, httpServer_RequestHandler)
+    print('Webserver running...')
+    httpd.serve_forever()
 
 class SensorBase:
     # Derived classes should set: svcUUID, ctrlUUID, dataUUID
@@ -92,7 +128,19 @@ class IRTemperatureSensorTMP007(SensorBase):
         tObj = (rawTobj >> 2) * self.SCALE_LSB;
         tAmb = (rawTamb >> 2) * self.SCALE_LSB;
         return (tAmb, tObj)
+    
+class TemperatureSensorHDC2010(SensorBase):
+    svcUUID  = _TI_UUID(0xAA00)
+    dataUUID = _TI_UUID(0xAA01)
+    ctrlUUID = _TI_UUID(0xAA02)
 
+    def __init__(self, periph):
+        SensorBase.__init__(self, periph)
+
+    def read(self):
+        
+        return (round(struct.unpack('<f', self.data.read())[0],2))
+    
 class AccelerometerSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA10)
     dataUUID = _TI_UUID(0xAA11)
@@ -110,6 +158,34 @@ class AccelerometerSensor(SensorBase):
         x_y_z = struct.unpack('bbb', self.data.read())
         return tuple([ (val/self.scale) for val in x_y_z ])
 
+class AccelerometerSensorADXL362(SensorBase):
+    svcUUID  = _TI_UUID(0xFFA0)
+    dataUUID = None
+    ctrlUUID = _TI_UUID(0xFFA1)
+    sensorOn = struct.pack("B",0x01)
+
+    def __init__(self, periph):
+        SensorBase.__init__(self, periph)
+ 
+    def enable(self):
+        SensorBase.enable(self)
+        self.char_descr = self.service.getDescriptors(forUUID=0x2902)[0]
+        self.char_descr.write(struct.pack('<bb', 0x01, 0x00), True)
+        self.char_descr = self.service.getDescriptors(forUUID=0x2902)[1]
+        self.char_descr.write(struct.pack('<bb', 0x01, 0x00), True)
+        self.char_descr = self.service.getDescriptors(forUUID=0x2902)[2]
+        self.char_descr.write(struct.pack('<bb', 0x01, 0x00), True)
+        
+    def disable(self):
+        if self.service:
+            self.char_descr = self.service.getDescriptors(forUUID=0x2902)[0]
+            self.char_descr.write(struct.pack('<bb', 0x00, 0x00), True)
+            self.char_descr = self.service.getDescriptors(forUUID=0x2902)[1]
+            self.char_descr.write(struct.pack('<bb', 0x00, 0x00), True)
+            self.char_descr = self.service.getDescriptors(forUUID=0x2902)[2]
+            self.char_descr.write(struct.pack('<bb', 0x00, 0x00), True)
+        SensorBase.disable(self)
+    
 class MovementSensorMPU9250(SensorBase):
     svcUUID  = _TI_UUID(0xAA80)
     dataUUID = _TI_UUID(0xAA81)
@@ -188,6 +264,18 @@ class HumiditySensorHDC1000(SensorBase):
         temp = -40.0 + 165.0 * (rawT / 65536.0)
         RH = 100.0 * (rawH/65536.0)
         return (temp, RH)
+    
+class HumiditySensorHDC2010(SensorBase):
+    svcUUID  = _TI_UUID(0xAA20)
+    dataUUID = _TI_UUID(0xAA21)
+    ctrlUUID = _TI_UUID(0xAA22)
+
+    def __init__(self, periph):
+        SensorBase.__init__(self, periph)
+
+    def read(self):
+        
+        return (round(struct.unpack('<f', self.data.read())[0],2))
 
 class MagnetometerSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA30)
@@ -301,7 +389,6 @@ class KeypressSensor(SensorBase):
     svcUUID = UUID(0xFFE0)
     dataUUID = UUID(0xFFE1)
     ctrlUUID = None
-    sensorOn = None
 
     def __init__(self, periph):
         SensorBase.__init__(self, periph)
@@ -313,7 +400,38 @@ class KeypressSensor(SensorBase):
 
     def disable(self):
         self.char_descr.write(struct.pack('<bb', 0x00, 0x00), True)
+        
+class KeypressSensorCC1352R(SensorBase):
+    svcUUID = _TI_UUID(0x1120)
+    dataUUID = _TI_UUID(0x1121)
+    ctrlUUID = None
+    sensorOn = None
 
+    def __init__(self, periph):
+        SensorBase.__init__(self, periph)
+ 
+    def enable(self):
+        SensorBase.enable(self)
+        self.char_descr = self.service.getDescriptors(forUUID=0x2902)[0]
+        self.char_descr.write(struct.pack('<bb', 0x01, 0x00), True)
+        self.char_descr = self.service.getDescriptors(forUUID=0x2902)[1]
+        self.char_descr.write(struct.pack('<bb', 0x01, 0x00), True)
+
+    def disable(self):
+        self.char_descr.write(struct.pack('<bb', 0x00, 0x00), True)
+
+class OpticalSensorOPT3010(SensorBase):
+    svcUUID  = _TI_UUID(0xAA70)
+    dataUUID = _TI_UUID(0xAA71)
+    ctrlUUID = _TI_UUID(0xAA72)
+
+    def __init__(self, periph):
+       SensorBase.__init__(self, periph)
+
+    def read(self):
+        '''Returns value in lux'''
+        return (round(struct.unpack('<f', self.data.read())[0],2))
+    
 class OpticalSensorOPT3001(SensorBase):
     svcUUID  = _TI_UUID(0xAA70)
     dataUUID = _TI_UUID(0xAA71)
@@ -343,15 +461,34 @@ class BatterySensor(SensorBase):
         val = ord(self.data.read())
         return val
 
+class BatterySensorCC1352R(SensorBase):
+    svcUUID  = _TI_UUID(0x180f)
+    dataUUID = _TI_UUID(0x2a19)
+    ctrlUUID = None
+    sensorOn = None
+
+    def __init__(self, periph):
+       SensorBase.__init__(self, periph)
+
+    def read(self):
+        '''Returns the battery level in percent'''
+        val = ord(self.data.read())
+        return val
+    
 class SensorTag(Peripheral):
-    def __init__(self,addr,version=AUTODETECT):
+    version = AUTODETECT
+    
+    def __init__(self,addr):
         Peripheral.__init__(self,addr)
-        if version==AUTODETECT:
+        if self.version==AUTODETECT:
             svcs = self.discoverServices()
             if _TI_UUID(0xAA70) in svcs:
-                version = SENSORTAG_2650
+                if _TI_UUID(0xFFA0)in svcs: #ADXL362 Accelerometer 
+                    self.version = SENSORTAG_1352R   
+                else:
+                    self.version = SENSORTAG_2650
             else:
-                version = SENSORTAG_V1
+                self.version = SENSORTAG_V1
 
         fwVers = self.getCharacteristics(uuid=AssignedNumbers.firmwareRevisionString)
         if len(fwVers) >= 1:
@@ -359,7 +496,7 @@ class SensorTag(Peripheral):
         else:
             self.firmwareVersion = u''
 
-        if version==SENSORTAG_V1:
+        if self.version==SENSORTAG_V1:
             self.IRtemperature = IRTemperatureSensor(self)
             self.accelerometer = AccelerometerSensor(self)
             self.humidity = HumiditySensor(self)
@@ -368,7 +505,7 @@ class SensorTag(Peripheral):
             self.gyroscope = GyroscopeSensor(self)
             self.keypress = KeypressSensor(self)
             self.lightmeter = None
-        elif version==SENSORTAG_2650:
+        elif self.version==SENSORTAG_2650:
             self._mpu9250 = MovementSensorMPU9250(self)
             self.IRtemperature = IRTemperatureSensorTMP007(self)
             self.accelerometer = AccelerometerSensorMPU9250(self._mpu9250)
@@ -379,7 +516,18 @@ class SensorTag(Peripheral):
             self.keypress = KeypressSensor(self)
             self.lightmeter = OpticalSensorOPT3001(self)
             self.battery = BatterySensor(self)
-
+        elif self.version==SENSORTAG_1352R:
+            self._mpu9250 = None
+            self.IRtemperature = TemperatureSensorHDC2010(self)
+            self.accelerometer = AccelerometerSensorADXL362(self)
+            self.humidity = HumiditySensorHDC2010(self)
+            self.magnetometer = None
+            self.barometer = None
+            self.gyroscope = None
+            self.keypress = KeypressSensorCC1352R(self)
+            self.lightmeter = OpticalSensorOPT3010(self)
+            self.battery = BatterySensorCC1352R(self)
+            
 class KeypressDelegate(DefaultDelegate):
     BUTTON_L = 0x02
     BUTTON_R = 0x01
@@ -413,6 +561,123 @@ class KeypressDelegate(DefaultDelegate):
     def onButtonDown(self, but):
         print ( "** " + self._button_desc[but] + " DOWN")
 
+class SensorDelegate(DefaultDelegate):
+    BUTTON_L = 0x02
+    BUTTON_R = 0x01
+    BUTTON_HOLD = 0xB1
+    
+    _button_desc = { 
+        BUTTON_L : "Button 2",
+        BUTTON_R : "Button 1",
+    } 
+
+    def __init__(self, rnd):
+        DefaultDelegate.__init__(self)
+        self.lastVal = 0
+        self.rnd = rnd
+
+
+    def handleNotification(self, hnd, data):
+
+        but = 0x00
+        #Accelerometer
+        
+        if hnd == 110: #x-axis data
+            self.x = struct.unpack('<h',data)[0]
+        if hnd == 114: #y-axis data
+            self.y = struct.unpack('<h',data)[0]
+        if hnd == 118: #z-axis data
+            self.z = struct.unpack('<h',data)[0]
+            self.rnd.render ('Accelerometer: ', str(self.x) + ',' + str(self.y) + ',' + str(self.z),'')
+        
+        #Keypress
+
+        if hnd == 90:
+            but = 0x01
+        if hnd == 94:
+            but = 0x02
+
+        if but != 0x00:        
+            val = struct.unpack("B", data)[0]
+        
+            if val == 0x01:
+                self.onButtonDown(but)
+            if val == 0x00:
+                self.onButtonUp(but)
+            if val == 0xB1:
+                self.onButtonHold(but)
+            
+
+    def onButtonUp(self, but):
+        self.rnd.render ( "Key pressed: ", self._button_desc[but] + " UP",'')
+
+    def onButtonDown(self, but):
+        self.rnd.render ( "Key pressed: ", self._button_desc[but] + " DOWN",'')
+        
+    def onButtonHold(self, but):
+        self.rnd.render ( "Key pressed: ", self._button_desc[but] + " HOLD",'')
+
+class render:
+    lock = threading.Lock()
+    
+    def __init__(self, isRaw, isWebServer):
+         self.current_pos = 0
+         self.last_pos = -1
+         self.isRaw = isRaw  
+         self.isWebServer = isWebServer
+         self.dict = {}
+         
+    def moveCursor(self, line):
+        if self.current_pos < line:
+            cycle = line - self.current_pos
+            strs='\033['+ str(cycle) + 'E'  # move cursor down
+            print(strs, end='', flush=True)
+        
+        if self.current_pos > line:
+            cycle = self.current_pos - line
+            strs='\033['+ str(cycle) + 'F'  # move cursor up
+            print(strs, end='', flush=True)
+        
+        self.current_pos = line
+                    
+    def getLine(self, label):
+        saved_pos = self.current_pos
+        if label not in self.dict:
+            self.last_pos = self.last_pos + 1       # assign a new line
+            self.dict[label] = self.last_pos
+            if self.last_pos > 0 :                       # go to end of the screen
+                self.moveCursor (self.last_pos)
+            print()                                 # print a new line to scroll the screenand return to previous line
+            print('\033[F', end='', flush=True)
+            if self.last_pos > 0 :                  # go back to original position
+                self.moveCursor (saved_pos)
+            print()             
+        
+        return self.dict[label]
+        
+    def printDashboard(self, label, data, unit):
+        self.lock.acquire()
+        self.moveCursor(self.getLine(label))
+        print('\033[K', end='', flush=True)  # empty the line
+        print(label, data, unit, end='\r', flush=True)
+        self.lock.release() 
+      
+    def render(self, label, data, unit):
+        str_label = label + ': '
+        if self.isRaw:
+            print(str_label, data)
+        else:
+            self.printDashboard(str_label,data,unit)
+        if self.isWebServer:
+            sensors[label] = data
+                
+    
+def enable_tag (tag_name, tagI):
+    if tagI == None:
+        print ("Warning : no ", tag_name, " on this device")
+    else:
+        tagI.enable()
+    
 def main():
     import time
     import sys
@@ -421,8 +686,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('host', action='store',help='MAC of BT device')
     parser.add_argument('-n', action='store', dest='count', default=0,
-            type=int, help="Number of times to loop data")
+            type=int, help="number of times to loop data")
     parser.add_argument('-t',action='store',type=float, default=5.0, help='time between polling')
+    parser.add_argument('-w','--webserver', action='store_true', default=False,  help='start the web server')
+    parser.add_argument('-r','--rawdata', action='store_true', default=False,  help='disable dashboard view and print raw data')
+    parser.add_argument('-d','--debug', action='store_true', default=False,  help='debug mode')
     parser.add_argument('-T','--temperature', action="store_true",default=False)
     parser.add_argument('-A','--accelerometer', action='store_true',
             default=False)
@@ -434,65 +702,98 @@ def main():
     parser.add_argument('-K','--keypress', action='store_true', default=False)
     parser.add_argument('-L','--light', action='store_true', default=False)
     parser.add_argument('-P','--battery', action='store_true', default=False)
-    parser.add_argument('--all', action='store_true', default=False)
 
+    parser.add_argument('--all', action='store_true', default=False)
+    
     arg = parser.parse_args(sys.argv[1:])
+    
+    # start webserver if requested
+    if arg.webserver:
+        t = threading.Thread(target=run_webserver, args=())
+        t.start()
+    
+    # render class
+    rnd = render(arg.rawdata,arg.webserver)
+        
+    # traceback and exceptions when --debug only
+    def exception_handler(exception_type, exception, traceback):
+        rnd.render(exception,'','')
+        print()
+    
+    if not arg.debug:
+        sys.tracebacklimit=0
+        sys.excepthook = exception_handler
 
     print('Connecting to ' + arg.host)
-    tag = SensorTag(arg.host)
 
+    tag = SensorTag(arg.host)
+         
+    print('Connected to ',tag.version,' sensortag device')
+        
+    # Setting delegate to handle notifications
+    if tag.version == SENSORTAG_1352R:
+        tag.setDelegate(SensorDelegate(rnd))
+    else:
+        tag.setDelegate(KeypressDelegate())   
+        
     # Enabling selected sensors
     if arg.temperature or arg.all:
-        tag.IRtemperature.enable()
+        enable_tag('temperature',tag.IRtemperature)
     if arg.humidity or arg.all:
-        tag.humidity.enable()
+        enable_tag('humidity',tag.humidity)
     if arg.barometer or arg.all:
-        tag.barometer.enable()
+        enable_tag('barometer', tag.barometer)
     if arg.accelerometer or arg.all:
-        tag.accelerometer.enable()
+        enable_tag('accelerometer', tag.accelerometer)
     if arg.magnetometer or arg.all:
-        tag.magnetometer.enable()
+        enable_tag('magnetometer', tag.magnetometer)
     if arg.gyroscope or arg.all:
-        tag.gyroscope.enable()
+        enable_tag('giroscope', tag.gyroscope)
     if arg.battery or arg.all:
-        tag.battery.enable()
+        enable_tag('battery', tag.battery)
     if arg.keypress or arg.all:
-        tag.keypress.enable()
-        tag.setDelegate(KeypressDelegate())
-    if arg.light and tag.lightmeter is None:
-        print("Warning: no lightmeter on this device")
-    if (arg.light or arg.all) and tag.lightmeter is not None:
-        tag.lightmeter.enable()
+        enable_tag('key press', tag.keypress)
+    if arg.light or arg.all:
+        enable_tag('Lightmeter',tag.lightmeter)
+
 
     # Some sensors (e.g., temperature, accelerometer) need some time for initialization.
     # Not waiting here after enabling a sensor, the first read value might be empty or incorrect.
     time.sleep(1.0)
 
     counter=1
+    
     while True:
-       if arg.temperature or arg.all:
-           print('Temp: ', tag.IRtemperature.read())
-       if arg.humidity or arg.all:
-           print("Humidity: ", tag.humidity.read())
-       if arg.barometer or arg.all:
-           print("Barometer: ", tag.barometer.read())
-       if arg.accelerometer or arg.all:
-           print("Accelerometer: ", tag.accelerometer.read())
-       if arg.magnetometer or arg.all:
-           print("Magnetometer: ", tag.magnetometer.read())
-       if arg.gyroscope or arg.all:
-           print("Gyroscope: ", tag.gyroscope.read())
+       if (arg.temperature or arg.all) and tag.IRtemperature is not None:
+           rnd.render('Temp', tag.IRtemperature.read(), '°C')
+       if (arg.humidity or arg.all) and tag.humidity is not None:
+           rnd.render("Humidity", tag.humidity.read(),'%')
+       if (arg.barometer or arg.all) and tag.barometer is not None:
+           rnd.render("Barometer", tag.barometer.read(),'')
+       if (arg.accelerometer or arg.all) and tag.accelerometer is not None and tag.version != SENSORTAG_1352R:
+           rnd.render("Accelerometer", tag.accelerometer.read(),'')
+       if (arg.magnetometer or arg.all) and tag.magnetometer is not None:
+           rnd.render("Magnetometer", tag.magnetometer.read(),'')
+       if (arg.gyroscope or arg.all) and tag.gyroscope is not None:
+           rnd.render("Gyroscope", tag.gyroscope.read(),'')
        if (arg.light or arg.all) and tag.lightmeter is not None:
-           print("Light: ", tag.lightmeter.read())
-       if arg.battery or arg.all:
-           print("Battery: ", tag.battery.read())
+           rnd.render("Light", tag.lightmeter.read(),'lux')
+       if (arg.battery or arg.all) and tag.battery is not None:
+           rnd.render("Battery", tag.battery.read(),'%')
        if counter >= arg.count and arg.count != 0:
            break
+       
        counter += 1
        tag.waitForNotifications(arg.t)
-
+    
+    if tag.version == SENSORTAG_1352R and tag.accelerometer:
+        tag.accelerometer.disable()
+            
     tag.disconnect()
     del tag
+    
+    rnd.render('done','','')
+    print()
 
 if __name__ == "__main__":
     main()
