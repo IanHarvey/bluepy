@@ -1,18 +1,19 @@
 #!/usr/bin/env python
+"""Bluetooth Low Energy Python interface"""
 
 from __future__ import print_function
 
-"""Bluetooth Low Energy Python interface"""
-import sys
-import os
-import time
-import subprocess
 import binascii
+import os
+from queue import Empty, Queue
 import select
-import struct
 import signal
-from queue import Queue, Empty
+import struct
+import subprocess
+import sys
 from threading import Thread
+import time
+
 
 def preexec_function():
     # Ignore the SIGINT signal by setting the handler to the standard
@@ -382,6 +383,8 @@ class BluepyHelper:
                     raise BTLEDisconnectError("Device disconnected", resp)
             elif respType == 'err':
                 errcode=resp['code'][0]
+                if errcode == "connfail":  # not terminal, can retry connection.
+                    raise BTLEDisconnectError("Device disconnected", errcode)
                 if errcode=='nomgmt':
                     raise BTLEManagementError("Management not available (permissions problem?)", resp)
                 elif errcode=='atterr':
@@ -439,30 +442,38 @@ class Peripheral(BluepyHelper):
             return resp
 
     def _connect(self, addr, addrType=ADDR_TYPE_PUBLIC, iface=None, timeout=None):
+
         if len(addr.split(":")) != 6:
             raise ValueError("Expected MAC address, got %s" % repr(addr))
         if addrType not in (ADDR_TYPE_PUBLIC, ADDR_TYPE_RANDOM):
             raise ValueError("Expected address type public or random, got {}".format(addrType))
-        self._startHelper(iface)
+        if self._helper is None:
+            self._startHelper(iface)
+            
         self.addr = addr
         self.addrType = addrType
         self.iface = iface
+        
         if iface is not None:
             self._writeCmd("conn %s %s %s\n" % (addr, addrType, "hci"+str(iface)))
         else:
             self._writeCmd("conn %s %s\n" % (addr, addrType))
+            
         rsp = self._getResp('stat', timeout)
-        timeout_exception = BTLEDisconnectError(
-            "Timed out while trying to connect to peripheral %s, addr type: %s" %
-            (addr, addrType), rsp)
-        if rsp is None:
-            raise timeout_exception
-        while rsp and rsp['state'][0] == 'tryconn':
-            rsp = self._getResp('stat', timeout)
+        
+        while rsp.get("state") and rsp["state"][0] in [
+            "tryconn",
+            "scan",
+            "disc",
+        ]:  # Wait for any operations to finish.
+            rsp = self._getResp("stat", timeout)
+
         if rsp is None or rsp['state'][0] != 'conn':
             self._stopHelper()
             if rsp is None:
-                raise timeout_exception
+                raise BTLEDisconnectError(
+                    "Timed out while trying to connect to peripheral %s, addr type: %s" %
+                    (addr, addrType), rsp)
             else:
                 raise BTLEDisconnectError("Failed to connect to peripheral %s, addr type: %s"
                                           % (addr, addrType), rsp)
