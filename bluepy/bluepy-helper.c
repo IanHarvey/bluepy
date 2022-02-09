@@ -245,6 +245,16 @@ static void resp_mgmt_err(uint8_t status)
   send_uint(tag_ERRSTAT, status);
   send_str(tag_ERRMSG, mgmt_errstr(status));
   resp_end();
+  static int hint=0;
+  if (status==MGMT_STATUS_PERMISSION_DENIED && !hint++)
+    {
+      fprintf(stderr,
+	      "  Looks like you got a permission error.\n"
+	      "  bluepy-helper needs cap_net_raw+e and cap_net_admin+eip,\n"
+	      "  try setting these as root with setcap(1).\n"
+	      "  See also https://github.com/IanHarvey/bluepy/issues/313\n");
+      fflush(stderr);
+    }
 }
 
 static void cmd_status(int argcp, char **argvp)
