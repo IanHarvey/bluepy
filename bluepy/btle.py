@@ -8,7 +8,6 @@ import os
 import time
 import subprocess
 import binascii
-import select
 import struct
 import signal
 from queue import Queue, Empty
@@ -93,6 +92,7 @@ class BTLEGattError(BTLEException):
 
 class UUID:
     def __init__(self, val, commonName=None):
+        """Initialisation"""
         '''We accept: 32-digit hex strings, with and without '-' characters,
            4 to 8 digit hex strings, and integers'''
         if isinstance(val, int):
@@ -212,7 +212,7 @@ class Characteristic:
         return "Characteristic <%s>" % self.uuid.getCommonName()
 
     def supportsRead(self):
-        if (self.properties & Characteristic.props["READ"]):
+        if self.properties & Characteristic.props["READ"]:
             return True
         else:
             return False
@@ -220,7 +220,7 @@ class Characteristic:
     def propertiesToString(self):
         propStr = ""
         for p in Characteristic.propNames:
-            if (p & self.properties):
+            if p & self.properties:
                 propStr += Characteristic.propNames[p] + " "
         return propStr
 
@@ -668,15 +668,17 @@ class ScanEntry:
     MANUFACTURER = 0xFF
 
     dataTags = {FLAGS: 'Flags', INCOMPLETE_16B_SERVICES: 'Incomplete 16b Services',
-        COMPLETE_16B_SERVICES: 'Complete 16b Services', INCOMPLETE_32B_SERVICES: 'Incomplete 32b Services',
-        COMPLETE_32B_SERVICES: 'Complete 32b Services', INCOMPLETE_128B_SERVICES: 'Incomplete 128b Services',
-        COMPLETE_128B_SERVICES: 'Complete 128b Services', SHORT_LOCAL_NAME: 'Short Local Name',
-        COMPLETE_LOCAL_NAME: 'Complete Local Name', TX_POWER: 'Tx Power',
-        SERVICE_SOLICITATION_16B: '16b Service Solicitation', SERVICE_SOLICITATION_32B: '32b Service Solicitation',
-        SERVICE_SOLICITATION_128B: '128b Service Solicitation', SERVICE_DATA_16B: '16b Service Data',
-        SERVICE_DATA_32B: '32b Service Data', SERVICE_DATA_128B: '128b Service Data',
-        PUBLIC_TARGET_ADDRESS: 'Public Target Address', RANDOM_TARGET_ADDRESS: 'Random Target Address',
-        APPEARANCE: 'Appearance', ADVERTISING_INTERVAL: 'Advertising Interval', MANUFACTURER: 'Manufacturer', }
+                COMPLETE_16B_SERVICES: 'Complete 16b Services', INCOMPLETE_32B_SERVICES: 'Incomplete 32b Services',
+                COMPLETE_32B_SERVICES: 'Complete 32b Services', INCOMPLETE_128B_SERVICES: 'Incomplete 128b Services',
+                COMPLETE_128B_SERVICES: 'Complete 128b Services', SHORT_LOCAL_NAME: 'Short Local Name',
+                COMPLETE_LOCAL_NAME: 'Complete Local Name', TX_POWER: 'Tx Power',
+                SERVICE_SOLICITATION_16B: '16b Service Solicitation',
+                SERVICE_SOLICITATION_32B: '32b Service Solicitation',
+                SERVICE_SOLICITATION_128B: '128b Service Solicitation', SERVICE_DATA_16B: '16b Service Data',
+                SERVICE_DATA_32B: '32b Service Data', SERVICE_DATA_128B: '128b Service Data',
+                PUBLIC_TARGET_ADDRESS: 'Public Target Address', RANDOM_TARGET_ADDRESS: 'Random Target Address',
+                APPEARANCE: 'Appearance', ADVERTISING_INTERVAL: 'Advertising Interval', MANUFACTURER: 'Manufacturer'
+                }
 
     def __init__(self, addr, iface):
         self.addr = addr
@@ -767,7 +769,7 @@ class ScanEntry:
             return binascii.b2a_hex(val).decode('ascii')
 
     def getScanData(self):
-        '''Returns list of tuples [(tag, description, value)]'''
+        """Return list of tuples [(tag, description, value)]"""
         return [(sdid, self.getDescription(sdid), self.getValueText(sdid)) for sdid in self.scanData.keys()]
 
 
@@ -907,7 +909,7 @@ if __name__ == '__main__':
             for ch in svc.getCharacteristics():
                 print("    {}, hnd={}, supports {}".format(ch, hex(ch.handle), ch.propertiesToString()))
                 chName = AssignedNumbers.getCommonName(ch.uuid)
-                if (ch.supportsRead()):
+                if ch.supportsRead():
                     try:
                         print("    ->", repr(ch.read()))
                     except BTLEException as e:

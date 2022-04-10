@@ -1,29 +1,30 @@
-from bluepy.btle import UUID, Peripheral, ADDR_TYPE_RANDOM, DefaultDelegate
+#!/usr/bin/env python
+
 import argparse
-import time
 import binascii
+import time
+
+from bluepy.btle import UUID, Peripheral, ADDR_TYPE_RANDOM, DefaultDelegate
+
 
 def write_uint16(data, value, index):
     """ Write 16bit value into data string at index and return new string """
     data = data.decode('utf-8')  # This line is added to make sure both Python 2 and 3 works
-    return '{}{:02x}{:02x}{}'.format(
-                data[:index*4], 
-                value & 0xFF, value >> 8, 
-                data[index*4 + 4:])
+    return '{}{:02x}{:02x}{}'.format(data[:index * 4], value & 0xFF, value >> 8, data[index * 4 + 4:])
+
 
 def write_uint8(data, value, index):
     """ Write 8bit value into data string at index and return new string """
     data = data.decode('utf-8')  # This line is added to make sure both Python 2 and 3 works
-    return '{}{:02x}{}'.format(
-                data[:index*2], 
-                value, 
-                data[index*2 + 2:])
+    return '{}{:02x}{}'.format(data[:index * 2], value, data[index * 2 + 2:])
+
 
 # Please see # Ref https://nordicsemiconductor.github.io/Nordic-Thingy52-FW/documentation
 # for more information on the UUIDs of the Services and Characteristics that are being used
 def Nordic_UUID(val):
     """ Adds base UUID and inserts value to return Nordic UUID """
     return UUID("EF68%04X-9B35-4933-9B10-52FFA9740042" % val)
+
 
 # Definition of all UUID used by Thingy
 CCCD_UUID = 0x2902
@@ -33,34 +34,34 @@ BATTERY_LEVEL_UUID = 0x2A19
 
 ENVIRONMENT_SERVICE_UUID = 0x0200
 E_TEMPERATURE_CHAR_UUID = 0x0201
-E_PRESSURE_CHAR_UUID    = 0x0202
-E_HUMIDITY_CHAR_UUID    = 0x0203
-E_GAS_CHAR_UUID         = 0x0204
-E_COLOR_CHAR_UUID       = 0x0205
-E_CONFIG_CHAR_UUID      = 0x0206
+E_PRESSURE_CHAR_UUID = 0x0202
+E_HUMIDITY_CHAR_UUID = 0x0203
+E_GAS_CHAR_UUID = 0x0204
+E_COLOR_CHAR_UUID = 0x0205
+E_CONFIG_CHAR_UUID = 0x0206
 
 USER_INTERFACE_SERVICE_UUID = 0x0300
-UI_LED_CHAR_UUID            = 0x0301
-UI_BUTTON_CHAR_UUID         = 0x0302
-UI_EXT_PIN_CHAR_UUID        = 0x0303
+UI_LED_CHAR_UUID = 0x0301
+UI_BUTTON_CHAR_UUID = 0x0302
+UI_EXT_PIN_CHAR_UUID = 0x0303
 
-MOTION_SERVICE_UUID         = 0x0400
-M_CONFIG_CHAR_UUID          = 0x0401
-M_TAP_CHAR_UUID             = 0x0402
-M_ORIENTATION_CHAR_UUID     = 0x0403
-M_QUATERNION_CHAR_UUID      = 0x0404
-M_STEP_COUNTER_UUID         = 0x0405
-M_RAW_DATA_CHAR_UUID        = 0x0406
-M_EULER_CHAR_UUID           = 0x0407
+MOTION_SERVICE_UUID = 0x0400
+M_CONFIG_CHAR_UUID = 0x0401
+M_TAP_CHAR_UUID = 0x0402
+M_ORIENTATION_CHAR_UUID = 0x0403
+M_QUATERNION_CHAR_UUID = 0x0404
+M_STEP_COUNTER_UUID = 0x0405
+M_RAW_DATA_CHAR_UUID = 0x0406
+M_EULER_CHAR_UUID = 0x0407
 M_ROTATION_MATRIX_CHAR_UUID = 0x0408
-M_HEAIDNG_CHAR_UUID         = 0x0409
-M_GRAVITY_VECTOR_CHAR_UUID  = 0x040A
+M_HEAIDNG_CHAR_UUID = 0x0409
+M_GRAVITY_VECTOR_CHAR_UUID = 0x040A
 
-SOUND_SERVICE_UUID          = 0x0500
-S_CONFIG_CHAR_UUID          = 0x0501
-S_SPEAKER_DATA_CHAR_UUID    = 0x0502
-S_SPEAKER_STATUS_CHAR_UUID  = 0x0503
-S_MICROPHONE_CHAR_UUID      = 0x0504
+SOUND_SERVICE_UUID = 0x0500
+S_CONFIG_CHAR_UUID = 0x0501
+S_SPEAKER_DATA_CHAR_UUID = 0x0502
+S_SPEAKER_STATUS_CHAR_UUID = 0x0503
+S_MICROPHONE_CHAR_UUID = 0x0504
 
 # Notification handles used in notification delegate
 e_temperature_handle = None
@@ -87,7 +88,7 @@ class BatterySensor():
     Battery Service module. Instance the class and enable to get access to Battery interface.
     """
     svcUUID = UUID(BATTERY_SERVICE_UUID)  # Ref https://www.bluetooth.com/specifications/gatt/services 
-    dataUUID = UUID(BATTERY_LEVEL_UUID) # Ref https://www.bluetooth.com/specifications/gatt/characteristics
+    dataUUID = UUID(BATTERY_LEVEL_UUID)  # Ref https://www.bluetooth.com/specifications/gatt/characteristics
 
     def __init__(self, periph):
         self.periph = periph
@@ -111,13 +112,13 @@ class EnvironmentService():
     """
     Environment service module. Instance the class and enable to get access to the Environment interface.
     """
-    serviceUUID =           Nordic_UUID(ENVIRONMENT_SERVICE_UUID)
+    serviceUUID = Nordic_UUID(ENVIRONMENT_SERVICE_UUID)
     temperature_char_uuid = Nordic_UUID(E_TEMPERATURE_CHAR_UUID)
-    pressure_char_uuid =    Nordic_UUID(E_PRESSURE_CHAR_UUID)
-    humidity_char_uuid =    Nordic_UUID(E_HUMIDITY_CHAR_UUID)
-    gas_char_uuid =         Nordic_UUID(E_GAS_CHAR_UUID)
-    color_char_uuid =       Nordic_UUID(E_COLOR_CHAR_UUID)
-    config_char_uuid =      Nordic_UUID(E_CONFIG_CHAR_UUID)
+    pressure_char_uuid = Nordic_UUID(E_PRESSURE_CHAR_UUID)
+    humidity_char_uuid = Nordic_UUID(E_HUMIDITY_CHAR_UUID)
+    gas_char_uuid = Nordic_UUID(E_GAS_CHAR_UUID)
+    color_char_uuid = Nordic_UUID(E_COLOR_CHAR_UUID)
+    config_char_uuid = Nordic_UUID(E_CONFIG_CHAR_UUID)
 
     def __init__(self, periph):
         self.periph = periph
@@ -202,8 +203,8 @@ class EnvironmentService():
             else:
                 self.color_cccd.write(b"\x00\x00", True)
 
-    def configure(self, temp_int=None, press_int=None, humid_int=None, gas_mode_int=None,
-                        color_int=None, color_sens_calib=None):
+    def configure(self, temp_int=None, press_int=None, humid_int=None, gas_mode_int=None, color_int=None,
+                  color_sens_calib=None):
         if temp_int is not None and self.config_char is not None:
             current_config = binascii.b2a_hex(self.config_char.read())
             new_config = write_uint16(current_config, temp_int, 0)
@@ -246,6 +247,7 @@ class UserInterfaceService():
     serviceUUID = Nordic_UUID(USER_INTERFACE_SERVICE_UUID)
     led_char_uuid = Nordic_UUID(UI_LED_CHAR_UUID)
     btn_char_uuid = Nordic_UUID(UI_BUTTON_CHAR_UUID)
+
     # To be added: EXT PIN CHAR
 
     def __init__(self, periph):
@@ -253,8 +255,7 @@ class UserInterfaceService():
         self.ui_service = None
         self.led_char = None
         self.btn_char = None
-        self.btn_char_cccd = None
-        # To be added: EXT PIN CHAR
+        self.btn_char_cccd = None  # To be added: EXT PIN CHAR
 
     def enable(self):
         """ Enables the class by finding the service and its characteristics. """
@@ -271,11 +272,11 @@ class UserInterfaceService():
 
     def set_led_mode_off(self):
         self.led_char.write(b"\x00", True)
-        
+
     def set_led_mode_constant(self, r, g, b):
         teptep = "01{:02X}{:02X}{:02X}".format(r, g, b)
         self.led_char.write(binascii.a2b_hex(teptep), True)
-        
+
     def set_led_mode_breathe(self, color, intensity, delay):
         """
         Set LED to breathe mode.
@@ -283,11 +284,10 @@ class UserInterfaceService():
         intensity [%] has to be within 1-100
         delay [ms] has to be within 1 ms - 10 s
         """
-        teptep = "02{:02X}{:02X}{:02X}{:02X}".format(color, intensity,
-                delay & 0xFF, delay >> 8)
+        teptep = "02{:02X}{:02X}{:02X}{:02X}".format(color, intensity, delay & 0xFF, delay >> 8)
         self.led_char.write(binascii.a2b_hex(teptep), True)
-        
-    def set_led_mode_one_shot(self, color, intensity):  
+
+    def set_led_mode_one_shot(self, color, intensity):
         """
         Set LED to one shot mode.
         color has to be within 0x01 and 0x07
@@ -311,17 +311,17 @@ class MotionService():
     """
     Motion service module. Instance the class and enable to get access to the Motion interface.
     """
-    serviceUUID =           Nordic_UUID(MOTION_SERVICE_UUID)
-    config_char_uuid =      Nordic_UUID(M_CONFIG_CHAR_UUID)
-    tap_char_uuid =         Nordic_UUID(M_TAP_CHAR_UUID)
-    orient_char_uuid =      Nordic_UUID(M_ORIENTATION_CHAR_UUID)
-    quaternion_char_uuid =  Nordic_UUID(M_QUATERNION_CHAR_UUID)
-    stepcnt_char_uuid =     Nordic_UUID(M_STEP_COUNTER_UUID)
-    rawdata_char_uuid =     Nordic_UUID(M_RAW_DATA_CHAR_UUID)
-    euler_char_uuid =       Nordic_UUID(M_EULER_CHAR_UUID)
-    rotation_char_uuid =    Nordic_UUID(M_ROTATION_MATRIX_CHAR_UUID)
-    heading_char_uuid =     Nordic_UUID(M_HEAIDNG_CHAR_UUID)
-    gravity_char_uuid =     Nordic_UUID(M_GRAVITY_VECTOR_CHAR_UUID)
+    serviceUUID = Nordic_UUID(MOTION_SERVICE_UUID)
+    config_char_uuid = Nordic_UUID(M_CONFIG_CHAR_UUID)
+    tap_char_uuid = Nordic_UUID(M_TAP_CHAR_UUID)
+    orient_char_uuid = Nordic_UUID(M_ORIENTATION_CHAR_UUID)
+    quaternion_char_uuid = Nordic_UUID(M_QUATERNION_CHAR_UUID)
+    stepcnt_char_uuid = Nordic_UUID(M_STEP_COUNTER_UUID)
+    rawdata_char_uuid = Nordic_UUID(M_RAW_DATA_CHAR_UUID)
+    euler_char_uuid = Nordic_UUID(M_EULER_CHAR_UUID)
+    rotation_char_uuid = Nordic_UUID(M_ROTATION_MATRIX_CHAR_UUID)
+    heading_char_uuid = Nordic_UUID(M_HEAIDNG_CHAR_UUID)
+    gravity_char_uuid = Nordic_UUID(M_GRAVITY_VECTOR_CHAR_UUID)
 
     def __init__(self, periph):
         self.periph = periph
@@ -462,8 +462,7 @@ class MotionService():
             else:
                 self.gravity_cccd.write(b"\x00\x00", True)
 
-    def configure(self, step_int=None, temp_comp_int=None, magnet_comp_int=None,
-                        motion_freq=None, wake_on_motion=None):
+    def configure(self, step_int=None, temp_comp_int=None, magnet_comp_int=None, motion_freq=None, wake_on_motion=None):
         if step_int is not None and self.config_char is not None:
             current_config = binascii.b2a_hex(self.config_char.read())
             new_config = write_uint16(current_config, step_int, 0)
@@ -501,11 +500,11 @@ class SoundService():
     """
     Sound service module. Instance the class and enable to get access to the Sound interface.
     """
-    serviceUUID                 = Nordic_UUID(SOUND_SERVICE_UUID)
-    config_char_uuid            = Nordic_UUID(S_CONFIG_CHAR_UUID)
-    speaker_data_char_uuid      = Nordic_UUID(S_SPEAKER_DATA_CHAR_UUID)
-    speaker_status_char_uuid    = Nordic_UUID(S_SPEAKER_STATUS_CHAR_UUID)
-    microphone_char_uuid        = Nordic_UUID(S_MICROPHONE_CHAR_UUID)
+    serviceUUID = Nordic_UUID(SOUND_SERVICE_UUID)
+    config_char_uuid = Nordic_UUID(S_CONFIG_CHAR_UUID)
+    speaker_data_char_uuid = Nordic_UUID(S_SPEAKER_DATA_CHAR_UUID)
+    speaker_status_char_uuid = Nordic_UUID(S_SPEAKER_STATUS_CHAR_UUID)
+    microphone_char_uuid = Nordic_UUID(S_MICROPHONE_CHAR_UUID)
 
     def __init__(self, periph):
         self.periph = periph
@@ -572,18 +571,17 @@ class SoundService():
 
 
 class MyDelegate(DefaultDelegate):
-    
+
     def handleNotification(self, hnd, data):
-        #Debug print repr(data)
+        # Debug print repr(data)
         if (hnd == e_temperature_handle):
             teptep = binascii.b2a_hex(data)
-            print('Notification: Temp received:  {}.{} degCelsius'.format(
-                        self._str_to_int(teptep[:-2]), int(teptep[-2:], 16)))
-            
+            print('Notification: Temp received:  {}.{} degCelsius'.format(self._str_to_int(teptep[:-2]),
+                                                                          int(teptep[-2:], 16)))
+
         elif (hnd == e_pressure_handle):
             pressure_int, pressure_dec = self._extract_pressure_data(data)
-            print('Notification: Press received: {}.{} hPa'.format(
-                        pressure_int, pressure_dec))
+            print('Notification: Press received: {}.{} hPa'.format(pressure_int, pressure_dec))
 
         elif (hnd == e_humidity_handle):
             teptep = binascii.b2a_hex(data)
@@ -595,7 +593,7 @@ class MyDelegate(DefaultDelegate):
 
         elif (hnd == e_color_handle):
             teptep = binascii.b2a_hex(data)
-            print('Notification: Color: {}'.format(teptep))            
+            print('Notification: Color: {}'.format(teptep))
 
         elif (hnd == ui_button_handle):
             teptep = binascii.b2a_hex(data)
@@ -635,7 +633,7 @@ class MyDelegate(DefaultDelegate):
 
         elif (hnd == m_gravity_handle):
             teptep = binascii.b2a_hex(data)
-            print('Notification: Gravity: {}'.format(teptep))        
+            print('Notification: Gravity: {}'.format(teptep))
 
         elif (hnd == s_speaker_status_handle):
             teptep = binascii.b2a_hex(data)
@@ -648,21 +646,20 @@ class MyDelegate(DefaultDelegate):
         else:
             teptep = binascii.b2a_hex(data)
             print('Notification: UNKOWN: hnd {}, data {}'.format(hnd, teptep))
-            
 
     def _str_to_int(self, s):
         """ Transform hex str into int. """
         i = int(s, 16)
-        if i >= 2**7:
-            i -= 2**8
-        return i    
+        if i >= 2 ** 7:
+            i -= 2 ** 8
+        return i
 
     def _extract_pressure_data(self, data):
         """ Extract pressure data from data string. """
         teptep = binascii.b2a_hex(data)
         pressure_int = 0
         for i in range(0, 4):
-                pressure_int += (int(teptep[i*2:(i*2)+2], 16) << 8*i)
+            pressure_int += (int(teptep[i * 2:(i * 2) + 2], 16) << 8 * i)
         pressure_dec = int(teptep[-2:], 16)
         return (pressure_int, pressure_dec)
 
@@ -687,6 +684,7 @@ class Thingy52(Peripheral):
     The addr of your device has to be know, or can be found by using the hcitool command line 
     tool, for example. Call "> sudo hcitool lescan" and your Thingy's address should show up.
     """
+
     def __init__(self, addr):
         Peripheral.__init__(self, addr, addrType=ADDR_TYPE_RANDOM)
 
@@ -695,21 +693,19 @@ class Thingy52(Peripheral):
         self.environment = EnvironmentService(self)
         self.ui = UserInterfaceService(self)
         self.motion = MotionService(self)
-        self.sound = SoundService(self)
-        # DFU Service not implemented
+        self.sound = SoundService(self)  # DFU Service not implemented
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('mac_address', action='store', help='MAC address of BLE peripheral')
-    parser.add_argument('-n', action='store', dest='count', default=0,
-                            type=int, help="Number of times to loop data")
-    parser.add_argument('-t',action='store',type=float, default=2.0, help='time between polling')
-    parser.add_argument('--temperature', action="store_true",default=False)
-    parser.add_argument('--pressure', action="store_true",default=False)
-    parser.add_argument('--humidity', action="store_true",default=False)
-    parser.add_argument('--gas', action="store_true",default=False)
-    parser.add_argument('--color', action="store_true",default=False)
+    parser.add_argument('-n', action='store', dest='count', default=0, type=int, help="Number of times to loop data")
+    parser.add_argument('-t', action='store', type=float, default=2.0, help='time between polling')
+    parser.add_argument('--temperature', action="store_true", default=False)
+    parser.add_argument('--pressure', action="store_true", default=False)
+    parser.add_argument('--humidity', action="store_true", default=False)
+    parser.add_argument('--gas', action="store_true", default=False)
+    parser.add_argument('--color', action="store_true", default=False)
     parser.add_argument('--keypress', action='store_true', default=False)
     parser.add_argument('--tap', action='store_true', default=False)
     parser.add_argument('--orientation', action='store_true', default=False)
@@ -733,7 +729,7 @@ def main():
     try:
         # Set LED so that we know we are connected
         thingy.ui.enable()
-        thingy.ui.set_led_mode_breathe(0x01, 50, 100) # 0x01 = RED
+        thingy.ui.set_led_mode_breathe(0x01, 50, 100)  # 0x01 = RED
         print('LED set to breathe mode...')
 
         # Enabling selected sensors
@@ -758,7 +754,7 @@ def main():
         if args.color:
             thingy.environment.enable()
             thingy.environment.configure(color_int=1000)
-            thingy.environment.configure(color_sens_calib=[0,0,0])
+            thingy.environment.configure(color_sens_calib=[0, 0, 0])
             thingy.environment.set_color_notification(True)
         # User Interface Service
         if args.keypress:
@@ -811,15 +807,15 @@ def main():
         # Allow sensors time to start up (might need more time for some sensors to be ready)
         print('All requested sensors and notifications are enabled...')
         time.sleep(1.0)
-        
-        counter=1
+
+        counter = 1
         while True:
             if args.battery:
                 print("Battery: ", thingy.battery.read())
 
             if counter >= args.count:
                 break
-            
+
             counter += 1
             thingy.waitForNotifications(args.t)
 
