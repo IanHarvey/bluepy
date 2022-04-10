@@ -8,7 +8,11 @@ import sys
 from setuptools import setup
 from setuptools.command.build_py import build_py
 
-VERSION = '1.3.0-kimnaty'
+VERSION = '1.3.0'   # -kimnaty
+# versionnumber kept to fix error during installation:
+#   ERROR: pip's dependency resolver does not currently take into account all the packages that are installed.
+#   This behaviour is the source of the following dependency conflicts.
+#   lywsd02 0.0.9 requires bluepy==1.3.0, but you have bluepy 1.3.0-kimnaty which is incompatible.
 
 
 def pre_install():
