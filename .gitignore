@@ -16,3 +16,5 @@ bluez-5.4/attrib/gatttool
 /dist
 # conda automation
 .env
+# PyCharm project related files
+.idea/
