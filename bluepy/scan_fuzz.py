@@ -11,6 +11,7 @@ import btle
 def rand_db(adtype, datalen):
     return struct.pack("<BB", datalen+1, adtype) + os.urandom(datalen)
 
+
 if __name__ == '__main__':
     while True:
         sr = btle.ScanEntry(None, 0)
