@@ -273,7 +273,8 @@ class BluepyHelper:
             self._mtu = 0
             self._stderr = open(os.devnull, "w")
             args = [helperExe]
-            if iface is not None: args.append(str(iface))
+            if iface is not None:
+                args.append(str(iface))
             self._helper = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=self._stderr,
                                             universal_newlines=True, preexec_fn=preexec_function)
             t = Thread(target=self._readToQueue)
