@@ -460,7 +460,7 @@ class Peripheral(BluepyHelper):
                 else:
                     DBG(f"   *** Failed to connect. ({self.retries})")
                     time.sleep(5.0)
-                    if self.retries <= 0:
+                    if self.retries <= 1:
                         raise BTLEDisconnectError("Failed to connect to peripheral %s, addr type: %s" % (addr, addrType), rsp)
             self.retries -= 1
 
