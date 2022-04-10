@@ -526,12 +526,17 @@ class Peripheral(BluepyHelper):
         self._writeCmd("incl %X %X\n" % (startHnd, endHnd))
         return self._getResp('find')
 
-    def getCharacteristics(self, startHnd=1, endHnd=0xFFFF, uuid=None):
+    def getCharacteristics(self, startHnd=1, endHnd=0xFFFF, uuid=None, timeout=None):
         cmd = 'char %X %X' % (startHnd, endHnd)
         if uuid:
             cmd += ' %s' % UUID(uuid)
         self._writeCmd(cmd + "\n")
-        rsp = self._getResp('find')
+        rsp = self._getResp('find', timeout)
+        timeout_exception = BTLEDisconnectError(
+            "Timed out while trying to get characteristics from peripheral %s, addr type: %s" %
+            (self.addr, self.addrType), rsp)
+        if rsp is None:
+            raise timeout_exception
         nChars = len(rsp['hnd'])
         return [Characteristic(self, rsp['uuid'][i], rsp['hnd'][i], rsp['props'][i], rsp['vhnd'][i]) for i in
                 range(nChars)]
