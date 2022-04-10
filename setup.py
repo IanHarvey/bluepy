@@ -8,7 +8,7 @@ import sys
 from setuptools import setup
 from setuptools.command.build_py import build_py
 
-VERSION = '1.3.0'
+VERSION = '1.3.0-kimnaty'
 
 
 def pre_install():
