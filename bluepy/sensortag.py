@@ -2,13 +2,16 @@ from bluepy.btle import UUID, Peripheral, DefaultDelegate, AssignedNumbers
 import struct
 import math
 
+
 def _TI_UUID(val):
     return UUID("%08X-0451-4000-b000-000000000000" % (0xF0000000+val))
+
 
 # Sensortag versions
 AUTODETECT = "-"
 SENSORTAG_V1 = "v1"
 SENSORTAG_2650 = "CC2650"
+
 
 class SensorBase:
     # Derived classes should set: svcUUID, ctrlUUID, dataUUID
@@ -81,7 +84,7 @@ class IRTemperatureSensorTMP007(SensorBase):
     ctrlUUID = _TI_UUID(0xAA02)
 
     SCALE_LSB = 0.03125;
- 
+
     def __init__(self, periph):
         SensorBase.__init__(self, periph)
 
@@ -158,7 +161,6 @@ class AccelerometerSensorMPU9250:
         return tuple([ v*self.scale for v in rawVals ])
 
 
-
 class HumiditySensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA20)
     dataUUID = _TI_UUID(0xAA21)
@@ -173,6 +175,7 @@ class HumiditySensor(SensorBase):
         temp = -46.85 + 175.72 * (rawT / 65536.0)
         RH = -6.0 + 125.0 * ((rawH & 0xFFFC)/65536.0)
         return (temp, RH)
+
 
 class HumiditySensorHDC1000(SensorBase):
     svcUUID  = _TI_UUID(0xAA20)
@@ -189,6 +192,7 @@ class HumiditySensorHDC1000(SensorBase):
         RH = 100.0 * (rawH/65536.0)
         return (temp, RH)
 
+
 class MagnetometerSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA30)
     dataUUID = _TI_UUID(0xAA31)
@@ -202,6 +206,7 @@ class MagnetometerSensor(SensorBase):
         x_y_z = struct.unpack('<hhh', self.data.read())
         return tuple([ 1000.0 * (v/32768.0) for v in x_y_z ])
         # Revisit - some absolute calibration is needed
+
 
 class MagnetometerSensorMPU9250:
     def __init__(self, sensor_):
@@ -219,6 +224,7 @@ class MagnetometerSensorMPU9250:
         '''Returns (x_mag, y_mag, z_mag) in units of uT'''
         rawVals = self.sensor.rawRead()[6:9]
         return tuple([ v*self.scale for v in rawVals ])
+
 
 class BarometerSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA40)
@@ -253,6 +259,7 @@ class BarometerSensor(SensorBase):
         pres = (sens * rawP + offs) / (100.0 * float(1<<14))
         return (temp,pres)
 
+
 class BarometerSensorBMP280(SensorBase):
     svcUUID  = _TI_UUID(0xAA40)
     dataUUID = _TI_UUID(0xAA41)
@@ -267,6 +274,7 @@ class BarometerSensorBMP280(SensorBase):
         press = (pH*65536 + pM*256 + pL) / 100.0
         return (temp, press)
 
+
 class GyroscopeSensor(SensorBase):
     svcUUID  = _TI_UUID(0xAA50)
     dataUUID = _TI_UUID(0xAA51)
@@ -280,6 +288,7 @@ class GyroscopeSensor(SensorBase):
         '''Returns (x,y,z) rate in deg/sec'''
         x_y_z = struct.unpack('<hhh', self.data.read())
         return tuple([ 250.0 * (v/32768.0) for v in x_y_z ])
+
 
 class GyroscopeSensorMPU9250:
     def __init__(self, sensor_):
@@ -297,6 +306,7 @@ class GyroscopeSensorMPU9250:
         rawVals = self.sensor.rawRead()[0:3]
         return tuple([ v*self.scale for v in rawVals ])
 
+
 class KeypressSensor(SensorBase):
     svcUUID = UUID(0xFFE0)
     dataUUID = UUID(0xFFE1)
@@ -305,7 +315,7 @@ class KeypressSensor(SensorBase):
 
     def __init__(self, periph):
         SensorBase.__init__(self, periph)
- 
+
     def enable(self):
         SensorBase.enable(self)
         self.char_descr = self.service.getDescriptors(forUUID=0x2902)[0]
@@ -313,6 +323,7 @@ class KeypressSensor(SensorBase):
 
     def disable(self):
         self.char_descr.write(struct.pack('<bb', 0x00, 0x00), True)
+
 
 class OpticalSensorOPT3001(SensorBase):
     svcUUID  = _TI_UUID(0xAA70)
@@ -329,6 +340,7 @@ class OpticalSensorOPT3001(SensorBase):
         e = (raw & 0xF000) >> 12;
         return 0.01 * (m << e)
 
+
 class BatterySensor(SensorBase):
     svcUUID  = UUID("0000180f-0000-1000-8000-00805f9b34fb")
     dataUUID = UUID("00002a19-0000-1000-8000-00805f9b34fb")
@@ -342,6 +354,7 @@ class BatterySensor(SensorBase):
         '''Returns the battery level in percent'''
         val = ord(self.data.read())
         return val
+
 
 class SensorTag(Peripheral):
     def __init__(self,addr,version=AUTODETECT):
@@ -380,16 +393,17 @@ class SensorTag(Peripheral):
             self.lightmeter = OpticalSensorOPT3001(self)
             self.battery = BatterySensor(self)
 
+
 class KeypressDelegate(DefaultDelegate):
     BUTTON_L = 0x02
     BUTTON_R = 0x01
     ALL_BUTTONS = (BUTTON_L | BUTTON_R)
 
-    _button_desc = { 
+    _button_desc = {
         BUTTON_L : "Left button",
         BUTTON_R : "Right button",
         ALL_BUTTONS : "Both buttons"
-    } 
+    }
 
     def __init__(self):
         DefaultDelegate.__init__(self)
@@ -412,6 +426,7 @@ class KeypressDelegate(DefaultDelegate):
 
     def onButtonDown(self, but):
         print ( "** " + self._button_desc[but] + " DOWN")
+
 
 def main():
     import time
@@ -493,6 +508,7 @@ def main():
 
     tag.disconnect()
     del tag
+
 
 if __name__ == "__main__":
     main()
