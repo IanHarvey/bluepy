@@ -12,6 +12,7 @@ class ScanDelegate(DefaultDelegate):
         print(strftime("%Y-%m-%d %H:%M:%S", gmtime()), dev.addr, dev.getScanData())
         sys.stdout.flush()
 
+
 scanner = Scanner().withDelegate(ScanDelegate())
 
 # listen for ADV_IND packages for 10s, then exit
