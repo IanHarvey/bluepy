@@ -120,8 +120,8 @@ class UUID:
     def __eq__(self, other):
         return self.binVal == UUID(other).binVal
 
-    def __cmp__(self, other):
-        return cmp(self.binVal, UUID(other).binVal)
+    # def __cmp__(self, other):
+    #     return cmp(self.binVal, UUID(other).binVal)
 
     def __hash__(self):
         return hash(self.binVal)
