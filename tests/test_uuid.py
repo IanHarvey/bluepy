@@ -12,6 +12,7 @@ import warnings
 
 from bluepy.btle import UUID
 
+
 class TestUUID(unittest.TestCase):
     def test_init_with_good_uuids(self):
         self.assertIsInstance(UUID(10880), UUID)
@@ -112,4 +113,3 @@ class TestUUID(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

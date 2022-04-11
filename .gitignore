@@ -14,3 +14,7 @@ bluez-5.4/attrib/gatttool
 /build
 /bluepy.egg-info
 /dist
+# conda automation
+.env
+# PyCharm project related files
+.idea/

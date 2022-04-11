@@ -1,9 +1,11 @@
 #!/usr/bin/python
+
 from __future__ import print_function
 
-from time import gmtime, strftime, sleep
-from bluepy.btle import Scanner, DefaultDelegate, BTLEException
 import sys
+from time import gmtime, strftime
+
+from bluepy.btle import Scanner, DefaultDelegate
 
 
 class ScanDelegate(DefaultDelegate):
@@ -11,6 +13,7 @@ class ScanDelegate(DefaultDelegate):
     def handleDiscovery(self, dev, isNewDev, isNewData):
         print(strftime("%Y-%m-%d %H:%M:%S", gmtime()), dev.addr, dev.getScanData())
         sys.stdout.flush()
+
 
 scanner = Scanner().withDelegate(ScanDelegate())
 
