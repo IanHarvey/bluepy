@@ -269,6 +269,7 @@ class BluepyHelper:
     def _startHelper(self, iface=None):
         if self._helper is None:
             DBG("Running ", helperExe)
+            self._aiti = 0
             self._lineq = Queue()
             self._mtu = 0
             self._stderr = open(os.devnull, "w")
@@ -296,6 +297,7 @@ class BluepyHelper:
             self._helper.stdin.flush()
             self._helper.wait()
             self._helper = None
+            self._aiti = None
         if self._stderr is not None:
             self._stderr.close()
             self._stderr = None
@@ -346,6 +348,12 @@ class BluepyHelper:
             except Empty:
                 DBG("Select timeout")
                 return None
+            # sometimes devices just keep sending `ntfy`
+            if 'ntfy' in repr(rv):
+                self._aiti += 1
+                if self._aiti > 3:
+                    self._stopHelper()
+                    raise BTLEInternalError("I am not an idiot.", resp)
 
             DBG("Got:", repr(rv))
             if rv.startswith('#') or rv == '\n' or len(rv) == 0:
