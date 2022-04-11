@@ -348,12 +348,6 @@ class BluepyHelper:
             except Empty:
                 DBG("Select timeout")
                 return None
-            # sometimes devices just keep sending `ntfy`
-            if 'ntfy' in repr(rv):
-                self._aiti += 1
-                if self._aiti > 3:
-                    self._stopHelper()
-                    raise BTLEInternalError("I am not an idiot.", resp)
 
             DBG("Got:", repr(rv))
             if rv.startswith('#') or rv == '\n' or len(rv) == 0:
@@ -362,6 +356,13 @@ class BluepyHelper:
             resp = BluepyHelper.parseResp(rv)
             if 'rsp' not in resp:
                 raise BTLEInternalError("No response type indicator", resp)
+
+            # sometimes devices just keep sending `ntfy`
+            if 'ntfy' in repr(rv):
+                self._aiti += 1
+                if self._aiti > 3:
+                    self._stopHelper()
+                    raise BTLEInternalError("I am not an idiot.", resp)
 
             respType = resp['rsp'][0]
 
