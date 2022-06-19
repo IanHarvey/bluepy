@@ -83,6 +83,9 @@ class BTLEGattError(BTLEException):
     def __init__(self, message, rsp=None):
         BTLEException.__init__(self, message, rsp)
 
+class BTLETimeoutException(BTLEException):
+    def __init__(self, message, rsp=None):
+        BTLEException.__init__(self, message, rsp)
 
 
 class UUID:
@@ -354,8 +357,7 @@ class BluepyHelper:
             try:
                 rv = self._lineq.get(timeout=timeout)
             except Empty:
-                DBG("Select timeout")
-                return None
+                raise BTLETimeoutException("No response after %d seconds" % (timeout))
 
             DBG("Got:", repr(rv))
             if rv.startswith('#') or rv == '\n' or len(rv)==0:
@@ -452,19 +454,11 @@ class Peripheral(BluepyHelper):
         else:
             self._writeCmd("conn %s %s\n" % (addr, addrType))
         rsp = self._getResp('stat', timeout)
-        timeout_exception = BTLEDisconnectError(
-            "Timed out while trying to connect to peripheral %s, addr type: %s" %
-            (addr, addrType), rsp)
-        if rsp is None:
-            raise timeout_exception
         while rsp and rsp['state'][0] == 'tryconn':
             rsp = self._getResp('stat', timeout)
-        if rsp is None or rsp['state'][0] != 'conn':
+        if rsp['state'][0] != 'conn':
             self._stopHelper()
-            if rsp is None:
-                raise timeout_exception
-            else:
-                raise BTLEDisconnectError("Failed to connect to peripheral %s, addr type: %s"
+            raise BTLEDisconnectError("Failed to connect to peripheral %s, addr type: %s"
                                           % (addr, addrType), rsp)
 
     def connect(self, addr, addrType=ADDR_TYPE_PUBLIC, iface=None, timeout=None):
@@ -529,12 +523,12 @@ class Peripheral(BluepyHelper):
         self._writeCmd("incl %X %X\n" % (startHnd, endHnd))
         return self._getResp('find')
 
-    def getCharacteristics(self, startHnd=1, endHnd=0xFFFF, uuid=None):
+    def getCharacteristics(self, startHnd=1, endHnd=0xFFFF, uuid=None, timeout=None):
         cmd = 'char %X %X' % (startHnd, endHnd)
         if uuid:
             cmd += ' %s' % UUID(uuid)
         self._writeCmd(cmd + "\n")
-        rsp = self._getResp('find')
+        rsp = self._getResp('find', timeout=timeout)
         nChars = len(rsp['hnd'])
         return [Characteristic(self, rsp['uuid'][i], rsp['hnd'][i],
                                rsp['props'][i], rsp['vhnd'][i])
@@ -554,9 +548,9 @@ class Peripheral(BluepyHelper):
         ndesc = len(resp['hnd'])
         return [Descriptor(self, resp['uuid'][i], resp['hnd'][i]) for i in range(ndesc)]
 
-    def readCharacteristic(self, handle):
+    def readCharacteristic(self, handle, timeout=None):
         self._writeCmd("rd %X\n" % handle)
-        resp = self._getResp('rd')
+        resp = self._getResp('rd', timeout=timeout)
         return resp['d'][0]
 
     def _readCharacteristicByUUID(self, uuid, startHnd, endHnd):
