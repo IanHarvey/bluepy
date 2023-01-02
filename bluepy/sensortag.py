@@ -67,10 +67,10 @@ class IRTemperatureSensor(SensorBase):
         self.S0 = 6.4e-14
 
     def read(self):
-        '''Returns (ambient_temp, target_temp) in degC'''
+        """Returns (ambient_temp, target_temp) in degC"""
 
         # See http://processors.wiki.ti.com/index.php/SensorTag_User_Guide#IR_Temperature_Sensor
-        (rawVobj, rawTamb) = struct.unpack('<hh', self.data.read())
+        (rawVobj, rawTamb) = struct.unpack("<hh", self.data.read())
         tAmb = rawTamb / 128.0
         Vobj = 1.5625e-7 * rawVobj
 
@@ -88,17 +88,17 @@ class IRTemperatureSensorTMP007(SensorBase):
     dataUUID = _TI_UUID(0xAA01)
     ctrlUUID = _TI_UUID(0xAA02)
 
-    SCALE_LSB = 0.03125;
+    SCALE_LSB = 0.03125
 
     def __init__(self, periph):
         SensorBase.__init__(self, periph)
 
     def read(self):
-        '''Returns (ambient_temp, target_temp) in degC'''
+        """Returns (ambient_temp, target_temp) in degC"""
         # http://processors.wiki.ti.com/index.php/CC2650_SensorTag_User's_Guide?keyMatch=CC2650&tisearch=Search-EN
-        (rawTobj, rawTamb) = struct.unpack('<hh', self.data.read())
-        tObj = (rawTobj >> 2) * self.SCALE_LSB;
-        tAmb = (rawTamb >> 2) * self.SCALE_LSB;
+        (rawTobj, rawTamb) = struct.unpack("<hh", self.data.read())
+        tObj = (rawTobj >> 2) * self.SCALE_LSB
+        tAmb = (rawTamb >> 2) * self.SCALE_LSB
         return (tAmb, tObj)
 
 
@@ -115,8 +115,8 @@ class AccelerometerSensor(SensorBase):
             self.scale = 16.0
 
     def read(self):
-        '''Returns (x_accel, y_accel, z_accel) in units of g'''
-        x_y_z = struct.unpack('bbb', self.data.read())
+        """Returns (x_accel, y_accel, z_accel) in units of g"""
+        x_y_z = struct.unpack("bbb", self.data.read())
         return tuple([(val / self.scale) for val in x_y_z])
 
 
@@ -164,7 +164,7 @@ class AccelerometerSensorMPU9250:
         self.sensor.disable(self.bits)
 
     def read(self):
-        '''Returns (x_accel, y_accel, z_accel) in units of g'''
+        """Returns (x_accel, y_accel, z_accel) in units of g"""
         rawVals = self.sensor.rawRead()[3:6]
         return tuple([v * self.scale for v in rawVals])
 
@@ -178,8 +178,8 @@ class HumiditySensor(SensorBase):
         SensorBase.__init__(self, periph)
 
     def read(self):
-        '''Returns (ambient_temp, rel_humidity)'''
-        (rawT, rawH) = struct.unpack('<HH', self.data.read())
+        """Returns (ambient_temp, rel_humidity)"""
+        (rawT, rawH) = struct.unpack("<HH", self.data.read())
         temp = -46.85 + 175.72 * (rawT / 65536.0)
         RH = -6.0 + 125.0 * ((rawH & 0xFFFC) / 65536.0)
         return (temp, RH)
@@ -194,8 +194,8 @@ class HumiditySensorHDC1000(SensorBase):
         SensorBase.__init__(self, periph)
 
     def read(self):
-        '''Returns (ambient_temp, rel_humidity)'''
-        (rawT, rawH) = struct.unpack('<HH', self.data.read())
+        """Returns (ambient_temp, rel_humidity)"""
+        (rawT, rawH) = struct.unpack("<HH", self.data.read())
         temp = -40.0 + 165.0 * (rawT / 65536.0)
         RH = 100.0 * (rawH / 65536.0)
         return (temp, RH)
@@ -210,9 +210,11 @@ class MagnetometerSensor(SensorBase):
         SensorBase.__init__(self, periph)
 
     def read(self):
-        '''Returns (x, y, z) in uT units'''
-        x_y_z = struct.unpack('<hhh', self.data.read())
-        return tuple([1000.0 * (v / 32768.0) for v in x_y_z])  # Revisit - some absolute calibration is needed
+        """Returns (x, y, z) in uT units"""
+        x_y_z = struct.unpack("<hhh", self.data.read())
+        return tuple(
+            [1000.0 * (v / 32768.0) for v in x_y_z]
+        )  # Revisit - some absolute calibration is needed
 
 
 class MagnetometerSensorMPU9250:
@@ -227,7 +229,7 @@ class MagnetometerSensorMPU9250:
         self.sensor.disable(self.sensor.MAG_XYZ)
 
     def read(self):
-        '''Returns (x_mag, y_mag, z_mag) in units of uT'''
+        """Returns (x_mag, y_mag, z_mag) in units of uT"""
         rawVals = self.sensor.rawRead()[6:9]
         return tuple([v * self.scale for v in rawVals])
 
@@ -248,7 +250,9 @@ class BarometerSensor(SensorBase):
 
         # Read calibration data
         self.ctrl.write(struct.pack("B", 0x02), True)
-        (c1, c2, c3, c4, c5, c6, c7, c8) = struct.unpack("<HHHHhhhh", self.calChr.read())
+        (c1, c2, c3, c4, c5, c6, c7, c8) = struct.unpack(
+            "<HHHHhhhh", self.calChr.read()
+        )
         self.c1_s = c1 / float(1 << 24)
         self.c2_s = c2 / float(1 << 10)
         self.sensPoly = [c3 / 1.0, c4 / float(1 << 17), c5 / float(1 << 34)]
@@ -256,8 +260,8 @@ class BarometerSensor(SensorBase):
         self.ctrl.write(struct.pack("B", 0x01), True)
 
     def read(self):
-        '''Returns (ambient_temp, pressure_millibars)'''
-        (rawT, rawP) = struct.unpack('<hH', self.data.read())
+        """Returns (ambient_temp, pressure_millibars)"""
+        (rawT, rawP) = struct.unpack("<hH", self.data.read())
         temp = (self.c1_s * rawT) + self.c2_s
         sens = calcPoly(self.sensPoly, float(rawT))
         offs = calcPoly(self.offsPoly, float(rawT))
@@ -274,7 +278,7 @@ class BarometerSensorBMP280(SensorBase):
         SensorBase.__init__(self, periph)
 
     def read(self):
-        (tL, tM, tH, pL, pM, pH) = struct.unpack('<BBBBBB', self.data.read())
+        (tL, tM, tH, pL, pM, pH) = struct.unpack("<BBBBBB", self.data.read())
         temp = (tH * 65536 + tM * 256 + tL) / 100.0
         press = (pH * 65536 + pM * 256 + pL) / 100.0
         return (temp, press)
@@ -290,8 +294,8 @@ class GyroscopeSensor(SensorBase):
         SensorBase.__init__(self, periph)
 
     def read(self):
-        '''Returns (x,y,z) rate in deg/sec'''
-        x_y_z = struct.unpack('<hhh', self.data.read())
+        """Returns (x,y,z) rate in deg/sec"""
+        x_y_z = struct.unpack("<hhh", self.data.read())
         return tuple([250.0 * (v / 32768.0) for v in x_y_z])
 
 
@@ -307,7 +311,7 @@ class GyroscopeSensorMPU9250:
         self.sensor.disable(self.sensor.GYRO_XYZ)
 
     def read(self):
-        '''Returns (x_gyro, y_gyro, z_gyro) in units of degrees/sec'''
+        """Returns (x_gyro, y_gyro, z_gyro) in units of degrees/sec"""
         rawVals = self.sensor.rawRead()[0:3]
         return tuple([v * self.scale for v in rawVals])
 
@@ -324,10 +328,10 @@ class KeypressSensor(SensorBase):
     def enable(self):
         SensorBase.enable(self)
         self.char_descr = self.service.getDescriptors(forUUID=0x2902)[0]
-        self.char_descr.write(struct.pack('<bb', 0x01, 0x00), True)
+        self.char_descr.write(struct.pack("<bb", 0x01, 0x00), True)
 
     def disable(self):
-        self.char_descr.write(struct.pack('<bb', 0x00, 0x00), True)
+        self.char_descr.write(struct.pack("<bb", 0x00, 0x00), True)
 
 
 class OpticalSensorOPT3001(SensorBase):
@@ -339,10 +343,10 @@ class OpticalSensorOPT3001(SensorBase):
         SensorBase.__init__(self, periph)
 
     def read(self):
-        '''Returns value in lux'''
-        raw = struct.unpack('<h', self.data.read())[0]
-        m = raw & 0xFFF;
-        e = (raw & 0xF000) >> 12;
+        """Returns value in lux"""
+        raw = struct.unpack("<h", self.data.read())[0]
+        m = raw & 0xFFF
+        e = (raw & 0xF000) >> 12
         return 0.01 * (m << e)
 
 
@@ -356,7 +360,7 @@ class BatterySensor(SensorBase):
         SensorBase.__init__(self, periph)
 
     def read(self):
-        '''Returns the battery level in percent'''
+        """Returns the battery level in percent"""
         val = ord(self.data.read())
         return val
 
@@ -375,7 +379,7 @@ class SensorTag(Peripheral):
         if len(fwVers) >= 1:
             self.firmwareVersion = fwVers[0].read().decode("utf-8")
         else:
-            self.firmwareVersion = u''
+            self.firmwareVersion = ""
 
         if version == SENSORTAG_V1:
             self.IRtemperature = IRTemperatureSensor(self)
@@ -402,9 +406,13 @@ class SensorTag(Peripheral):
 class KeypressDelegate(DefaultDelegate):
     BUTTON_L = 0x02
     BUTTON_R = 0x01
-    ALL_BUTTONS = (BUTTON_L | BUTTON_R)
+    ALL_BUTTONS = BUTTON_L | BUTTON_R
 
-    _button_desc = {BUTTON_L: "Left button", BUTTON_R: "Right button", ALL_BUTTONS: "Both buttons"}
+    _button_desc = {
+        BUTTON_L: "Left button",
+        BUTTON_R: "Right button",
+        ALL_BUTTONS: "Both buttons",
+    }
 
     def __init__(self):
         DefaultDelegate.__init__(self)
@@ -435,23 +443,32 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('host', action='store', help='MAC of BT device')
-    parser.add_argument('-n', action='store', dest='count', default=0, type=int, help="Number of times to loop data")
-    parser.add_argument('-t', action='store', type=float, default=5.0, help='time between polling')
-    parser.add_argument('-T', '--temperature', action="store_true", default=False)
-    parser.add_argument('-A', '--accelerometer', action='store_true', default=False)
-    parser.add_argument('-H', '--humidity', action='store_true', default=False)
-    parser.add_argument('-M', '--magnetometer', action='store_true', default=False)
-    parser.add_argument('-B', '--barometer', action='store_true', default=False)
-    parser.add_argument('-G', '--gyroscope', action='store_true', default=False)
-    parser.add_argument('-K', '--keypress', action='store_true', default=False)
-    parser.add_argument('-L', '--light', action='store_true', default=False)
-    parser.add_argument('-P', '--battery', action='store_true', default=False)
-    parser.add_argument('--all', action='store_true', default=False)
+    parser.add_argument("host", action="store", help="MAC of BT device")
+    parser.add_argument(
+        "-n",
+        action="store",
+        dest="count",
+        default=0,
+        type=int,
+        help="Number of times to loop data",
+    )
+    parser.add_argument(
+        "-t", action="store", type=float, default=5.0, help="time between polling"
+    )
+    parser.add_argument("-T", "--temperature", action="store_true", default=False)
+    parser.add_argument("-A", "--accelerometer", action="store_true", default=False)
+    parser.add_argument("-H", "--humidity", action="store_true", default=False)
+    parser.add_argument("-M", "--magnetometer", action="store_true", default=False)
+    parser.add_argument("-B", "--barometer", action="store_true", default=False)
+    parser.add_argument("-G", "--gyroscope", action="store_true", default=False)
+    parser.add_argument("-K", "--keypress", action="store_true", default=False)
+    parser.add_argument("-L", "--light", action="store_true", default=False)
+    parser.add_argument("-P", "--battery", action="store_true", default=False)
+    parser.add_argument("--all", action="store_true", default=False)
 
     arg = parser.parse_args(sys.argv[1:])
 
-    print('Connecting to ' + arg.host)
+    print("Connecting to " + arg.host)
     tag = SensorTag(arg.host)
 
     # Enabling selected sensors
@@ -484,7 +501,7 @@ def main():
     counter = 1
     while True:
         if arg.temperature or arg.all:
-            print('Temp: ', tag.IRtemperature.read())
+            print("Temp: ", tag.IRtemperature.read())
         if arg.humidity or arg.all:
             print("Humidity: ", tag.humidity.read())
         if arg.barometer or arg.all:

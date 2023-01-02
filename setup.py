@@ -8,7 +8,7 @@ import sys
 from setuptools import setup
 from setuptools.command.build_py import build_py
 
-VERSION = '1.3.0'   # -kimnaty
+VERSION = "1.3.0"  # -kimnaty
 # versionnumber kept to fix error during installation:
 #   ERROR: pip's dependency resolver does not currently take into account all the packages that are installed.
 #   This behaviour is the source of the following dependency conflicts.
@@ -39,7 +39,7 @@ class my_build_py(build_py):
 
 
 setup_cmdclass = {
-    'build_py': my_build_py,
+    "build_py": my_build_py,
 }
 
 # Force package to be *not* pure Python
@@ -48,43 +48,47 @@ setup_cmdclass = {
 try:
     from wheel.bdist_wheel import bdist_wheel
 
-
     class BluepyBdistWheel(bdist_wheel):
         def finalize_options(self):
             bdist_wheel.finalize_options(self)
             self.root_is_pure = False
 
-
-    setup_cmdclass['bdist_wheel'] = BluepyBdistWheel
+    setup_cmdclass["bdist_wheel"] = BluepyBdistWheel
 except ImportError:
     pass
 
 setup(
-    name='bluepy',
+    name="bluepy",
     version=VERSION,
-    description='Python module for interfacing with BLE devices through Bluez',
-    author='Ian Harvey',
-    author_email='website-contact@fenditton.org',
-    url='https://github.com/IanHarvey/bluepy',
-    download_url='https://github.com/IanHarvey/bluepy/tarball/v/%s' % VERSION,
-    keywords=['Bluetooth', 'Bluetooth Smart', 'BLE', 'Bluetooth Low Energy'],
+    description="Python module for interfacing with BLE devices through Bluez",
+    author="Ian Harvey",
+    author_email="website-contact@fenditton.org",
+    url="https://github.com/IanHarvey/bluepy",
+    download_url="https://github.com/IanHarvey/bluepy/tarball/v/%s" % VERSION,
+    keywords=["Bluetooth", "Bluetooth Smart", "BLE", "Bluetooth Low Energy"],
     classifiers=[
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.9',
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.9",
     ],
-    packages=['bluepy'],
-
+    packages=["bluepy"],
     package_data={
-        'bluepy': ['bluepy-helper', '*.json', 'bluez-src.tgz', 'bluepy-helper.c', 'version.h', 'Makefile']
+        "bluepy": [
+            "bluepy-helper",
+            "*.json",
+            "bluez-src.tgz",
+            "bluepy-helper.c",
+            "version.h",
+            "Makefile",
+        ]
     },
     cmdclass=setup_cmdclass,
     entry_points={
-        'console_scripts': [
-            'thingy52=bluepy.thingy52:main',
-            'sensortag=bluepy.sensortag:main',
-            'blescan=bluepy.blescan:main',
+        "console_scripts": [
+            "thingy52=bluepy.thingy52:main",
+            "sensortag=bluepy.sensortag:main",
+            "blescan=bluepy.blescan:main",
         ]
-    }
+    },
 )

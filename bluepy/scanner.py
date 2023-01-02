@@ -9,7 +9,6 @@ from bluepy.btle import Scanner, DefaultDelegate
 
 
 class ScanDelegate(DefaultDelegate):
-
     def handleDiscovery(self, dev, isNewDev, isNewData):
         print(strftime("%Y-%m-%d %H:%M:%S", gmtime()), dev.addr, dev.getScanData())
         sys.stdout.flush()
