@@ -1,0 +1,1557 @@
+{
+    "declaration_UUIDs": [
+        [ 10240, "gatt_primary_service_declaration", "Primary Service Declaration" ],
+        [ 10241, "gatt_secondary_service_declaration", "Secondary Service Declaration" ],
+        [ 10242, "gatt_include_declaration", "Include Declaration" ],
+        [ 10243, "gatt_characteristic_declaration", "Characteristic Declaration" ]
+    ],
+
+    "characteristic_UUIDs": [
+        [
+            10878, 
+            "aerobic_heart_rate_lower_limit", 
+            "Aerobic Heart Rate Lower Limit"
+        ], 
+        [
+            10884, 
+            "aerobic_heart_rate_upper_limit", 
+            "Aerobic Heart Rate Upper Limit"
+        ], 
+        [
+            10879, 
+            "aerobic_threshold", 
+            "Aerobic Threshold"
+        ], 
+        [
+            10880, 
+            "age", 
+            "Age"
+        ], 
+        [
+            10819, 
+            "alert_category_id", 
+            "Alert Category ID"
+        ], 
+        [
+            10818, 
+            "alert_category_id_bit_mask", 
+            "Alert Category ID Bit Mask"
+        ], 
+        [
+            10758, 
+            "alert_level", 
+            "Alert Level"
+        ], 
+        [
+            10820, 
+            "alert_notification_control_point", 
+            "Alert Notification Control Point"
+        ], 
+        [
+            10815, 
+            "alert_status", 
+            "Alert Status"
+        ], 
+        [
+            10931, 
+            "altitude", 
+            "Altitude"
+        ], 
+        [
+            10881, 
+            "anaerobic_heart_rate_lower_limit", 
+            "Anaerobic Heart Rate Lower Limit"
+        ], 
+        [
+            10882, 
+            "anaerobic_heart_rate_upper_limit", 
+            "Anaerobic Heart Rate Upper Limit"
+        ], 
+        [
+            10883, 
+            "anaerobic_threshold", 
+            "Anaerobic Threshold"
+        ], 
+        [
+            10867, 
+            "apparent_wind_direction", 
+            "Apparent Wind Direction"
+        ], 
+        [
+            10866, 
+            "apparent_wind_speed", 
+            "Apparent Wind Speed"
+        ], 
+        [
+            10753, 
+            "appearance", 
+            "Appearance"
+        ], 
+        [
+            10915, 
+            "barometric_pressure_trend", 
+            "Barometric Pressure Trend"
+        ], 
+        [
+            10777, 
+            "battery_level", 
+            "Battery Level"
+        ], 
+        [
+            10825, 
+            "blood_pressure_feature", 
+            "Blood Pressure Feature"
+        ], 
+        [
+            10805, 
+            "blood_pressure_measurement", 
+            "Blood Pressure Measurement"
+        ], 
+        [
+            10907, 
+            "body_composition_feature", 
+            "Body Composition Feature"
+        ], 
+        [
+            10908, 
+            "body_composition_measurement", 
+            "Body Composition Measurement"
+        ], 
+        [
+            10808, 
+            "body_sensor_location", 
+            "Body Sensor Location"
+        ], 
+        [
+            10916, 
+            "bond_management_control_point", 
+            "Bond Management Control Point"
+        ], 
+        [
+            10917, 
+            "bond_management_feature", 
+            "Bond Management Feature"
+        ], 
+        [
+            10786, 
+            "boot_keyboard_input_report", 
+            "Boot Keyboard Input Report"
+        ], 
+        [
+            10802, 
+            "boot_keyboard_output_report", 
+            "Boot Keyboard Output Report"
+        ], 
+        [
+            10803, 
+            "boot_mouse_input_report", 
+            "Boot Mouse Input Report"
+        ], 
+        [
+            10918, 
+            "central_address_resolution_support", 
+            "Central Address Resolution"
+        ], 
+        [
+            10920, 
+            "cgm_feature", 
+            "CGM Feature"
+        ], 
+        [
+            10919, 
+            "cgm_measurement", 
+            "CGM Measurement"
+        ], 
+        [
+            10923, 
+            "cgm_session_run_time", 
+            "CGM Session Run Time"
+        ], 
+        [
+            10922, 
+            "cgm_session_start_time", 
+            "CGM Session Start Time"
+        ], 
+        [
+            10924, 
+            "cgm_specific_ops_control_point", 
+            "CGM Specific Ops Control Point"
+        ], 
+        [
+            10921, 
+            "cgm_status", 
+            "CGM Status"
+        ], 
+        [
+            10844, 
+            "csc_feature", 
+            "CSC Feature"
+        ], 
+        [
+            10843, 
+            "csc_measurement", 
+            "CSC Measurement"
+        ], 
+        [
+            10795, 
+            "current_time", 
+            "Current Time"
+        ], 
+        [
+            10854, 
+            "cycling_power_control_point", 
+            "Cycling Power Control Point"
+        ], 
+        [
+            10853, 
+            "cycling_power_feature", 
+            "Cycling Power Feature"
+        ], 
+        [
+            10851, 
+            "cycling_power_measurement", 
+            "Cycling Power Measurement"
+        ], 
+        [
+            10852, 
+            "cycling_power_vector", 
+            "Cycling Power Vector"
+        ], 
+        [
+            10905, 
+            "database_change_increment", 
+            "Database Change Increment"
+        ], 
+        [
+            10885, 
+            "date_of_birth", 
+            "Date of Birth"
+        ], 
+        [
+            10886, 
+            "date_of_threshold_assessment", 
+            "Date of Threshold Assessment"
+        ], 
+        [
+            10760, 
+            "date_time", 
+            "Date Time"
+        ], 
+        [
+            10762, 
+            "day_date_time", 
+            "Day Date Time"
+        ], 
+        [
+            10761, 
+            "day_of_week", 
+            "Day of Week"
+        ], 
+        [
+            10877, 
+            "descriptor_value_changed", 
+            "Descriptor Value Changed"
+        ], 
+        [
+            10752, 
+            "device_name", 
+            "Device Name"
+        ], 
+        [
+            10875, 
+            "dew_point", 
+            "Dew Point"
+        ], 
+        [
+            10765, 
+            "dst_offset", 
+            "DST Offset"
+        ], 
+        [
+            10860, 
+            "elevation", 
+            "Elevation"
+        ], 
+        [
+            10887, 
+            "email_address", 
+            "Email Address"
+        ], 
+        [
+            10764, 
+            "exact_time_256", 
+            "Exact Time 256"
+        ], 
+        [
+            10888, 
+            "fat_burn_heart_rate_lower_limit", 
+            "Fat Burn Heart Rate Lower Limit"
+        ], 
+        [
+            10889, 
+            "fat_burn_heart_rate_upper_limit", 
+            "Fat Burn Heart Rate Upper Limit"
+        ], 
+        [
+            10790, 
+            "firmware_revision_string", 
+            "Firmware Revision String"
+        ], 
+        [
+            10890, 
+            "first_name", 
+            "First Name"
+        ], 
+        [
+            10891, 
+            "five_zone_heart_rate_limits", 
+            "Five Zone Heart Rate Limits"
+        ], 
+        [
+            10930, 
+            "floor_number", 
+            "Floor Number"
+        ], 
+        [
+            10892, 
+            "gender", 
+            "Gender"
+        ], 
+        [
+            10833, 
+            "glucose_feature", 
+            "Glucose Feature"
+        ], 
+        [
+            10776, 
+            "glucose_measurement", 
+            "Glucose Measurement"
+        ], 
+        [
+            10804, 
+            "glucose_measurement_context", 
+            "Glucose Measurement Context"
+        ], 
+        [
+            10868, 
+            "gust_factor", 
+            "Gust Factor"
+        ], 
+        [
+            10791, 
+            "hardware_revision_string", 
+            "Hardware Revision String"
+        ], 
+        [
+            10809, 
+            "heart_rate_control_point", 
+            "Heart Rate Control Point"
+        ], 
+        [
+            10893, 
+            "heart_rate_max", 
+            "Heart Rate Max"
+        ], 
+        [
+            10807, 
+            "heart_rate_measurement", 
+            "Heart Rate Measurement"
+        ], 
+        [
+            10874, 
+            "heat_index", 
+            "Heat Index"
+        ], 
+        [
+            10894, 
+            "height", 
+            "Height"
+        ], 
+        [
+            10828, 
+            "hid_control_point", 
+            "HID Control Point"
+        ], 
+        [
+            10826, 
+            "hid_information", 
+            "HID Information"
+        ], 
+        [
+            10895, 
+            "hip_circumference", 
+            "Hip Circumference"
+        ], 
+        [
+            10863, 
+            "humidity", 
+            "Humidity"
+        ], 
+        [
+            10794, 
+            "ieee_11073-20601_regulatory_certification_data_list", 
+            "IEEE 11073-20601 Regulatory Certification Data List"
+        ], 
+        [
+            10925, 
+            "indoor_positioning_configuration", 
+            "Indoor Positioning Configuration"
+        ], 
+        [
+            10806, 
+            "intermediate_blood_pressure", 
+            "Intermediate Cuff Pressure"
+        ], 
+        [
+            10782, 
+            "intermediate_temperature", 
+            "Intermediate Temperature"
+        ], 
+        [
+            10871, 
+            "irradiance", 
+            "Irradiance"
+        ], 
+        [
+            10914, 
+            "language", 
+            "Language"
+        ], 
+        [
+            10896, 
+            "last_name", 
+            "Last Name"
+        ], 
+        [
+            10926, 
+            "latitude", 
+            "Latitude"
+        ], 
+        [
+            10859, 
+            "ln_control_point", 
+            "LN Control Point"
+        ], 
+        [
+            10858, 
+            "ln_feature", 
+            "LN Feature"
+        ], 
+        [
+            10929, 
+            "xml", 
+            "Local East Coordinate"
+        ], 
+        [
+            10928, 
+            "local_north_coordinate", 
+            "Local North Coordinate"
+        ], 
+        [
+            10767, 
+            "local_time_information", 
+            "Local Time Information"
+        ], 
+        [
+            10855, 
+            "location_and_speed", 
+            "Location and Speed"
+        ], 
+        [
+            10933, 
+            "location_name", 
+            "Location Name"
+        ], 
+        [
+            10927, 
+            "longitude", 
+            "Longitude"
+        ], 
+        [
+            10796, 
+            "magnetic_declination", 
+            "Magnetic Declination"
+        ], 
+        [
+            10912, 
+            "magnetic_flux_density_2D", 
+            "Magnetic Flux Density - 2D"
+        ], 
+        [
+            10913, 
+            "magnetic_flux_density_3D", 
+            "Magnetic Flux Density - 3D"
+        ], 
+        [
+            10793, 
+            "manufacturer_name_string", 
+            "Manufacturer Name String"
+        ], 
+        [
+            10897, 
+            "maximum_recommended_heart_rate", 
+            "Maximum Recommended Heart Rate"
+        ], 
+        [
+            10785, 
+            "measurement_interval", 
+            "Measurement Interval"
+        ], 
+        [
+            10788, 
+            "model_number_string", 
+            "Model Number String"
+        ], 
+        [
+            10856, 
+            "navigation", 
+            "Navigation"
+        ], 
+        [
+            10822, 
+            "new_alert", 
+            "New Alert"
+        ], 
+        [
+            10756, 
+            "peripheral_preferred_connection_parameters", 
+            "Peripheral Preferred Connection Parameters"
+        ], 
+        [
+            10754, 
+            "peripheral_privacy_flag", 
+            "Peripheral Privacy Flag"
+        ], 
+        [
+            10832, 
+            "pnp_id", 
+            "PnP ID"
+        ], 
+        [
+            10869, 
+            "pollen_concentration", 
+            "Pollen Concentration"
+        ], 
+        [
+            10857, 
+            "position_quality", 
+            "Position Quality"
+        ], 
+        [
+            10861, 
+            "pressure", 
+            "Pressure"
+        ], 
+        [
+            10830, 
+            "protocol_mode", 
+            "Protocol Mode"
+        ], 
+        [
+            10872, 
+            "rainfall", 
+            "Rainfall"
+        ], 
+        [
+            10755, 
+            "reconnection_address", 
+            "Reconnection Address"
+        ], 
+        [
+            10834, 
+            "record_access_control_point", 
+            "Record Access Control Point"
+        ], 
+        [
+            10772, 
+            "reference_time_information", 
+            "Reference Time Information"
+        ], 
+        [
+            10829, 
+            "report", 
+            "Report"
+        ], 
+        [
+            10827, 
+            "report_map", 
+            "Report Map"
+        ], 
+        [
+            10898, 
+            "resting_heart_rate", 
+            "Resting Heart Rate"
+        ], 
+        [
+            10816, 
+            "ringer_control_point", 
+            "Ringer Control Point"
+        ], 
+        [
+            10817, 
+            "ringer_setting", 
+            "Ringer Setting"
+        ], 
+        [
+            10836, 
+            "rsc_feature", 
+            "RSC Feature"
+        ], 
+        [
+            10835, 
+            "rsc_measurement", 
+            "RSC Measurement"
+        ], 
+        [
+            10837, 
+            "sc_control_point", 
+            "SC Control Point"
+        ], 
+        [
+            10831, 
+            "scan_interval_window", 
+            "Scan Interval Window"
+        ], 
+        [
+            10801, 
+            "scan_refresh", 
+            "Scan Refresh"
+        ], 
+        [
+            10845, 
+            "sensor_location", 
+            "Sensor Location"
+        ], 
+        [
+            10789, 
+            "serial_number_string", 
+            "Serial Number String"
+        ], 
+        [
+            10757, 
+            "service_changed", 
+            "Service Changed"
+        ], 
+        [
+            10792, 
+            "software_revision_string", 
+            "Software Revision String"
+        ], 
+        [
+            10899, 
+            "sport_type_for_aerobic_and_anaerobic_thresholds", 
+            "Sport Type for Aerobic and Anaerobic Thresholds"
+        ], 
+        [
+            10823, 
+            "supported_new_alert_category", 
+            "Supported New Alert Category"
+        ], 
+        [
+            10824, 
+            "supported_unread_alert_category", 
+            "Supported Unread Alert Category"
+        ], 
+        [
+            10787, 
+            "system_id", 
+            "System ID"
+        ], 
+        [
+            10862, 
+            "temperature", 
+            "Temperature"
+        ], 
+        [
+            10780, 
+            "temperature_measurement", 
+            "Temperature Measurement"
+        ], 
+        [
+            10781, 
+            "temperature_type", 
+            "Temperature Type"
+        ], 
+        [
+            10900, 
+            "three_zone_heart_rate_limits", 
+            "Three Zone Heart Rate Limits"
+        ], 
+        [
+            10770, 
+            "time_accuracy", 
+            "Time Accuracy"
+        ], 
+        [
+            10771, 
+            "time_source", 
+            "Time Source"
+        ], 
+        [
+            10774, 
+            "time_update_control_point", 
+            "Time Update Control Point"
+        ], 
+        [
+            10775, 
+            "time_update_state", 
+            "Time Update State"
+        ], 
+        [
+            10769, 
+            "time_with_dst", 
+            "Time with DST"
+        ], 
+        [
+            10766, 
+            "time_zone", 
+            "Time Zone"
+        ], 
+        [
+            10865, 
+            "true_wind_direction", 
+            "True Wind Direction"
+        ], 
+        [
+            10864, 
+            "true_wind_speed", 
+            "True Wind Speed"
+        ], 
+        [
+            10901, 
+            "two_zone_heart_rate_limit", 
+            "Two Zone Heart Rate Limit"
+        ], 
+        [
+            10759, 
+            "tx_power_level", 
+            "Tx Power Level"
+        ], 
+        [
+            10932, 
+            "uncertainty", 
+            "Uncertainty"
+        ], 
+        [
+            10821, 
+            "unread_alert_status", 
+            "Unread Alert Status"
+        ], 
+        [
+            10911, 
+            "user_control_point", 
+            "User Control Point"
+        ], 
+        [
+            10906, 
+            "user_index", 
+            "User Index"
+        ], 
+        [
+            10870, 
+            "uv_index", 
+            "UV Index"
+        ], 
+        [
+            10902, 
+            "vo2_max", 
+            "VO2 Max"
+        ], 
+        [
+            10903, 
+            "waist_circumference", 
+            "Waist Circumference"
+        ], 
+        [
+            10904, 
+            "weight", 
+            "Weight"
+        ], 
+        [
+            10909, 
+            "weight_measurement", 
+            "Weight Measurement"
+        ], 
+        [
+            10910, 
+            "weight_scale_feature", 
+            "Weight Scale Feature"
+        ], 
+        [
+            10873, 
+            "wind_chill", 
+            "Wind Chill"
+        ]
+    ], 
+    "descriptor_UUIDs": [
+        [
+            10496, 
+            "characteristic_extended_properties", 
+            "Characteristic Extended Properties"
+        ], 
+        [
+            10497, 
+            "characteristic_user_description", 
+            "Characteristic User Description"
+        ], 
+        [
+            10498, 
+            "client_characteristic_configuration", 
+            "Client Characteristic Configuration"
+        ], 
+        [
+            10499, 
+            "server_characteristic_configuration", 
+            "Server Characteristic Configuration"
+        ], 
+        [
+            10500, 
+            "characteristic_presentation_format", 
+            "Characteristic Presentation Format"
+        ], 
+        [
+            10501, 
+            "characteristic_aggregate_format", 
+            "Characteristic Aggregate Format"
+        ], 
+        [
+            10502, 
+            "valid_range", 
+            "Valid Range"
+        ], 
+        [
+            10503, 
+            "external_report_reference", 
+            "External Report Reference"
+        ], 
+        [
+            10504, 
+            "report_reference", 
+            "Report Reference"
+        ], 
+        [
+            10507, 
+            "es_configuration", 
+            "Environmental Sensing Configuration"
+        ], 
+        [
+            10508, 
+            "es_measurement", 
+            "Environmental Sensing Measurement"
+        ], 
+        [
+            10509, 
+            "es_trigger_setting", 
+            "Environmental Sensing Trigger Setting"
+        ]
+    ], 
+    "service_UUIDs": [
+        [
+            6161, 
+            "alert_notification", 
+            "Alert Notification Service"
+        ], 
+        [
+            6159, 
+            "battery_service", 
+            "Battery Service"
+        ], 
+        [
+            6160, 
+            "blood_pressure", 
+            "Blood Pressure"
+        ], 
+        [
+            6171, 
+            "body_composition", 
+            "Body Composition"
+        ], 
+        [
+            6174, 
+            "bond_management", 
+            "Bond Management"
+        ], 
+        [
+            6175, 
+            "continuous_glucose_monitoring", 
+            "Continuous Glucose Monitoring"
+        ], 
+        [
+            6149, 
+            "current_time", 
+            "Current Time Service"
+        ], 
+        [
+            6168, 
+            "cycling_power", 
+            "Cycling Power"
+        ], 
+        [
+            6166, 
+            "cycling_speed_and_cadence", 
+            "Cycling Speed and Cadence"
+        ], 
+        [
+            6154, 
+            "device_information", 
+            "Device Information"
+        ], 
+        [
+            6170, 
+            "environmental_sensing", 
+            "Environmental Sensing"
+        ], 
+        [
+            6144, 
+            "generic_access", 
+            "Generic Access"
+        ], 
+        [
+            6145, 
+            "generic_attribute", 
+            "Generic Attribute"
+        ], 
+        [
+            6152, 
+            "glucose", 
+            "Glucose"
+        ], 
+        [
+            6153, 
+            "health_thermometer", 
+            "Health Thermometer"
+        ], 
+        [
+            6157, 
+            "heart_rate", 
+            "Heart Rate"
+        ], 
+        [
+            6162, 
+            "human_interface_device", 
+            "Human Interface Device"
+        ], 
+        [
+            6146, 
+            "immediate_alert", 
+            "Immediate Alert"
+        ], 
+        [
+            6177, 
+            "indoor_positioning", 
+            "Indoor Positioning"
+        ], 
+        [
+            6176, 
+            "internet_protocol_support", 
+            "Internet Protocol Support"
+        ], 
+        [
+            6147, 
+            "link_loss", 
+            "Link Loss"
+        ], 
+        [
+            6169, 
+            "location_and_navigation", 
+            "Location and Navigation"
+        ], 
+        [
+            6151, 
+            "next_dst_change", 
+            "Next DST Change Service"
+        ], 
+        [
+            6158, 
+            "phone_alert_status", 
+            "Phone Alert Status Service"
+        ], 
+        [
+            6150, 
+            "reference_time_update", 
+            "Reference Time Update Service"
+        ], 
+        [
+            6164, 
+            "running_speed_and_cadence", 
+            "Running Speed and Cadence"
+        ], 
+        [
+            6163, 
+            "scan_parameters", 
+            "Scan Parameters"
+        ], 
+        [
+            6148, 
+            "tx_power", 
+            "Tx Power"
+        ], 
+        [
+            6172, 
+            "user_data", 
+            "User Data"
+        ], 
+        [
+            6173, 
+            "weight_scale", 
+            "Weight Scale"
+        ]
+    ], 
+    "units_UUIDs": [
+        [
+            9984, 
+            "unitless", 
+            "unitless"
+        ], 
+        [
+            9985, 
+            "metre", 
+            "length (metre)"
+        ], 
+        [
+            9986, 
+            "kilogram", 
+            "mass (kilogram)"
+        ], 
+        [
+            9987, 
+            "second", 
+            "time (second)"
+        ], 
+        [
+            9988, 
+            "ampere", 
+            "electric current (ampere)"
+        ], 
+        [
+            9989, 
+            "kelvin", 
+            "thermodynamic temperature (kelvin)"
+        ], 
+        [
+            9990, 
+            "mole", 
+            "amount of substance (mole)"
+        ], 
+        [
+            9991, 
+            "candela", 
+            "luminous intensity (candela)"
+        ], 
+        [
+            10000, 
+            "square_metres", 
+            "area (square metres)"
+        ], 
+        [
+            10001, 
+            "cubic_metres", 
+            "volume (cubic metres)"
+        ], 
+        [
+            10002, 
+            "metres_per_second", 
+            "velocity (metres per second)"
+        ], 
+        [
+            10003, 
+            "metres_per_second_squared", 
+            "acceleration (metres per second squared)"
+        ], 
+        [
+            10004, 
+            "reciprocal_metre", 
+            "wavenumber (reciprocal metre)"
+        ], 
+        [
+            10005, 
+            "kilogram_per_cubic_metre", 
+            "density (kilogram per cubic metre)"
+        ], 
+        [
+            10006, 
+            "kilogram_per_square_metre", 
+            "surface density (kilogram per square metre)"
+        ], 
+        [
+            10007, 
+            "cubic_metre_per_kilogram", 
+            "specific volume (cubic metre per kilogram)"
+        ], 
+        [
+            10008, 
+            "ampere_per_square_metre", 
+            "current density (ampere per square metre)"
+        ], 
+        [
+            10009, 
+            "ampere_per_metre", 
+            "magnetic field strength (ampere per metre)"
+        ], 
+        [
+            10010, 
+            "mole_per_cubic_metre", 
+            "amount concentration (mole per cubic metre)"
+        ], 
+        [
+            10011, 
+            "kilogram_per_cubic_metre", 
+            "mass concentration (kilogram per cubic metre)"
+        ], 
+        [
+            10012, 
+            "candela_per_square_metre", 
+            "luminance (candela per square metre)"
+        ], 
+        [
+            10013, 
+            "refractive_index", 
+            "refractive index"
+        ], 
+        [
+            10014, 
+            "relative_permeability", 
+            "relative permeability"
+        ], 
+        [
+            10016, 
+            "radian", 
+            "plane angle (radian)"
+        ], 
+        [
+            10017, 
+            "steradian", 
+            "solid angle (steradian)"
+        ], 
+        [
+            10018, 
+            "hertz", 
+            "frequency (hertz)"
+        ], 
+        [
+            10019, 
+            "newton", 
+            "force (newton)"
+        ], 
+        [
+            10020, 
+            "pascal", 
+            "pressure (pascal)"
+        ], 
+        [
+            10021, 
+            "joule", 
+            "energy (joule)"
+        ], 
+        [
+            10022, 
+            "watt", 
+            "power (watt)"
+        ], 
+        [
+            10023, 
+            "coulomb", 
+            "electric charge (coulomb)"
+        ], 
+        [
+            10024, 
+            "volt", 
+            "electric potential difference (volt)"
+        ], 
+        [
+            10025, 
+            "farad", 
+            "capacitance (farad)"
+        ], 
+        [
+            10026, 
+            "ohm", 
+            "electric resistance (ohm)"
+        ], 
+        [
+            10027, 
+            "siemens", 
+            "electric conductance (siemens)"
+        ], 
+        [
+            10028, 
+            "weber", 
+            "magnetic flux (weber)"
+        ], 
+        [
+            10029, 
+            "tesla", 
+            "magnetic flux density (tesla)"
+        ], 
+        [
+            10030, 
+            "henry", 
+            "inductance (henry)"
+        ], 
+        [
+            10031, 
+            "degree_celsius", 
+            "Celsius temperature (degree Celsius)"
+        ], 
+        [
+            10032, 
+            "lumen", 
+            "luminous flux (lumen)"
+        ], 
+        [
+            10033, 
+            "lux", 
+            "illuminance (lux)"
+        ], 
+        [
+            10034, 
+            "becquerel", 
+            "activity referred to a radionuclide (becquerel)"
+        ], 
+        [
+            10035, 
+            "gray", 
+            "absorbed dose (gray)"
+        ], 
+        [
+            10036, 
+            "sievert", 
+            "dose equivalent (sievert)"
+        ], 
+        [
+            10037, 
+            "katal", 
+            "catalytic activity (katal)"
+        ], 
+        [
+            10048, 
+            "pascal_second", 
+            "dynamic viscosity (pascal second)"
+        ], 
+        [
+            10049, 
+            "newton_metre", 
+            "moment of force (newton metre)"
+        ], 
+        [
+            10050, 
+            "newton_per_metre", 
+            "surface tension (newton per metre)"
+        ], 
+        [
+            10051, 
+            "radian_per_second", 
+            "angular velocity (radian per second)"
+        ], 
+        [
+            10052, 
+            "radian_per_second_squared", 
+            "angular acceleration (radian per second squared)"
+        ], 
+        [
+            10053, 
+            "watt_per_square_metre", 
+            "heat flux density (watt per square metre)"
+        ], 
+        [
+            10054, 
+            "joule_per_kelvin", 
+            "heat capacity (joule per kelvin)"
+        ], 
+        [
+            10055, 
+            "joule_per_kilogram_kelvin", 
+            "specific heat capacity (joule per kilogram kelvin)"
+        ], 
+        [
+            10056, 
+            "joule_per_kilogram", 
+            "specific energy (joule per kilogram)"
+        ], 
+        [
+            10057, 
+            "watt_per_metre_kelvin", 
+            "thermal conductivity (watt per metre kelvin)"
+        ], 
+        [
+            10058, 
+            "joule_per_cubic_metre", 
+            "energy density (joule per cubic metre)"
+        ], 
+        [
+            10059, 
+            "volt_per_metre", 
+            "electric field strength (volt per metre)"
+        ], 
+        [
+            10060, 
+            "coulomb_per_cubic_metre", 
+            "electric charge density (coulomb per cubic metre)"
+        ], 
+        [
+            10061, 
+            "coulomb_per_square_metre", 
+            "surface charge density (coulomb per square metre)"
+        ], 
+        [
+            10062, 
+            "coulomb_per_square_metre", 
+            "electric flux density (coulomb per square metre)"
+        ], 
+        [
+            10063, 
+            "farad_per_metre", 
+            "permittivity (farad per metre)"
+        ], 
+        [
+            10064, 
+            "henry_per_metre", 
+            "permeability (henry per metre)"
+        ], 
+        [
+            10065, 
+            "joule_per_mole", 
+            "molar energy (joule per mole)"
+        ], 
+        [
+            10066, 
+            "joule_per_mole_kelvin", 
+            "molar entropy (joule per mole kelvin)"
+        ], 
+        [
+            10067, 
+            "coulomb_per_kilogram", 
+            "exposure (coulomb per kilogram)"
+        ], 
+        [
+            10068, 
+            "gray_per_second", 
+            "absorbed dose rate (gray per second)"
+        ], 
+        [
+            10069, 
+            "watt_per_steradian", 
+            "radiant intensity (watt per steradian)"
+        ], 
+        [
+            10070, 
+            "watt_per_square_metre_steradian", 
+            "radiance (watt per square metre steradian)"
+        ], 
+        [
+            10071, 
+            "katal_per_cubic_metre", 
+            "catalytic activity concentration (katal per cubic metre)"
+        ], 
+        [
+            10080, 
+            "minute", 
+            "time (minute)"
+        ], 
+        [
+            10081, 
+            "hour", 
+            "time (hour)"
+        ], 
+        [
+            10082, 
+            "day", 
+            "time (day)"
+        ], 
+        [
+            10083, 
+            "degree", 
+            "plane angle (degree)"
+        ], 
+        [
+            10084, 
+            "minute", 
+            "plane angle (minute)"
+        ], 
+        [
+            10085, 
+            "second", 
+            "plane angle (second)"
+        ], 
+        [
+            10086, 
+            "hectare", 
+            "area (hectare)"
+        ], 
+        [
+            10087, 
+            "litre", 
+            "volume (litre)"
+        ], 
+        [
+            10088, 
+            "tonne", 
+            "mass (tonne)"
+        ], 
+        [
+            10112, 
+            "bar", 
+            "pressure (bar)"
+        ], 
+        [
+            10113, 
+            "millimetre_of_mercury", 
+            "pressure (millimetre of mercury)"
+        ], 
+        [
+            10114, 
+            "angstrom",
+            "length (ångström)"
+        ], 
+        [
+            10115, 
+            "nautical_mile", 
+            "length (nautical mile)"
+        ], 
+        [
+            10116, 
+            "barn", 
+            "area (barn)"
+        ], 
+        [
+            10117, 
+            "knot", 
+            "velocity (knot)"
+        ], 
+        [
+            10118, 
+            "neper", 
+            "logarithmic radio quantity (neper)"
+        ], 
+        [
+            10119, 
+            "bel", 
+            "logarithmic radio quantity (bel)"
+        ], 
+        [
+            10144, 
+            "yard", 
+            "length (yard)"
+        ], 
+        [
+            10145, 
+            "parsec", 
+            "length (parsec)"
+        ], 
+        [
+            10146, 
+            "inch", 
+            "length (inch)"
+        ], 
+        [
+            10147, 
+            "foot", 
+            "length (foot)"
+        ], 
+        [
+            10148, 
+            "mile", 
+            "length (mile)"
+        ], 
+        [
+            10149, 
+            "pound_force_per_square_inch", 
+            "pressure (pound-force per square inch)"
+        ], 
+        [
+            10150, 
+            "kilometre_per_hour", 
+            "velocity (kilometre per hour)"
+        ], 
+        [
+            10151, 
+            "mile_per_hour", 
+            "velocity (mile per hour)"
+        ], 
+        [
+            10152, 
+            "revolution_per_minute", 
+            "angular velocity (revolution per minute)"
+        ], 
+        [
+            10153, 
+            "gram_calorie", 
+            "energy (gram calorie)"
+        ], 
+        [
+            10154, 
+            "kilogram_calorie", 
+            "energy (kilogram calorie)"
+        ], 
+        [
+            10155, 
+            "kilowatt_hour", 
+            "energy (kilowatt hour)"
+        ], 
+        [
+            10156, 
+            "degree_fahrenheit", 
+            "thermodynamic temperature (degree Fahrenheit)"
+        ], 
+        [
+            10157, 
+            "percentage", 
+            "percentage"
+        ], 
+        [
+            10158, 
+            "per_mille", 
+            "per mille"
+        ], 
+        [
+            10159, 
+            "beats_per_minute", 
+            "period (beats per minute)"
+        ], 
+        [
+            10160, 
+            "ampere_hours", 
+            "electric charge (ampere hours)"
+        ], 
+        [
+            10161, 
+            "milligram_per_decilitre", 
+            "mass density (milligram per decilitre)"
+        ], 
+        [
+            10162, 
+            "millimole_per_litre", 
+            "mass density (millimole per litre)"
+        ], 
+        [
+            10163, 
+            "year", 
+            "time (year)"
+        ], 
+        [
+            10164, 
+            "month", 
+            "time (month)"
+        ], 
+        [
+            10165, 
+            "count_per_cubic_metre", 
+            "concentration (count per cubic metre)"
+        ], 
+        [
+            10166, 
+            "watt_per_square_metre", 
+            "irradiance (watt per square metre)"
+        ], 
+        [
+            10167, 
+            "milliliter_per_kilogram_per_minute", 
+            "milliliter (per kilogram per minute)"
+        ], 
+        [
+            10168, 
+            "pound", 
+            "mass (pound)"
+        ]
+    ]
+}
