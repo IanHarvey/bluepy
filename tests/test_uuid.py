@@ -93,14 +93,8 @@ class TestUUID(unittest.TestCase):
         self.assertTrue(UUID("ABCD") == "0000abcd-0000-1000-8000-00805f9b34fb")
         self.assertTrue(UUID(0xFFFFFFFF) == "ffffffff-0000-1000-8000-00805f9b34fb")
         self.assertTrue(UUID(0xABCDEF12) == "abcdef12-0000-1000-8000-00805f9b34fb")
-        self.assertTrue(
-            UUID("00000000-0000-1000-8000-00805f9b34fb")
-            == "00000000-0000-1000-8000-00805f9b34fb"
-        )
-        self.assertTrue(
-            UUID("0000000000001000800000805f9b34fb")
-            == "00000000-0000-1000-8000-00805f9b34fb"
-        )
+        self.assertTrue(UUID("00000000-0000-1000-8000-00805f9b34fb") == "00000000-0000-1000-8000-00805f9b34fb")
+        self.assertTrue(UUID("0000000000001000800000805f9b34fb") == "00000000-0000-1000-8000-00805f9b34fb")
 
     def test_cmp(self):
         """Note that cmp() does not exist in Python 3, only Python 2"""
@@ -117,12 +111,8 @@ class TestUUID(unittest.TestCase):
             self.assertTrue(cmp(UUID("f"), "0000000f-0000-1000-8000-00805f9b34fb"))
             self.assertTrue(cmp(UUID("FFFF"), "0000ffff-0000-1000-8000-00805f9b34fb"))
             self.assertTrue(cmp(UUID("ABCD"), "0000abcd-0000-1000-8000-00805f9b34fb"))
-            self.assertTrue(
-                cmp(UUID(0xFFFFFFFF), "ffffffff-0000-1000-8000-00805f9b34fb")
-            )
-            self.assertTrue(
-                cmp(UUID(0xABCDEF12), "abcdef12-0000-1000-8000-00805f9b34fb")
-            )
+            self.assertTrue(cmp(UUID(0xFFFFFFFF), "ffffffff-0000-1000-8000-00805f9b34fb"))
+            self.assertTrue(cmp(UUID(0xABCDEF12), "abcdef12-0000-1000-8000-00805f9b34fb"))
             self.assertTrue(
                 cmp(
                     UUID("00000000-0000-1000-8000-00805f9b34fb"),
