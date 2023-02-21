@@ -1,0 +1,33 @@
+# pyproject.toml
+
+# Hatchling  https://packaging.python.org/en/latest/key_projects/#hatch
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bluepy3"
+description = "A Python3 interface to Bluetooth LE on Linux."
+version = "0.0.1"
+dependencies = []
+license = "MIT"
+authors = [
+  { name="Mausy5043" },
+]
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Home Automation"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/Mausy5043/pylywsdxx"
+"Bug Tracker" = "https://github.com/Mausy5043/pylywsdxx/issues"

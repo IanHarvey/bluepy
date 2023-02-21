@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+
+PACKAGE_NAME="pylywsdxx"
+
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)
+CMD="${1}"
+BRANCH="$(git branch --show-current)"
+echo "$HERE is on branch: $BRANCH"
+echo
+
+pushd "${HERE}" >/dev/null || exit 1
+
+build_app(){
+    LOCATION=$1
+    echo "Building distribution package in $LOCATION"
+    ### install build-system
+    echo
+    echo "Checking build-system installation..."
+    python3 -m pip install --upgrade build | grep -v "already satisfied"
+    python3 -m pip install --upgrade twine | grep -v "already satisfied"
+    ### build package
+    echo
+    echo "Building..."
+    rm dist/*
+    python3 -m build
+}
+
+test_app() {
+    LOCATION=$1
+    echo "Upload package to TestPyPi from $LOCATION"
+    python3 -m twine upload --repository testpypi dist/*
+    echo ""
+    echo "To test installing this package use:"
+    echo "python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps ${PACKAGE_NAME}"
+}
+
+dist_app() {
+    LOCATION=$1
+    echo "Upload distribution package to PyPi from $LOCATION"
+    # throw away files if upload was succesful
+    python3 -m twine upload --repository pypi dist/*   # && rm dist/*
+    echo ""
+    echo "To install this package use:"
+    echo "python3 -m pip install --upgrade ${PACKAGE_NAME}"
+}
+
+update_local_repo() {
+    branch_name=$1
+    git fetch origin "${branch_name}" || { sleep 60; git fetch origin "${branch_name}" || exit 1; }
+    git reset --hard "origin/${branch_name}" || exit 1
+    git clean -f -d || exit 1
+    git pull || exit 1
+}
+
+# check commandline parameters
+case $CMD in
+    -b | --build)
+        # build
+        build_app "${HERE}" || exit 1
+        ;;
+    -d | --dist)
+        # distribute for production
+        dist_app "${HERE}" || exit 1
+        ;;
+    -t | --test)
+        # distribute for testing
+        test_app "${HERE}" || exit 1
+        ;;
+    --discard)
+        # reset local repo discarding local changes
+        update_local_repo "${BRANCH}" || exit 1
+        ;;
+    *)
+        echo "Syntax:"
+        echo "build [-b|--build] | [-d|--dist] | [-t|--test] | [--discard]"
+        echo "Only the first option past is executed!"
+        echo
+        exit 1
+        ;;
+esac
+
+popd >/dev/null || exit 1
