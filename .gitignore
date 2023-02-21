@@ -4,6 +4,8 @@
 ### local linting
 FIXME
 FIXME-2
+FIXME-SECURITY
+
 
 ### PyCharm ###
 .idea/
@@ -21,6 +23,7 @@ __pycache__/
 
 # C extensions
 *.so
+*.o
 
 # Distribution / packaging
 .Python
