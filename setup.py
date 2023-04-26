@@ -51,10 +51,7 @@ except ImportError:
 
 
 setup (
-    name='bluepy',
     version=VERSION,
-    description='Python module for interfacing with BLE devices through Bluez',
-    author='Ian Harvey',
     author_email='website-contact@fenditton.org',
     url='https://github.com/IanHarvey/bluepy',
     download_url='https://github.com/IanHarvey/bluepy/tarball/v/%s' % VERSION,
