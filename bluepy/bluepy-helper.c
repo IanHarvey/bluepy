@@ -1189,8 +1189,6 @@ static void cmd_sec_level(int argcp, char **argvp)
 static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
                             gpointer user_data)
 {
-    uint16_t mtu;
-
     if (status != 0) {
         DBG("status returned error : %s (0x%02x)",
             att_ecode2str(status), status);
@@ -1198,27 +1196,13 @@ static void exchange_mtu_cb(guint8 status, const guint8 *pdu, guint16 plen,
         return;
     }
 
-    if (!dec_mtu_resp(pdu, plen, &mtu)) {
-        resp_error(err_DECODING);
-        return;
-    }
-
-    mtu = MIN(mtu, opt_mtu);
-    /* Set new value for MTU in client */
-    if (g_attrib_set_mtu(attrib, mtu))
-    {
-        opt_mtu = mtu;
-        cmd_status(0, NULL);
-    }
-    else
-    {
-        printf("# Error exchanging MTU\n");
-        resp_error(err_CALL_FAIL);
-    }
+    cmd_status(0, NULL);
 }
 
 static void cmd_mtu(int argcp, char **argvp)
 {
+    uint16_t mtu;
+
     if (conn_state != STATE_CONNECTED) {
         resp_error(err_BAD_STATE);
         return;
@@ -1238,11 +1222,19 @@ static void cmd_mtu(int argcp, char **argvp)
     }
 
     errno = 0;
-    opt_mtu = strtoll(argvp[1], NULL, 16);
-    if (errno != 0 || opt_mtu < ATT_DEFAULT_LE_MTU) {
+    mtu = strtoll(argvp[1], NULL, 16);
+    if (errno != 0 || mtu < ATT_DEFAULT_LE_MTU) {
         resp_error(err_BAD_PARAM);
         return;
     }
+
+    if (!g_attrib_set_mtu(attrib, mtu))
+    {
+        printf("# Error setting local MTU\n");
+        resp_error(err_CALL_FAIL);
+    }
+
+    opt_mtu = mtu;
 
     gatt_exchange_mtu(attrib, opt_mtu, exchange_mtu_cb, NULL);
 }
@@ -1449,7 +1441,7 @@ static void read_local_oob_data_complete(uint8_t status, uint16_t len,
     DBG("received local OOB ext with eir_len = %d",eir_len);
     for (i = 0; i<eir_len; i++)
         DBG("0x%02x ", rp->eir[i]);
-    
+
     resp_begin(rsp_OOB);
     send_data(rp->eir, eir_len);
     resp_end();
@@ -1503,7 +1495,12 @@ static void pair_device_complete(uint8_t status, uint16_t length,
         return;
     }
 
-    resp_mgmt(err_SUCCESS);
+    const struct mgmt_addr_info * rp = param;
+
+    resp_begin(rsp_MGMT);
+    send_sym(tag_ERRCODE, err_SUCCESS);
+    send_addr(rp);
+    resp_end();
 }
 
 static void cmd_pair(int argcp, char **argvp)
@@ -2155,5 +2152,3 @@ int main(int argc, char *argv[])
 
     return EXIT_SUCCESS;
 }
-
-

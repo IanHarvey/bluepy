@@ -1,0 +1,38 @@
+[Unit]
+Description=Bluetooth service
+Documentation=man:bluetoothd(8)
+ConditionPathIsDirectory=/sys/class/bluetooth
+
+[Service]
+Type=dbus
+BusName=org.bluez
+ExecStart=@PKGLIBEXECDIR@/bluetoothd
+NotifyAccess=main
+#WatchdogSec=10
+#Restart=on-failure
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+LimitNPROC=1
+
+# Filesystem lockdown
+ProtectHome=true
+ProtectSystem=strict
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+StateDirectory=bluetooth
+StateDirectoryMode=0700
+ConfigurationDirectory=bluetooth
+ConfigurationDirectoryMode=0555
+
+# Execute Mappings
+MemoryDenyWriteExecute=true
+
+# Privilege escalation
+NoNewPrivileges=true
+
+# Real-time
+RestrictRealtime=true
+
+[Install]
+WantedBy=bluetooth.target
+Alias=dbus-org.bluez.service

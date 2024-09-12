@@ -1,0 +1,20 @@
+{
+	global:
+		btd_*;
+		g_dbus_*;
+		info;
+		error;
+		debug;
+		baswap;
+		ba2str;
+		/* Don't break LLVM sanitizers */
+		__asan*;
+		__dfsan*;
+		__lsan*;
+		__msan*;
+		__sanitizer*;
+		__tsan*;
+		__ubsan*;
+	local:
+		*;
+};

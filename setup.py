@@ -15,7 +15,7 @@ def pre_install():
         print("Working dir is " + os.getcwd())
         with open("bluepy/version.h","w") as verfile:
             verfile.write('#define VERSION_STRING "%s"\n' % VERSION)
-        for cmd in [ "make -C ./bluepy clean", "make -C bluepy -j1" ]:
+        for cmd in [ "make -C ./bluepy clean", "make -C bluepy -j4" ]:
             print("execute " + cmd)
             msgs = subprocess.check_output(shlex.split(cmd), stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
@@ -65,7 +65,7 @@ setup (
         'Programming Language :: Python :: 3.4',
     ],
     packages=['bluepy'],
-    
+
     package_data={
         'bluepy': ['bluepy-helper', '*.json', 'bluez-src.tgz', 'bluepy-helper.c', 'version.h', 'Makefile']
     },
